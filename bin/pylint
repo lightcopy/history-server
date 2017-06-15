@@ -3,7 +3,8 @@
 bin="`dirname "$0"`"
 ROOT_DIR="`cd "$bin/../"; pwd`"
 
-WHICH_PYTHON=""
+# by default run bin/python from venv
+WHICH_PYTHON="$ROOT_DIR/bin/python"
 
 # Command-line options for start-up:
 for i in "$@"; do

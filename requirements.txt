@@ -1,6 +1,10 @@
 # Database
 pymongo == 3.3.0
 
+# HDFS
+protobuf == 2.6.1
+snakebite == 2.11.0
+
 # Testing
 coverage == 4.1
 mock == 2.0.0

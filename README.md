@@ -1,6 +1,9 @@
 # history-server
 Update for Spark history server
 
+[![Build Status](https://travis-ci.org/lightcopy/history-server.svg?branch=master)](https://travis-ci.org/lightcopy/history-server)
+[![Coverage Status](https://coveralls.io/repos/github/lightcopy/history-server/badge.svg?branch=master)](https://coveralls.io/github/lightcopy/history-server?branch=master)
+
 ## Build instructions
 
 ### Requirements
@@ -26,6 +29,8 @@ Now you can use `bin/python` and `bin/pip` to access python and pip of virtual e
 following commands to install dependencies.
 ```shell
 $ bin/pip install -r requirements.txt --upgrade --target lib/
+# google.protobuf missing __init__.py, add it manually
+$ touch lib/google/__init__.py
 ```
 
 ### Run linters
@@ -33,7 +38,9 @@ Run `bin/pylint` from project directory, you should provide `--python` flag for 
 want to use.
 ```shell
 # For example, use bin/python for 'virtualenv'
-bin/pylint --python=bin/python
+$ bin/pylint
+# Or provide your own python binaries
+$ bin/pylint --python=bin/python
 ```
 
 ### Run tests
@@ -41,5 +48,7 @@ Run `bin/coverage` from project directory, you should also specify `--python` fl
 to your python binaries. This will run Python tests and print overall coverage.
 ```shell
 # For example, use bin/python for 'virtualenv'
+$ bin/coverage
+# Or provide your own python binaries
 $ bin/coverage --python=bin/python
 ```
