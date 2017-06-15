@@ -1,0 +1,22 @@
+#!/bin/bash
+
+bin="`dirname "$0"`"
+ROOT_DIR="`cd "$bin/../"; pwd`"
+
+WHICH_PYTHON=""
+
+# Command-line options for start-up:
+for i in "$@"; do
+  case $i in
+    --python=*)
+      WHICH_PYTHON="${i#*=}"
+    shift ;;
+  esac
+done
+
+if [ -z "$WHICH_PYTHON" ]; then
+  echo "No python binaries provided, use --python=* to specify"
+  exit 1
+fi
+
+$WHICH_PYTHON $ROOT_DIR/run_pylint.py src test *.py
