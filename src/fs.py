@@ -65,6 +65,78 @@ def from_path(path):
     scheme, host, port, path = util.parse_path(path)
     return get(scheme, host, port)
 
+# pylint: disable=R0913,too-many-arguments
+# pylint: disable=E1305,too-many-format-args
+class FileStatus(object):
+    """
+    FileStatus class represents inode metadata in either local file system or HDFS and mirrors
+    org.apache.hadoop.fs.FileStatus class in Hadoop.
+    """
+    def __init__(self, group, owner, permission, file_type, access_time, modification_time, length,
+                 block_replication, block_size, path):
+        self._group = group
+        self._owner = owner
+        self._permission = permission
+        self._file_type = file_type
+        self._access_time = access_time
+        self._modification_time = modification_time
+        self._length = length
+        self._block_replication = block_replication
+        self._block_size = block_size
+        self._path = path
+
+    @property
+    def group(self):
+        return self._group
+
+    @property
+    def owner(self):
+        return self._owner
+
+    @property
+    def permission(self):
+        return self._permission
+
+    @property
+    def file_type(self):
+        return self._file_type
+
+    @property
+    def access_time(self):
+        return self._access_time
+
+    @property
+    def modification_time(self):
+        return self._modification_time
+
+    @property
+    def length(self):
+        return self._length
+
+    @property
+    def block_replication(self):
+        return self._block_replication
+
+    @property
+    def block_size(self):
+        return self._block_size
+
+    @property
+    def path(self):
+        return self._path
+
+    def __str__(self):
+        return ("{group: %s, owner: %s, permission: %s, file_type: %s, atime: %s, mtime: %s, " + \
+            "length: %s, block_replication: %s, block_size: %s, path: %s}") % (
+                self.group, self.owner, self.permission, self.file_type, self.access_time,
+                self.modification_time, self.length, self.block_replication, self.block_size,
+                self.path)
+
+    def __repr__(self):
+        return self.__str__()
+# pylint: enable=R0913,too-many-arguments
+# pylint: enable=E1305,too-many-format-args
+
 class FileSystem(object):
     """
     Abstract file system class.
@@ -90,19 +162,7 @@ class FileSystem(object):
 
     def listdir(self, path):
         """
-        Return child inodes as generator of dictionaries:
-        {
-            'group': u'supergroup',
-            'permission': 420,
-            'file_type': 'f',
-            'access_time': 1367317324982L,
-            'block_replication': 1,
-            'modification_time': 1367317325346L,
-            'length': 6783L,
-            'blocksize': 134217728L,
-            'owner': u'wouter',
-            'path': '/Makefile'
-        }
+        Return child inodes as generator of FileStatus.
         If path is not a directory should throw exception.
 
         :param path: directory path to list
@@ -140,18 +200,18 @@ class LocalFileSystem(FileSystem):
         owner = pwd.getpwuid(stat_result.st_uid).pw_name
         group = grp.getgrgid(stat_result.st_gid).gr_name
         permission = int(oct(stat_result.st_mode & 0777))
-        return {
-            "group": group,
-            "owner": owner,
-            "permission": permission,
-            "file_type": file_type,
-            "access_time": stat_result.st_atime * 1000L,
-            "modification_time": stat_result.st_mtime * 1000L,
-            "length": long(stat_result.st_size),
-            "block_replication": 0,
-            "blocksize": 0L,
-            "path": file_path
-        }
+        return FileStatus(
+            group=group,
+            owner=owner,
+            permission=permission,
+            file_type=file_type,
+            access_time=long(stat_result.st_atime * 1000L),
+            modification_time=long(stat_result.st_mtime * 1000L),
+            length=long(stat_result.st_size),
+            block_replication=0,
+            block_size=0L,
+            path=file_path
+        )
 
     def isdir(self, path):
         normpath = self._norm_path(path)
@@ -198,18 +258,18 @@ class HDFS(FileSystem):
         """
         file_path = self._norm_uri(obj["path"])
         file_type = FILETYPE_DIR if obj["file_type"] == "d" else FILETYPE_FILE
-        return {
-            "group": str(obj["group"]),
-            "owner": str(obj["owner"]),
-            "permission": obj["permission"],
-            "file_type": file_type,
-            "access_time": obj["access_time"],
-            "modification_time": obj["modification_time"],
-            "length": obj["length"],
-            "block_replication": obj["block_replication"],
-            "blocksize": obj["blocksize"],
-            "path": file_path
-        }
+        return FileStatus(
+            group=str(obj["group"]),
+            owner=str(obj["owner"]),
+            permission=obj["permission"],
+            file_type=file_type,
+            access_time=obj["access_time"],
+            modification_time=obj["modification_time"],
+            length=obj["length"],
+            block_replication=obj["block_replication"],
+            block_size=obj["blocksize"],
+            path=file_path
+        )
 
     def isdir(self, path):
         normpath = self._norm_path(path)

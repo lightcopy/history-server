@@ -54,6 +54,28 @@ class FsSuite(unittest.TestCase):
         with self.assertRaises(ValueError):
             client._norm_path(None)
 
+    def test_file_status_str(self):
+        status = fs.FileStatus(
+            group="group",
+            owner="owner",
+            permission=755,
+            file_type="f",
+            access_time=1000L,
+            modification_time=2000L,
+            length=123456L,
+            block_replication=3,
+            block_size=128L,
+            path="/path/to/file"
+        )
+        res = "%s" % status
+        self.assertEquals(
+            res,
+            "{group: group, owner: owner, permission: 755, file_type: f, " + \
+            "atime: 1000, mtime: 2000, length: 123456, block_replication: 3, " + \
+            "block_size: 128, path: /path/to/file}"
+        )
+        self.assertEquals(status.__repr__(), status.__str__())
+
     @mock.patch("src.fs.os")
     @mock.patch("src.fs.pwd")
     @mock.patch("src.fs.grp")
@@ -78,18 +100,18 @@ class FsSuite(unittest.TestCase):
         mock_grp.getgrgid.return_value = getgrgid
 
         client = fs.get()
-        self.assertEquals(client._path_stat("xyz"), {
-            "group": "my_group",
-            "owner": "my_user",
-            "permission": int(oct(stat.st_mode & 0777)),
-            "file_type": "d",
-            "access_time": stat.st_atime * 1000L,
-            "modification_time": stat.st_mtime * 1000L,
-            "length": stat.st_size,
-            "block_replication": 0,
-            "blocksize": 0L,
-            "path": "/xyz"
-        })
+        status = client._path_stat("xyz")
+        self.assertEquals(status.group, "my_group")
+        self.assertEquals(status.owner, "my_user")
+        self.assertEquals(status.permission, int(oct(stat.st_mode & 0777)))
+        self.assertEquals(status.file_type, "d")
+        self.assertEquals(status.access_time, stat.st_atime * 1000L)
+        self.assertEquals(status.modification_time, stat.st_mtime * 1000L)
+        self.assertEquals(status.length, stat.st_size)
+        self.assertEquals(status.block_replication, 0)
+        self.assertEquals(status.block_size, 0L)
+        self.assertEquals(status.path, "/xyz")
+
         # test method calls
         mock_os.stat.assert_called_with("/xyz")
         mock_pwd.getpwuid.assert_called_with(123)
@@ -119,18 +141,17 @@ class FsSuite(unittest.TestCase):
         mock_grp.getgrgid.return_value = getgrgid
 
         client = fs.get()
-        self.assertEquals(client._path_stat("xyz"), {
-            "group": "my_group",
-            "owner": "my_user",
-            "permission": int(oct(stat.st_mode & 0777)),
-            "file_type": "f",
-            "access_time": stat.st_atime * 1000L,
-            "modification_time": stat.st_mtime * 1000L,
-            "length": stat.st_size,
-            "block_replication": 0,
-            "blocksize": 0L,
-            "path": "/xyz"
-        })
+        status = client._path_stat("xyz")
+        self.assertEquals(status.group, "my_group")
+        self.assertEquals(status.owner, "my_user")
+        self.assertEquals(status.permission, int(oct(stat.st_mode & 0777)))
+        self.assertEquals(status.file_type, "f")
+        self.assertEquals(status.access_time, stat.st_atime * 1000L)
+        self.assertEquals(status.modification_time, stat.st_mtime * 1000L)
+        self.assertEquals(status.length, stat.st_size)
+        self.assertEquals(status.block_replication, 0)
+        self.assertEquals(status.block_size, 0L)
+        self.assertEquals(status.path, "/xyz")
         # test method calls
         mock_os.stat.assert_called_with("/xyz")
         mock_pwd.getpwuid.assert_called_with(123)
@@ -258,18 +279,17 @@ class FsSuite(unittest.TestCase):
             "blocksize": 128000L,
             "path": "path/to/dir"
         }
-        self.assertEquals(client._path_stat(obj), {
-            "group": "my_group",
-            "owner": "my_owner",
-            "permission": 777,
-            "file_type": "d",
-            "access_time": 4000L,
-            "modification_time": 5000L,
-            "length": 756L,
-            "block_replication": 3,
-            "blocksize": 128000L,
-            "path": "hdfs://host:5070/path/to/dir"
-        })
+        status = client._path_stat(obj)
+        self.assertEquals(status.group, "my_group")
+        self.assertEquals(status.owner, "my_owner")
+        self.assertEquals(status.permission, 777)
+        self.assertEquals(status.file_type, "d")
+        self.assertEquals(status.access_time, 4000L)
+        self.assertEquals(status.modification_time, 5000L)
+        self.assertEquals(status.length, 756L)
+        self.assertEquals(status.block_replication, 3)
+        self.assertEquals(status.block_size, 128000L)
+        self.assertEquals(status.path, "hdfs://host:5070/path/to/dir")
 
         # test file
         obj = {
@@ -284,18 +304,17 @@ class FsSuite(unittest.TestCase):
             "blocksize": 128000L,
             "path": "path/to/file"
         }
-        self.assertEquals(client._path_stat(obj), {
-            "group": "my_group",
-            "owner": "my_owner",
-            "permission": 555,
-            "file_type": "f",
-            "access_time": 4000L,
-            "modification_time": 5000L,
-            "length": 75623498234234934L,
-            "block_replication": 3,
-            "blocksize": 128000L,
-            "path": "hdfs://host:5070/path/to/file"
-        })
+        status = client._path_stat(obj)
+        self.assertEquals(status.group, "my_group")
+        self.assertEquals(status.owner, "my_owner")
+        self.assertEquals(status.permission, 555)
+        self.assertEquals(status.file_type, "f")
+        self.assertEquals(status.access_time, 4000L)
+        self.assertEquals(status.modification_time, 5000L)
+        self.assertEquals(status.length, 75623498234234934L)
+        self.assertEquals(status.block_replication, 3)
+        self.assertEquals(status.block_size, 128000L)
+        self.assertEquals(status.path, "hdfs://host:5070/path/to/file")
 
     def test_hdfs_isdir(self):
         client = fs.get("hdfs")

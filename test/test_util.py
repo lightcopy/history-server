@@ -18,6 +18,7 @@
 #
 
 import unittest
+import mock
 import src.util as util
 
 class UtilSuite(unittest.TestCase):
@@ -59,6 +60,11 @@ class UtilSuite(unittest.TestCase):
             util.merge_path(*util.parse_path("hdfs:/path")),
             "hdfs:/path"
         )
+
+    @mock.patch("src.util.time")
+    def test_time_now(self, mock_time):
+        mock_time.time.return_value = 12345.1232342
+        self.assertEquals(util.time_now(), 12345123L)
 
 def suites():
     return [

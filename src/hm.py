@@ -144,9 +144,9 @@ class WatchProcess(multiprocessing.Process):
         self._conns = conns
 
     def _get_applications(self):
-        for node in self._fs.listdir(self._root):
-            if node["file_type"] == fs.FILETYPE_FILE:
-                yield Application.from_path(node["path"])
+        for status in self._fs.listdir(self._root):
+            if status.file_type == fs.FILETYPE_FILE:
+                yield Application.from_path(status.path)
 
     def run(self):
         # periodically check directory and pull new applications
