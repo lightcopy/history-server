@@ -18,6 +18,7 @@
 #
 
 import re
+import time
 import urlparse
 
 def parse_path(path):
@@ -47,3 +48,11 @@ def merge_path(scheme, host, port, path):
     """
     netloc = "%s:%s" % (host, port) if port else host
     return urlparse.urlunparse((scheme, netloc, path, "", "", ""))
+
+def time_now():
+    """
+    Get current time in milliseconds.
+
+    :return: unix timestamp in milliseconds as long value
+    """
+    return long(time.time() * 1000L)

@@ -54,5 +54,5 @@ else: # pragma: no cover
     print "[WARN] Configuration is not found for '%s'" % conf_file
     print "[WARN] Loading default logger configuration"
     logging.config.dictConfig(conf_dict)
-logger = logging.getLogger("queue")
+logger = logging.getLogger("server")
 logger.addHandler(logging.NullHandler())
