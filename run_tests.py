@@ -24,7 +24,8 @@ import unittest
 # Select what tests to run
 RUN_TESTS = {
     "test.test_util": True,
-    "test.test_fs": True
+    "test.test_fs": True,
+    "test.test_hm": True
 }
 
 suites = unittest.TestSuite()

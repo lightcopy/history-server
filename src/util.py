@@ -34,7 +34,7 @@ def parse_path(path):
     groups = re.search(r"^(.+):(\d+)$", netloc)
     host = groups.group(1) if groups else netloc
     port = int(groups.group(2)) if groups else None
-    return (scheme, host, port, path)
+    return scheme, host, port, path
 
 def merge_path(scheme, host, port, path):
     """

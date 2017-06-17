@@ -20,10 +20,11 @@
 import multiprocessing
 import os
 import Queue as threadqueue
+import re
 import time
 import src.fs as fs
+import src.log as log
 import src.util as util
-from src.log import logger
 
 # processing statuses
 # application has been queued or is being processed
@@ -33,33 +34,72 @@ APP_SUCCESS = "SUCCESS"
 # application is failed to load
 APP_FAILURE = "FAILURE"
 
+# logger for module
+logger = log.getLogger("history-manager")
+
 class Application(object):
-    def __init__(self, app_id, status, path, modification_time):
+    """
+    Represents application dictionary with different processing statuses.
+    """
+    def __init__(self, app_id, status, in_progress, path, modification_time):
         """
         Create application for app_id, processing status, path to the application log file,
         and time of the latest modification to the application.
 
         :param app_id: application id
         :param status: processing status
+        :param in_progress: True if application log is in progress, False otherwise (complete)
         :param path: path to the log file
         :param modification_time: time of modification as long value, in milliseconds
         """
         self._app_id = app_id
         self._status = status
+        self._in_progress = in_progress
         self._path = path
         self._modification_time = modification_time
 
     @staticmethod
-    def from_path(path):
+    def _parse_app_name(name):
         """
-        Create application with process status from file path.
+        Return application id and ".inprogress" part.
+
+        Currently we only support applications that follow pattern: "app-YYYYMMDDHHmmss-SSSS" or
+        "local-TIMESTAMP". Each application might contain suffix ".inprogress" meaning that it is
+        incomplete. Examples:
+            - app-20170618085827-0000
+            - app-20170618085827-0000.inprogress
+            - local-1497733035840
+            - local-1497733035840.inprogress
+
+        Method returns tuple (app_id, ".inprogress") if match or (app_id, None) if app is complete
+
+        :param name: file name to parse
+        :return: tuple (app_id, '.inprogress') or (app_id, None) if match, or None otherwise
+        """
+        def match(name):
+            groups = re.search(r"^(app-\d{14}-\d{4})(\.inprogress)?$", name)
+            return groups if groups else re.search(r"^(local-\d{13})(\.inprogress)?$", name)
+        groups = match(name)
+        return (groups.group(1), groups.group(2) is not None) if groups else None
+
+    @staticmethod
+    def try_infer_from_path(path):
+        """
+        Create application with process status and default parameters from file path.
+        If application cannot be created, None is returned.
 
         :param path: fully-qualified path to the application log file
         :return: new application
         """
         file_path = util.parse_path(path)[3]
         file_name = os.path.split(file_path)[1]
-        return Application(file_name, APP_PROCESS, path, util.time_now())
+
+        res = Application._parse_app_name(file_name)
+        if res:
+            app_id, in_progress = res
+            # application contains full path to the file including scheme, host and port
+            return Application(app_id, APP_PROCESS, in_progress, path, util.time_now())
+        return None
 
     @property
     def app_id(self):
@@ -70,6 +110,10 @@ class Application(object):
         return self._status
 
     @property
+    def in_progress(self):
+        return self._in_progress
+
+    @property
     def path(self):
         return self._path
 
@@ -77,7 +121,7 @@ class Application(object):
     def modification_time(self):
         return self._modification_time
 
-    def update_status(self, status, mtime=util.time_now()):
+    def update_status(self, status, mtime=None):
         """
         Update status of this application, also automatically increments modification time.
 
@@ -85,11 +129,11 @@ class Application(object):
         :param mtime: update time for status
         """
         self._status = status
-        self._modification_time = mtime
+        self._modification_time = mtime if mtime else util.time_now()
 
     def __str__(self):
-        return "{app_id: %s, path: %s, status: %s, mtime: %s}" % (
-            self._app_id, self._path, self._status, self._modification_time)
+        return "{app_id: %s, status: %s, in_progress: %s, path: %s, mtime: %s}" % (
+            self._app_id, self.status, self.in_progress, self._path, self._modification_time)
 
     def __repr__(self):
         return self.__str__()
