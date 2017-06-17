@@ -129,6 +129,8 @@ class LocalFileSystem(FileSystem):
         """
         Resolve and normalize path.
         """
+        if not path:
+            raise ValueError("Path %s" % path)
         return os.path.realpath(path)
 
     def _path_stat(self, path):
@@ -143,7 +145,7 @@ class LocalFileSystem(FileSystem):
             "owner": owner,
             "permission": permission,
             "file_type": file_type,
-            "access_time": stat_result.st_ctime * 1000L,
+            "access_time": stat_result.st_atime * 1000L,
             "modification_time": stat_result.st_mtime * 1000L,
             "length": long(stat_result.st_size),
             "block_replication": 0,
@@ -176,7 +178,7 @@ class HDFS(FileSystem):
         self._scheme = "hdfs"
         self._host = host
         self._port = port
-        self._client = Client(host, port=port, use_trash=False)
+        self._fs = Client(host, port=port, use_trash=False)
 
     def _norm_path(self, path):
         """
@@ -210,17 +212,17 @@ class HDFS(FileSystem):
 
     def isdir(self, path):
         normpath = self._norm_path(path)
-        return self._client.test(normpath, exists=True, directory=True)
+        return self._fs.test(normpath, exists=True, directory=True)
 
     def exists(self, path):
         normpath = self._norm_path(path)
-        return self._client.test(normpath, exists=True)
+        return self._fs.test(normpath, exists=True)
 
     def listdir(self, path):
         normpath = self._norm_path(path)
         if not self.isdir(normpath):
             raise OSError("Not a directory: '%s'" % normpath)
-        gen = self._client\
+        gen = self._fs\
             .ls([normpath], recurse=False, include_toplevel=False, include_children=True)
         return [self._path_stat(x) for x in gen]
 
@@ -229,6 +231,6 @@ class HDFS(FileSystem):
         if self.isdir(normpath):
             raise OSError("Cannot open %s, is a directory" % normpath)
         # cat returns generator of generator of strings which is different from documentation
-        fgen = self._client.cat([normpath], check_crc=False)
+        fgen = self._fs.cat([normpath], check_crc=False)
         # always return the first generator for provided path
         return fgen.next()
