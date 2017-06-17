@@ -90,7 +90,7 @@ class FileSystem(object):
 
     def listdir(self, path):
         """
-        Return child inodes as list of dictionaries:
+        Return child inodes as generator of dictionaries:
         {
             'group': u'supergroup',
             'permission': 420,
@@ -106,7 +106,7 @@ class FileSystem(object):
         If path is not a directory should throw exception.
 
         :param path: directory path to list
-        :return: list of child directories or files
+        :return: generator of child directories or files
         """
         raise NotImplementedError()
 
@@ -165,7 +165,8 @@ class LocalFileSystem(FileSystem):
         normpath = self._norm_path(path)
         if not self.isdir(normpath):
             raise OSError("Not a directory: '%s'" % normpath)
-        return [self._path_stat(os.path.join(normpath, x)) for x in os.listdir(normpath)]
+        for node in os.listdir(normpath):
+            yield self._path_stat(os.path.join(normpath, node))
 
     def cat(self, path):
         normpath = self._norm_path(path)
@@ -224,7 +225,8 @@ class HDFS(FileSystem):
             raise OSError("Not a directory: '%s'" % normpath)
         gen = self._fs\
             .ls([normpath], recurse=False, include_toplevel=False, include_children=True)
-        return [self._path_stat(x) for x in gen]
+        for node in gen:
+            yield self._path_stat(node)
 
     def cat(self, path):
         normpath = self._norm_path(path)

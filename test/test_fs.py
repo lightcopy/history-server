@@ -187,13 +187,14 @@ class FsSuite(unittest.TestCase):
         client = fs.get()
         # should fail since path is not directory
         with self.assertRaises(OSError):
-            client.listdir("abc")
+            list(client.listdir("abc"))
 
         # test correct case
         mock_os.path.isdir.return_value = True
         mock_path_stat = mock.Mock()
         client._path_stat = mock_path_stat
-        self.assertEquals(len(client.listdir("abc")), 2)
+        res = [x for x in client.listdir("abc")]
+        self.assertEquals(len(res), 2)
         calls = [mock.call("/abc/file1"), mock.call("/abc/file2")]
         mock_path_stat.assert_has_calls(calls)
 
@@ -318,7 +319,7 @@ class FsSuite(unittest.TestCase):
 
         # should fail to list non-directory
         with self.assertRaises(OSError):
-            client.listdir("/path")
+            list(client.listdir("/path"))
 
         # should list directory
         client.isdir.return_value = True
@@ -326,13 +327,15 @@ class FsSuite(unittest.TestCase):
         client._fs.ls.return_value = [{"a": "b"}, {"c": "d"}]
         client._path_stat = mock.Mock()
 
-        self.assertEquals(len(client.listdir("/path")), 2)
+        res = [x for x in client.listdir("/path")]
+        self.assertEquals(len(res), 2)
         client._fs.ls.assert_called_with(
             ["/path"], recurse=False, include_toplevel=False, include_children=True)
         calls = [mock.call({"a": "b"}), mock.call({"c": "d"})]
         client._path_stat.assert_has_calls(calls)
 
-        self.assertEquals(len(client.listdir("hdfs://host:8020/path")), 2)
+        res = [x for x in client.listdir("hdfs://host:8020/path")]
+        self.assertEquals(len(res), 2)
         client._fs.ls.assert_called_with(
             ["/path"], recurse=False, include_toplevel=False, include_children=True)
         calls = [mock.call({"a": "b"}), mock.call({"c": "d"})]
@@ -345,7 +348,7 @@ class FsSuite(unittest.TestCase):
 
         # should fail to cat directory
         with self.assertRaises(OSError):
-            client.cat("/path")
+            list(client.cat("/path"))
 
         # should return iterator when reading file
         client.isdir.return_value = False
