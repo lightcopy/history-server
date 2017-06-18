@@ -218,6 +218,157 @@ class EventProcessSuite(unittest.TestCase):
         self.assertEquals(proc.__repr__(), proc.__str__())
 # pylint: enable=W0212,protected-access
 
+class WatchProcessSuite(unittest.TestCase):
+    @mock.patch("src.hm.fs")
+    def test_watch_process_init(self, mock_fs):
+        fs = mock.Mock()
+        fs.isdir.return_value = True
+        mock_fs.from_path.return_value = fs
+        app_dict = mock.Mock()
+        app_queue = mock.Mock()
+        conns = [mock.Mock()]
+
+        # test valid process
+        proc = hm.WatchProcess(1.2, "/path/to/dir", app_dict, app_queue, conns)
+        self.assertEquals(proc._fs, fs)
+        self.assertEquals(proc._interval, 1.2)
+        self.assertEquals(proc._root, "/path/to/dir")
+        self.assertEquals(proc._apps, app_dict)
+        self.assertEquals(proc._app_queue, app_queue)
+        self.assertEquals(proc._conns, conns)
+
+        # invalid interval
+        with self.assertRaises(ValueError):
+            hm.WatchProcess(0.0, "/path/to/dir", app_dict, app_queue, conns)
+        with self.assertRaises(ValueError):
+            hm.WatchProcess(-1.2, "/path/to/dir", app_dict, app_queue, conns)
+
+        # root is not a directory
+        fs.isdir.return_value = False
+        with self.assertRaises(IOError):
+            proc = hm.WatchProcess(1.2, "/path/to/dir", app_dict, app_queue, conns)
+        fs.isdir.assert_called_with("/path/to/dir")
+
+    @mock.patch("src.hm.fs.from_path")
+    def test_get_applications(self, mock_from_path):
+        status = mock.Mock(file_type="d")
+        fs = mock.Mock()
+        fs.isdir.return_value = True
+        fs.listdir.return_value = [status]
+        mock_from_path.return_value = fs
+
+        # test status as directory
+        proc = hm.WatchProcess(1.2, "/path/to/dir", {}, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(res, [])
+
+        # test status as file and app in progress
+        status = mock.Mock(file_type="f", path="/tmp/app-20170618085827-0000.inprogress")
+        fs.listdir.return_value = [status]
+        proc = hm.WatchProcess(1.2, "/tmp", {}, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(res, [])
+
+        # empty app
+        status = mock.Mock(file_type="f", path="/tmp/invalid-app")
+        fs.listdir.return_value = [status]
+        proc = hm.WatchProcess(1.2, "/tmp", {}, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(res, [])
+
+        # correct new app
+        status = mock.Mock(file_type="f", path="/tmp/app-20170618085827-0000")
+        fs.listdir.return_value = [status]
+        proc = hm.WatchProcess(1.2, "/tmp", {}, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(len(res), 1)
+
+        # correct existing app (SUCCESS)
+        status = mock.Mock(file_type="f", path="/tmp/app-20170618085827-0000")
+        fs.listdir.return_value = [status]
+        app_dict = {"app-20170618085827-0000": mock.Mock(status=hm.APP_SUCCESS)}
+        proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(len(res), 0)
+
+        # correct existing app (PROCESS)
+        status = mock.Mock(file_type="f", path="/tmp/app-20170618085827-0000")
+        fs.listdir.return_value = [status]
+        app_dict = {"app-20170618085827-0000": mock.Mock(status=hm.APP_PROCESS)}
+        proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(len(res), 0)
+
+        # correct failed app, atime < failed time and mtime < failed time
+        status = mock.Mock(
+            file_type="f",
+            path="/tmp/app-20170618085827-0000",
+            access_time=1L,
+            modification_time=1L
+        )
+        fs.listdir.return_value = [status]
+        app_dict = {
+            "app-20170618085827-0000": mock.Mock(status=hm.APP_FAILURE, modification_time=2L)
+        }
+        proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(len(res), 0)
+
+        # correct failed app, mtime > failed time
+        status = mock.Mock(
+            file_type="f",
+            path="/tmp/app-20170618085827-0000",
+            access_time=1L,
+            modification_time=3L
+        )
+        fs.listdir.return_value = [status]
+        app_dict = {
+            "app-20170618085827-0000": mock.Mock(status=hm.APP_FAILURE, modification_time=2L)
+        }
+        proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(len(res), 1)
+
+        # correct failed app with atime and mtime larger than current time
+        status = mock.Mock(
+            file_type="f",
+            path="/tmp/app-20170618085827-0000",
+            access_time=3L,
+            modification_time=3L
+        )
+        fs.listdir.return_value = [status]
+        app_dict = {
+            "app-20170618085827-0000": mock.Mock(status=hm.APP_FAILURE, modification_time=2L)
+        }
+        proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(len(res), 1)
+
+    @mock.patch("src.hm.fs.from_path")
+    def test_process_message(self, mock_from_path):
+        fs = mock.Mock()
+        fs.isdir.return_value = True
+        mock_from_path.return_value = fs
+
+        # test application with success status
+        app_dict = {
+            "123": hm.Application("123", hm.APP_PROCESS, False, "/tmp/123", 1L)
+        }
+        proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
+        proc._process_message({"app_id": "123", "status": hm.APP_SUCCESS, "finish_time": 123L})
+        self.assertEquals(app_dict["123"].status, hm.APP_SUCCESS)
+        self.assertEquals(app_dict["123"].modification_time, 123L)
+
+        # test application with failure status
+        app_dict = {
+            "123": hm.Application("123", hm.APP_PROCESS, False, "/tmp/123", 1L)
+        }
+        proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
+        proc._process_message({"app_id": "123", "status": hm.APP_FAILURE, "finish_time": 123L})
+        self.assertEquals(app_dict["123"].status, hm.APP_FAILURE)
+        self.assertEquals(app_dict["123"].modification_time, 123L)
+
+
 class HistoryManagerSuite(unittest.TestCase):
     pass
 
@@ -225,5 +376,6 @@ def suites():
     return [
         ApplicationSuite,
         EventProcessSuite,
+        WatchProcessSuite,
         HistoryManagerSuite
     ]

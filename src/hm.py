@@ -219,49 +219,89 @@ class EventProcess(multiprocessing.Process):
         return self.__str__()
 
 class WatchProcess(multiprocessing.Process):
-    def __init__(self, interval, root, apps, app_queue, conns):
+    """
+    Main process to search applications and launch event processing.
+    """
+    def __init__(self, interval, root, app_dict, app_queue, conns):
+        """
+        :param interval: interval in seconds
+        :param root: root directory for applications
+        :param app_dict: dictionary of applications with statuses
+        :param app_queue: application queue that event processes listen to
+        :param conns: list of pipe connections to event processes
+        """
         super(WatchProcess, self).__init__()
+        if not interval > 0.0:
+            raise ValueError("Invalid interval %s" % interval)
         self._interval = interval
         self._root = root
         # infer file system that is used to create applications
         self._fs = fs.from_path(root)
+        if not self._fs.isdir(root):
+            raise IOError("Expected directory, found %s" % root)
         # read/write access to applications dict
-        self._apps = apps
+        self._apps = app_dict
         self._app_queue = app_queue
         # pipe connections to all executors
         self._conns = conns
 
     def _get_applications(self):
+        """
+        List all potential applications for processing.
+
+        :return: generator with valid applications
+        """
         for status in self._fs.listdir(self._root):
+            logger.debug("Process status %s", status)
+            # capture files that can be parsed into applications
+            # ignore apps in progress by Spark and apps that are being processed or failed
             if status.file_type == fs.FILETYPE_FILE:
-                yield Application.from_path(status.path)
+                app = Application.try_infer_from_path(status.path)
+                if app and not app.in_progress:
+                    if app.app_id not in self._apps:
+                        # it is a new app, return
+                        logger.debug("New application: %s", app)
+                        yield app
+                    else:
+                        # if app is failed to process we should check status atime or mtime and
+                        # compare it with failure time; if atime or mtime is larger than failure
+                        # time, reload it, otherwise ignore.
+                        app = self._apps[app.app_id]
+                        if app.status == APP_FAILURE and \
+                            (status.access_time >= app.modification_time or \
+                                status.modification_time >= app.modification_time):
+                            app.update_status(APP_PROCESS)
+                            logger.debug("Application: %s has been updated for processing", app)
+                            yield app
+
+    def _process_message(self, message):
+        """
+        Process message and update applications accordingly.
+
+        :param message: message received from event process
+        """
+        logger.debug("Received message %s", message)
+        app = self._apps[message["app_id"]]
+        app.update_status(message["status"], message["finish_time"])
+        logger.info("Updated application %s", app)
+        self._apps[app.app_id] = app
 
     def run(self):
         # periodically check directory and pull new applications
         while True: # pragma: no branch
             logger.debug("Applications before update: %s", self._apps)
             # check if there are messages from event processes
-            logger.info("Process messages")
+            logger.debug("Process messages")
             for conn in self._conns:
                 while conn.poll():
                     # each message is a dictionary
                     message = conn.recv()
-                    logger.debug("Received message %s", message)
-                    app = self._apps[message["app_id"]]
-                    app.update_status(message["status"], message["finish_time"])
-                    logger.info("Updated application %s", app)
-                    self._apps[message["app_id"]] = app
+                    self._process_message(message)
             # check root directory for new applications
             # process only files at the root directory
             logger.info("Search applications")
             for app in self._get_applications():
-                # if app is being processed or is success we do nto schedule application
-                not_schedule = app.app_id in self._apps and (
-                    self._apps[app.app_id].status == APP_PROCESS or \
-                    self._apps[app.app_id].status == APP_SUCCESS)
-                if not_schedule:
-                    continue
-                logger.debug("Schedule application %s", app)
+                logger.info("Schedule application %s", app)
                 self._apps[app.app_id] = app
                 self._app_queue.put_nowait(app)
             time.sleep(self._interval)
