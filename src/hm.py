@@ -212,7 +212,10 @@ class EventProcess(multiprocessing.Process):
             app = EventProcess.get_next_app(self._app_queue)
             if app:
                 logger.debug("%s processing application %s", self._exec_id, app)
+                start_time = util.time_now()
                 self._process_app(app)
+                end_time = util.time_now()
+                logger.info("Processing app %s took %s seconds", app, (end_time - start_time)/1e3)
             time.sleep(self._interval)
 
     def __str__(self):
@@ -295,6 +298,7 @@ class WatchProcess(multiprocessing.Process):
             logger.debug("Applications before update: %s", self._apps)
             # check if there are messages from event processes
             logger.debug("Process messages")
+            start_time = util.time_now()
             for conn in self._conns:
                 while conn.poll():
                     # each message is a dictionary
@@ -302,11 +306,13 @@ class WatchProcess(multiprocessing.Process):
                     self._process_message(message)
             # check root directory for new applications
             # process only files at the root directory
-            logger.info("Search applications")
+            logger.debug("Search applications")
             for app in self._get_applications():
                 logger.info("Schedule application %s", app)
                 self._apps[app.app_id] = app
                 self._app_queue.put_nowait(app)
+            end_time = util.time_now()
+            logger.debug("Iteration took %s seconds", (end_time - start_time)/1e3)
             time.sleep(self._interval)
 
 class HistoryManager(object):
