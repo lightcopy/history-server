@@ -356,6 +356,21 @@ class WatchProcessSuite(unittest.TestCase):
         self.assertEquals(len(res), 1)
         res[0].update_status.assert_called_with(hm.APP_CLEANUP_PROCESS)
 
+        # correct failed app with atime > current time and mtime < current time
+        status = mock.Mock(
+            file_type="f",
+            path="/tmp/app-20170618085827-0000",
+            access_time=3L,
+            modification_time=1L
+        )
+        fsk.listdir.return_value = [status]
+        app_dict = {
+            "app-20170618085827-0000": mock.Mock(status=hm.APP_FAILURE, modification_time=2L)
+        }
+        proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
+        res = list(proc._get_applications())
+        self.assertEquals(len(res), 0)
+
     @mock.patch("src.hm.fs.from_path")
     def test_process_message(self, mock_from_path):
         fsk = mock.Mock()

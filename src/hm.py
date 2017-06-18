@@ -266,13 +266,13 @@ class WatchProcess(multiprocessing.Process):
                         logger.debug("New application: %s", app)
                         yield app
                     else:
-                        # if app is failed to process we should check status atime or mtime and
-                        # compare it with failure time; if atime or mtime is larger than failure
-                        # time, reload it with cleanup of the previous state, otherwise ignore.
+                        # if app is failed to process we should check status or mtime and compare
+                        # it with failure time; if mtime is larger than failure time (content
+                        # modification time), reload it with cleanup of the previous state,
+                        # otherwise ignore.
                         app = self._apps[app.app_id]
                         if app.status == APP_FAILURE and \
-                            (status.access_time >= app.modification_time or \
-                                status.modification_time >= app.modification_time):
+                                status.modification_time >= app.modification_time:
                             app.update_status(APP_CLEANUP_PROCESS)
                             logger.debug("Application: %s has been updated for processing", app)
                             yield app
