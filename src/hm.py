@@ -29,6 +29,8 @@ import src.util as util
 # processing statuses
 # application has been queued or is being processed
 APP_PROCESS = "PROCESS"
+# application requires cleanup of previous state, usually when failed application is restarted
+APP_CLEANUP_PROCESS = "CLEANUP_PROCESS"
 # application is successfully loaded
 APP_SUCCESS = "SUCCESS"
 # application is failed to load
@@ -181,6 +183,7 @@ class EventProcess(multiprocessing.Process):
         """
         logger.info("Start processing application %s", app)
         # Add another case for exceptions that process can tolerate
+        # Make sure to perform cleanup of the previous state if required
         try:
             time.sleep(50.0)
         except StandardError as serr:
@@ -265,12 +268,12 @@ class WatchProcess(multiprocessing.Process):
                     else:
                         # if app is failed to process we should check status atime or mtime and
                         # compare it with failure time; if atime or mtime is larger than failure
-                        # time, reload it, otherwise ignore.
+                        # time, reload it with cleanup of the previous state, otherwise ignore.
                         app = self._apps[app.app_id]
                         if app.status == APP_FAILURE and \
                             (status.access_time >= app.modification_time or \
                                 status.modification_time >= app.modification_time):
-                            app.update_status(APP_PROCESS)
+                            app.update_status(APP_CLEANUP_PROCESS)
                             logger.debug("Application: %s has been updated for processing", app)
                             yield app
 
@@ -320,7 +323,11 @@ class HistoryManager(object):
         :param interval: refresh interval for directory, in seconds
         """
         self._root = root
-        self._num_processes = num_processes
+        if num_processes <= 0:
+            raise ValueError("Invalid number of processes: %s" % num_processes)
+        self._num_processes = int(num_processes)
+        if interval <= 0.0:
+            raise ValueError("Invalid interval: %s" % interval)
         self._interval = interval
         # internal refresh interval for queue in executor process
         self._exec_interval = 1.0
@@ -336,15 +343,38 @@ class HistoryManager(object):
         # watch process
         self._watch = None
 
-    def _prepare_executor(self, exec_id, interval, app_queue):
+    @staticmethod
+    def prepare_event_process(exec_id, interval, app_queue):
+        """
+        Prepare event process and comminucation pipe.
+
+        :param exec_id: process name
+        :param interval: refresh interval in seconds
+        :param app_queue: application queue
+        :return: tuple (event process, pipe end)
+        """
         main_conn, exc_conn = multiprocessing.Pipe()
         exc = EventProcess(exec_id, interval, app_queue, exc_conn)
         return exc, main_conn
 
-    def _prepare_watch(self, interval, root, apps, app_queue, conns):
+    @staticmethod
+    def prepare_watch_process(interval, root, apps, app_queue, conns):
+        """
+        Prepare watch process with all comminucation pipes and list of applications.
+
+        :param interval: interval in seconds
+        :param root: root directory to search
+        :param apps: initial dictionary with apps
+        :param app_queue: application queue
+        :param conns: list of pipe connections
+        :return: watch process
+        """
         return WatchProcess(interval, root, apps, app_queue, conns)
 
     def _clean_up_state(self):
+        """
+        Clean up existing state, this involves removing data from db.
+        """
         self._app_queue = None
         self._executors = None
         self._watch = None
@@ -352,35 +382,48 @@ class HistoryManager(object):
         self._apps = None
 
     def app_status(self, app_id):
-        return self._apps[app_id] if app_id in self._apps else None
+        """
+        Fetch current application status for app id.
+        If application does not exist, return None.
+
+        :param app_id: app id
+        :return: status or None if app does not exist
+        """
+        return self._apps[app_id].status if app_id in self._apps else None
 
     def start(self):
+        """
+        Start history manager and daemon threads.
+        """
         logger.info("Start manager")
         pipe_conns = []
         for i in range(self._num_processes):
-            exc, pipe_conn = self._prepare_executor(
-                "executor-%s" % i, self._exec_interval, self._app_queue)
+            exc, pipe_conn = HistoryManager.prepare_event_process(
+                "event_process-%s" % i, self._exec_interval, self._app_queue)
             self._executors.append(exc)
             pipe_conns.append(pipe_conn)
-            logger.info("Start executor %s", exc.exec_id)
+            logger.info("Start event process %s", exc)
             exc.start()
         # prepare watch process
         logger.info("Start watch process")
-        self._watch = self._prepare_watch(
+        self._watch = HistoryManager.prepare_watch_process(
             self._interval, self._root, self._apps, self._app_queue, pipe_conns)
         self._watch.start()
 
     def stop(self):
+        """
+        Stop history manager and clean up state.
+        """
         logger.info("Stop manager")
         # terminate watch process first
         if self._watch.is_alive():
             logger.info("Stop watch process")
             self._watch.terminate()
         self._watch.join()
-        # terminate executors
+        # terminate event processes
         for exc in self._executors:
             if exc.is_alive():
-                logger.info("Stop executor %s", exc.exec_id)
+                logger.info("Stop event process %s", exc)
                 exc.terminate()
             exc.join()
         logger.info("Clean up manager state")

@@ -291,6 +291,7 @@ class WatchProcessSuite(unittest.TestCase):
         proc = hm.WatchProcess(1.2, "/tmp", {}, mock.Mock(), [mock.Mock()])
         res = list(proc._get_applications())
         self.assertEquals(len(res), 1)
+        self.assertEquals(res[0].status, hm.APP_PROCESS)
 
         # correct existing app (SUCCESS)
         status = mock.Mock(file_type="f", path="/tmp/app-20170618085827-0000")
@@ -337,6 +338,7 @@ class WatchProcessSuite(unittest.TestCase):
         proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
         res = list(proc._get_applications())
         self.assertEquals(len(res), 1)
+        res[0].update_status.assert_called_with(hm.APP_CLEANUP_PROCESS)
 
         # correct failed app with atime and mtime larger than current time
         status = mock.Mock(
@@ -352,6 +354,7 @@ class WatchProcessSuite(unittest.TestCase):
         proc = hm.WatchProcess(1.2, "/tmp", app_dict, mock.Mock(), [mock.Mock()])
         res = list(proc._get_applications())
         self.assertEquals(len(res), 1)
+        res[0].update_status.assert_called_with(hm.APP_CLEANUP_PROCESS)
 
     @mock.patch("src.hm.fs.from_path")
     def test_process_message(self, mock_from_path):
@@ -378,8 +381,133 @@ class WatchProcessSuite(unittest.TestCase):
         self.assertEquals(app_dict["123"].modification_time, 123L)
 # pylint: enable=W0212,protected-access
 
+# pylint: disable=W0212,protected-access
 class HistoryManagerSuite(unittest.TestCase):
-    pass
+    def test_init(self):
+        manager = hm.HistoryManager("/tmp", num_processes=2, interval=5.0)
+
+        self.assertEquals(manager._root, "/tmp")
+        self.assertEquals(manager._num_processes, 2)
+        self.assertEquals(manager._interval, 5.0)
+        self.assertEquals(manager._exec_interval, 1.0)
+        self.assertEquals(manager._executors, [])
+        self.assertEquals(manager._watch, None)
+
+        with self.assertRaises(ValueError):
+            hm.HistoryManager("/tmp", num_processes=0, interval=5.0)
+        with self.assertRaises(ValueError):
+            hm.HistoryManager("/tmp", num_processes=-1, interval=5.0)
+
+        with self.assertRaises(ValueError):
+            hm.HistoryManager("/tmp", num_processes=2, interval=0.0)
+        with self.assertRaises(ValueError):
+            hm.HistoryManager("/tmp", num_processes=2, interval=-1.0)
+
+    def test_prepare_event_process(self):
+        exc, conn = hm.HistoryManager.prepare_event_process("ep-123", 12.3, mock.Mock())
+        self.assertTrue(conn is not None)
+        self.assertTrue(isinstance(exc, hm.EventProcess))
+        self.assertEquals(exc.__str__(), "{exec_id: ep-123, interval: 12.3}")
+
+    @mock.patch("src.hm.fs")
+    def test_prepare_watch_process(self, mock_fs):
+        mock_fs.from_path.return_value = mock.Mock()
+        res = hm.HistoryManager.prepare_watch_process(
+            12.3, "/abc", mock.Mock(), mock.Mock(), [mock.Mock()])
+        self.assertTrue(isinstance(res, hm.WatchProcess))
+        self.assertEquals(res._interval, 12.3)
+        self.assertEquals(res._root, "/abc")
+
+    def test_clean_up_state(self):
+        manager = hm.HistoryManager("/abc")
+        manager._clean_up_state()
+        self.assertEquals(manager._app_queue, None)
+        self.assertEquals(manager._executors, None)
+        self.assertEquals(manager._watch, None)
+        self.assertEquals(manager._apps, None)
+
+    def test_app_status(self):
+        manager = hm.HistoryManager("/abc")
+        manager._apps = {
+            "app-1": mock.Mock(status=hm.APP_PROCESS),
+            "app-2": mock.Mock(status=hm.APP_SUCCESS)
+        }
+        self.assertEquals(manager.app_status("app-1"), hm.APP_PROCESS)
+        self.assertEquals(manager.app_status("app-2"), hm.APP_SUCCESS)
+        self.assertEquals(manager.app_status("app-3"), None)
+
+    def test_start(self):
+        event_pr, conn = mock.Mock(), mock.Mock()
+        watch_pr = mock.Mock()
+        hm.HistoryManager.prepare_event_process = mock.Mock()
+        hm.HistoryManager.prepare_event_process.return_value = (event_pr, conn)
+        hm.HistoryManager.prepare_watch_process = mock.Mock()
+        hm.HistoryManager.prepare_watch_process.return_value = watch_pr
+
+        manager = hm.HistoryManager("/abc", num_processes=3, interval=4.3)
+        manager.start()
+
+        # internal interval is 1.0 seconds
+        calls = [
+            mock.call("event_process-0", 1.0, manager._app_queue),
+            mock.call("event_process-1", 1.0, manager._app_queue),
+            mock.call("event_process-2", 1.0, manager._app_queue)
+        ]
+        hm.HistoryManager.prepare_event_process.assert_has_calls(calls)
+        self.assertEquals(manager._executors, [event_pr, event_pr, event_pr])
+        event_pr.start.assert_has_calls([mock.call(), mock.call(), mock.call()])
+
+        calls = [
+            mock.call(4.3, "/abc", manager._apps, manager._app_queue, [conn, conn, conn])
+        ]
+        hm.HistoryManager.prepare_watch_process.assert_has_calls(calls)
+        watch_pr.start.assert_has_calls([mock.call()])
+
+
+    def test_stop(self):
+        event_pr, conn = mock.Mock(), mock.Mock()
+        event_pr.is_alive.return_value = True
+        watch_pr = mock.Mock()
+        watch_pr.is_alive.return_value = True
+        hm.HistoryManager.prepare_event_process = mock.Mock()
+        hm.HistoryManager.prepare_event_process.return_value = (event_pr, conn)
+        hm.HistoryManager.prepare_watch_process = mock.Mock()
+        hm.HistoryManager.prepare_watch_process.return_value = watch_pr
+
+        manager = hm.HistoryManager("/abc", num_processes=3, interval=4.3)
+        manager.start()
+        manager.stop()
+
+        # assertions
+        watch_pr.is_alive.assert_called_with()
+        watch_pr.terminate.assert_called_with()
+        watch_pr.join.assert_called_with()
+        event_pr.is_alive.assert_has_calls([mock.call(), mock.call(), mock.call()])
+        event_pr.terminate.assert_has_calls([mock.call(), mock.call(), mock.call()])
+        event_pr.join.assert_has_calls([mock.call(), mock.call(), mock.call()])
+
+    def test_stop_no_processes(self):
+        # test when watch and event processes are already terminated
+        event_pr, conn = mock.Mock(), mock.Mock()
+        event_pr.is_alive.return_value = False
+        watch_pr = mock.Mock()
+        watch_pr.is_alive.return_value = False
+        hm.HistoryManager.prepare_event_process = mock.Mock()
+        hm.HistoryManager.prepare_event_process.return_value = (event_pr, conn)
+        hm.HistoryManager.prepare_watch_process = mock.Mock()
+        hm.HistoryManager.prepare_watch_process.return_value = watch_pr
+
+        manager = hm.HistoryManager("/abc", num_processes=3, interval=4.3)
+        manager.start()
+        manager.stop()
+
+        watch_pr.is_alive.assert_called_with()
+        watch_pr.terminate.assert_has_calls([])
+        watch_pr.join.assert_called_with()
+        event_pr.is_alive.assert_has_calls([mock.call(), mock.call(), mock.call()])
+        event_pr.terminate.assert_has_calls([])
+        event_pr.join.assert_has_calls([mock.call(), mock.call(), mock.call()])
+# pylint: enable=W0212,protected-access
 
 def suites():
     return [
