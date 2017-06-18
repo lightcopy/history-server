@@ -17,9 +17,13 @@
 # limitations under the License.
 #
 
+import Queue as threadqueue
 import unittest
 import mock
 import src.hm as hm
+
+# mock logger to remove verbose output
+hm.logger = mock.Mock()
 
 # pylint: disable=W0212,protected-access
 class ApplicationSuite(unittest.TestCase):
@@ -135,11 +139,91 @@ class ApplicationSuite(unittest.TestCase):
         self.assertEquals(app.__repr__(), res)
 # pylint: enable=W0212,protected-access
 
+# pylint: disable=W0212,protected-access
+class EventProcessSuite(unittest.TestCase):
+    def test_event_process_init(self):
+        # create event process with valid attributes
+        queue = mock.Mock()
+        conn = mock.Mock()
+        proc = hm.EventProcess("exec_id", 1.2, queue, conn)
+        self.assertEquals(proc._exec_id, "exec_id")
+        self.assertEquals(proc._interval, 1.2)
+        self.assertEquals(proc._app_queue, queue)
+        self.assertEquals(proc._conn, conn)
+
+        # fail to create because of the invalid interval
+        with self.assertRaises(ValueError):
+            hm.EventProcess("exec_id", 0.0, queue, conn)
+        with self.assertRaises(ValueError):
+            hm.EventProcess("exec_id", -1.0, queue, conn)
+
+    def test_get_next_app(self):
+        # mock queue, returns dummy dictionary as application
+        app = mock.Mock()
+        queue = mock.Mock()
+        queue.get.return_value = app
+        self.assertEquals(hm.EventProcess.get_next_app(queue), app)
+        queue.get.assert_called_with(block=False)
+
+        # test when queue is empty
+        queue.get.side_effect = threadqueue.Empty()
+        self.assertEquals(hm.EventProcess.get_next_app(queue), None)
+
+    @mock.patch("src.hm.time")
+    def test_process_app_err_1(self, mock_time):
+        # Update test once process_app is modified to process event log
+        app = mock.Mock()
+        proc = hm.EventProcess("exec_id", 1.2, mock.Mock(), mock.Mock())
+
+        mock_time.sleep.side_effect = Exception("Test")
+        with self.assertRaises(Exception):
+            proc._process_app(app)
+
+    @mock.patch("src.hm.time")
+    def test_process_app_err_2(self, mock_time):
+        # Update test once process_app is modified to process event log
+        app = mock.Mock()
+        proc = hm.EventProcess("exec_id", 1.2, mock.Mock(), mock.Mock())
+
+        mock_time.sleep.side_effect = KeyboardInterrupt("Test")
+        with self.assertRaises(KeyboardInterrupt):
+            proc._process_app(app)
+
+    @mock.patch("src.hm.time")
+    @mock.patch("src.hm.util")
+    def test_process_app_ok(self, mock_util, mock_time):
+        # Update test once process_app is modified to process event log
+        app = mock.Mock()
+        app.app_id = "app"
+        conn = mock.Mock()
+        proc = hm.EventProcess("exec_id", 1.2, mock.Mock(), conn)
+
+        mock_time.sleep.side_effect = StandardError("Test")
+        mock_util.time_now.return_value = 123L
+        proc._process_app(app)
+        conn.send.assert_called_with(
+            {"app_id": "app", "status": hm.APP_FAILURE, "finish_time": 123L})
+
+        # case when no exception is thrown
+        mock_time.sleep.side_effect = None
+        mock_util.time_now.return_value = 123L
+        proc._process_app(app)
+        conn.send.assert_called_with(
+            {"app_id": "app", "status": hm.APP_SUCCESS, "finish_time": 123L})
+
+    def test_str_repr(self):
+        proc = hm.EventProcess("id", 1.2, mock.Mock(), mock.Mock())
+        res = "%s" % proc
+        self.assertEquals(res, "{exec_id: id, interval: 1.2}")
+        self.assertEquals(proc.__repr__(), proc.__str__())
+# pylint: enable=W0212,protected-access
+
 class HistoryManagerSuite(unittest.TestCase):
     pass
 
 def suites():
     return [
         ApplicationSuite,
+        EventProcessSuite,
         HistoryManagerSuite
     ]

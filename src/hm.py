@@ -139,40 +139,84 @@ class Application(object):
         return self.__str__()
 
 class EventProcess(multiprocessing.Process):
+    """
+    Event processing thread that reads application logs synchronously.
+    """
     def __init__(self, exec_id, interval, app_queue, exc_conn):
+        """
+        :param exec_id: unique executor id, used as a name for the process
+        :param interval: interval in seconds
+        :param app_queue: multiprocessing queue with applications
+        :param exc_conn: pipe connection to communicate with watch process
+        """
         super(EventProcess, self).__init__()
         self.daemon = True
-        self._exec_id = exec_id
+        self._exec_id = str(exec_id)
         self._conn = exc_conn
         self._app_queue = app_queue
+        if not interval > 0.0:
+            raise ValueError("Invalid interval %s" % interval)
         self._interval = interval
 
-    @property
-    def exec_id(self):
-        return self._exec_id
+    @staticmethod
+    def get_next_app(queue):
+        """
+        Get next application from provided queue.
+        If queue does not have any apps, None is returned.
+
+        :param queue: multiprocessing queue
+        :return: appication or None if queue is empty
+        """
+        try:
+            return queue.get(block=False)
+        except threadqueue.Empty:
+            return None
 
     def _process_app(self, app):
-        # process application
+        """
+        Internal method to process application, app is guaranteed to be not None.
+        After processing is done, message is sent to watch process with appropriate status.
+
+        :param app: application to process
+        """
         logger.info("Start processing application %s", app)
-        time.sleep(50.0)
-        logger.info("Finish processing application %s", app)
-        msg = {"app_id": app.app_id, "status": APP_SUCCESS, "finish_time": util.time_now()}
-        self._conn.send(msg)
+        # Add another case for exceptions that process can tolerate
+        try:
+            time.sleep(50.0)
+        except StandardError as serr:
+            # we can tolerate standard error, log exception and send message to watch process
+            # also perform state cleanup
+            logger.error("Failed to process application %s, err: %s", app, serr)
+            msg = {"app_id": app.app_id, "status": APP_FAILURE, "finish_time": util.time_now()}
+            self._conn.send(msg)
+        except Exception as err:
+            logger.exception("Failed to process application %s, err: %s", app, err)
+            raise err
+        except KeyboardInterrupt as kint:
+            logger.exception("Process %s is interrupted, err: %s", app, kint)
+            raise kint
+        else:
+            logger.info("Finish processing application %s", app)
+            msg = {"app_id": app.app_id, "status": APP_SUCCESS, "finish_time": util.time_now()}
+            self._conn.send(msg)
 
     def run(self):
-        # processing is synchronous, we only check next task when previous one is either failed or
-        # processed successfully
+        """
+        Run method for the process. We periodically check for available application and launch
+        processing. Each application is processed synchronously.
+        """
         while True: # pragma: no branch
-            # check if new application is available
-            app = None
-            try:
-                app = self._app_queue.get(block=False)
-            except threadqueue.Empty:
-                logger.debug("%s - no tasks available", self.exec_id)
+            app = EventProcess.get_next_app(self._app_queue)
             if app:
-                logger.debug("%s - process application %s", self.exec_id, app)
+                logger.debug("%s processing application %s", self._exec_id, app)
                 self._process_app(app)
             time.sleep(self._interval)
+
+    def __str__(self):
+        return "{exec_id: %s, interval: %s}" % (self._exec_id, self._interval)
+
+    def __repr__(self):
+        return self.__str__()
 
 class WatchProcess(multiprocessing.Process):
     def __init__(self, interval, root, apps, app_queue, conns):
