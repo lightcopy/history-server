@@ -15,4 +15,7 @@ rm -rf $ROOT_DIR/static
 # delete distribution files (directory and generated MANIFEST)
 rm -rf $ROOT_DIR/history-server.egg-info
 rm -f $ROOT_DIR/MANIFEST
+
+# delete misc files
 rm -f $ROOT_DIR/.coverage
+rm -f $ROOT_DIR/history-server.log
