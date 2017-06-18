@@ -49,7 +49,6 @@ conf_dict = {
 # try loading configuration file, if not found, leave default
 
 if os.path.exists(conf_file): # pragma: no cover
-    print "[INFO] Loading configuration from '%s'" % conf_file
     logging.config.fileConfig(conf_file)
 else: # pragma: no cover
     print "[WARN] Configuration is not found for '%s'" % conf_file
