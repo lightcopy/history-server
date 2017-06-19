@@ -181,7 +181,7 @@ class EventProcess(multiprocessing.Process):
 
         :param app: application to process
         """
-        logger.info("Start processing application %s", app)
+        logger.info("%s: start processing application %s", self._exec_id, app)
         # Add another case for exceptions that process can tolerate
         # Make sure to perform cleanup of the previous state if required
         try:
@@ -189,17 +189,17 @@ class EventProcess(multiprocessing.Process):
         except StandardError as serr:
             # we can tolerate standard error, log exception and send message to watch process
             # also perform state cleanup
-            logger.error("Failed to process application %s, err: %s", app, serr)
+            logger.error("%s: failed to process application %s, err: %s", self._exec_id, app, serr)
             msg = {"app_id": app.app_id, "status": APP_FAILURE, "finish_time": util.time_now()}
             self._conn.send(msg)
         except Exception as err:
             logger.exception("Failed to process application %s, err: %s", app, err)
             raise err
         except KeyboardInterrupt as kint:
-            logger.exception("Process %s is interrupted, err: %s", app, kint)
+            logger.exception("%s: process %s is interrupted, err: %s", self._exec_id, app, kint)
             raise kint
         else:
-            logger.info("Finish processing application %s", app)
+            logger.info("%s: finish processing application %s", self._exec_id, app)
             msg = {"app_id": app.app_id, "status": APP_SUCCESS, "finish_time": util.time_now()}
             self._conn.send(msg)
 
@@ -211,11 +211,11 @@ class EventProcess(multiprocessing.Process):
         while True: # pragma: no branch
             app = EventProcess.get_next_app(self._app_queue)
             if app:
-                logger.debug("%s processing application %s", self._exec_id, app)
                 start_time = util.time_now()
                 self._process_app(app)
                 end_time = util.time_now()
-                logger.info("Processing app %s took %s seconds", app, (end_time - start_time)/1e3)
+                logger.info("%s: processing app %s took %s seconds", self._exec_id, app,
+                            (end_time - start_time) / 1e3)
             time.sleep(self._interval)
 
     def __str__(self):
