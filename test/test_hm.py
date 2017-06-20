@@ -145,17 +145,18 @@ class EventProcessSuite(unittest.TestCase):
         # create event process with valid attributes
         queue = mock.Mock()
         conn = mock.Mock()
-        proc = hm.EventProcess("exec_id", 1.2, queue, conn)
+        proc = hm.EventProcess("exec_id", "mongo_uri", 1.2, queue, conn)
         self.assertEquals(proc._exec_id, "exec_id")
+        self.assertEquals(proc._mongo_uri, "mongo_uri")
         self.assertEquals(proc._interval, 1.2)
         self.assertEquals(proc._app_queue, queue)
         self.assertEquals(proc._conn, conn)
 
         # fail to create because of the invalid interval
         with self.assertRaises(ValueError):
-            hm.EventProcess("exec_id", 0.0, queue, conn)
+            hm.EventProcess("exec_id", "mongo", 0.0, queue, conn)
         with self.assertRaises(ValueError):
-            hm.EventProcess("exec_id", -1.0, queue, conn)
+            hm.EventProcess("exec_id", "mongo", -1.0, queue, conn)
 
     def test_get_next_app(self):
         # mock queue, returns dummy dictionary as application
@@ -173,7 +174,7 @@ class EventProcessSuite(unittest.TestCase):
     def test_process_app_err_1(self, mock_time):
         # Update test once process_app is modified to process event log
         app = mock.Mock()
-        proc = hm.EventProcess("exec_id", 1.2, mock.Mock(), mock.Mock())
+        proc = hm.EventProcess("exec_id", "mongo", 1.2, mock.Mock(), mock.Mock())
 
         mock_time.sleep.side_effect = Exception("Test")
         with self.assertRaises(Exception):
@@ -183,7 +184,7 @@ class EventProcessSuite(unittest.TestCase):
     def test_process_app_err_2(self, mock_time):
         # Update test once process_app is modified to process event log
         app = mock.Mock()
-        proc = hm.EventProcess("exec_id", 1.2, mock.Mock(), mock.Mock())
+        proc = hm.EventProcess("exec_id", "mongo", 1.2, mock.Mock(), mock.Mock())
 
         mock_time.sleep.side_effect = KeyboardInterrupt("Test")
         with self.assertRaises(KeyboardInterrupt):
@@ -196,7 +197,7 @@ class EventProcessSuite(unittest.TestCase):
         app = mock.Mock()
         app.app_id = "app"
         conn = mock.Mock()
-        proc = hm.EventProcess("exec_id", 1.2, mock.Mock(), conn)
+        proc = hm.EventProcess("exec_id", "mongo", 1.2, mock.Mock(), conn)
 
         mock_time.sleep.side_effect = StandardError("Test")
         mock_util.time_now.return_value = 123L
@@ -212,9 +213,9 @@ class EventProcessSuite(unittest.TestCase):
             {"app_id": "app", "status": hm.APP_SUCCESS, "finish_time": 123L})
 
     def test_str_repr(self):
-        proc = hm.EventProcess("id", 1.2, mock.Mock(), mock.Mock())
+        proc = hm.EventProcess("id", "mongo", 1.2, mock.Mock(), mock.Mock())
         res = "%s" % proc
-        self.assertEquals(res, "{exec_id: id, interval: 1.2}")
+        self.assertEquals(res, "{exec_id: id, mongo_uri: mongo, interval: 1.2}")
         self.assertEquals(proc.__repr__(), proc.__str__())
 # pylint: enable=W0212,protected-access
 
@@ -399,9 +400,10 @@ class WatchProcessSuite(unittest.TestCase):
 # pylint: disable=W0212,protected-access
 class HistoryManagerSuite(unittest.TestCase):
     def test_init(self):
-        manager = hm.HistoryManager("/tmp", num_processes=2, interval=5.0)
+        manager = hm.HistoryManager("/tmp", num_processes=2, interval=5.0, mongo_uri="mongo")
 
         self.assertEquals(manager._root, "/tmp")
+        self.assertEquals(manager._mongo_uri, "mongo")
         self.assertEquals(manager._num_processes, 2)
         self.assertEquals(manager._interval, 5.0)
         self.assertEquals(manager._exec_interval, 1.0)
@@ -419,10 +421,10 @@ class HistoryManagerSuite(unittest.TestCase):
             hm.HistoryManager("/tmp", num_processes=2, interval=-1.0)
 
     def test_prepare_event_process(self):
-        exc, conn = hm.HistoryManager.prepare_event_process("ep-123", 12.3, mock.Mock())
+        exc, conn = hm.HistoryManager.prepare_event_process("ep-123", "mongo", 12.3, mock.Mock())
         self.assertTrue(conn is not None)
         self.assertTrue(isinstance(exc, hm.EventProcess))
-        self.assertEquals(exc.__str__(), "{exec_id: ep-123, interval: 12.3}")
+        self.assertEquals(exc.__str__(), "{exec_id: ep-123, mongo_uri: mongo, interval: 12.3}")
 
     @mock.patch("src.hm.fs")
     def test_prepare_watch_process(self, mock_fs):
@@ -440,6 +442,7 @@ class HistoryManagerSuite(unittest.TestCase):
         self.assertEquals(manager._executors, None)
         self.assertEquals(manager._watch, None)
         self.assertEquals(manager._apps, None)
+        self.assertEquals(manager._mongo_uri, None)
 
     def test_app_status(self):
         manager = hm.HistoryManager("/abc")
@@ -459,14 +462,14 @@ class HistoryManagerSuite(unittest.TestCase):
         hm.HistoryManager.prepare_watch_process = mock.Mock()
         hm.HistoryManager.prepare_watch_process.return_value = watch_pr
 
-        manager = hm.HistoryManager("/abc", num_processes=3, interval=4.3)
+        manager = hm.HistoryManager("/abc", num_processes=3, interval=4.3, mongo_uri="mongo")
         manager.start()
 
         # internal interval is 1.0 seconds
         calls = [
-            mock.call("event_process-0", 1.0, manager._app_queue),
-            mock.call("event_process-1", 1.0, manager._app_queue),
-            mock.call("event_process-2", 1.0, manager._app_queue)
+            mock.call("event_process-0", "mongo", 1.0, manager._app_queue),
+            mock.call("event_process-1", "mongo", 1.0, manager._app_queue),
+            mock.call("event_process-2", "mongo", 1.0, manager._app_queue)
         ]
         hm.HistoryManager.prepare_event_process.assert_has_calls(calls)
         self.assertEquals(manager._executors, [event_pr, event_pr, event_pr])

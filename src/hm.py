@@ -37,7 +37,7 @@ APP_SUCCESS = "SUCCESS"
 APP_FAILURE = "FAILURE"
 
 # logger for module
-logger = log.getLogger("history-manager")
+logger = log.getLogger(__name__)
 
 class Application(object):
     """
@@ -144,9 +144,10 @@ class EventProcess(multiprocessing.Process):
     """
     Event processing thread that reads application logs synchronously.
     """
-    def __init__(self, exec_id, interval, app_queue, exc_conn):
+    def __init__(self, exec_id, mongo_uri, interval, app_queue, exc_conn):
         """
         :param exec_id: unique executor id, used as a name for the process
+        :param mongo_uri: MongoDB URI to connect to database
         :param interval: interval in seconds
         :param app_queue: multiprocessing queue with applications
         :param exc_conn: pipe connection to communicate with watch process
@@ -154,6 +155,7 @@ class EventProcess(multiprocessing.Process):
         super(EventProcess, self).__init__()
         self.daemon = True
         self._exec_id = str(exec_id)
+        self._mongo_uri = mongo_uri
         self._conn = exc_conn
         self._app_queue = app_queue
         if not interval > 0.0:
@@ -219,7 +221,8 @@ class EventProcess(multiprocessing.Process):
             time.sleep(self._interval)
 
     def __str__(self):
-        return "{exec_id: %s, interval: %s}" % (self._exec_id, self._interval)
+        return "{exec_id: %s, mongo_uri: %s, interval: %s}" % (
+            self._exec_id, self._mongo_uri, self._interval)
 
     def __repr__(self):
         return self.__str__()
@@ -319,7 +322,7 @@ class HistoryManager(object):
     """
     History manager maintains state and progress of loading and processing new applications.
     """
-    def __init__(self, root, num_processes=1, interval=5.0):
+    def __init__(self, root, num_processes=1, interval=5.0, mongo_uri=None):
         """
         Create history manager for file system folder with number of executor processes and refresh
         interval for directory.
@@ -348,19 +351,22 @@ class HistoryManager(object):
         self._executors = []
         # watch process
         self._watch = None
+        # mongo db uri
+        self._mongo_uri = mongo_uri
 
     @staticmethod
-    def prepare_event_process(exec_id, interval, app_queue):
+    def prepare_event_process(exec_id, mongo_uri, interval, app_queue):
         """
         Prepare event process and comminucation pipe.
 
         :param exec_id: process name
+        :param mongo_uri: MongoDB URI
         :param interval: refresh interval in seconds
         :param app_queue: application queue
         :return: tuple (event process, pipe end)
         """
         main_conn, exc_conn = multiprocessing.Pipe()
-        exc = EventProcess(exec_id, interval, app_queue, exc_conn)
+        exc = EventProcess(exec_id, mongo_uri, interval, app_queue, exc_conn)
         return exc, main_conn
 
     @staticmethod
@@ -385,6 +391,7 @@ class HistoryManager(object):
         self._executors = None
         self._watch = None
         # also update statuses for applications
+        self._mongo_uri = None
         self._apps = None
 
     def app_status(self, app_id):
@@ -402,10 +409,12 @@ class HistoryManager(object):
         Start history manager and daemon threads.
         """
         logger.info("Start manager")
+        # fetch applications from mongo
+        self._apps = []
         pipe_conns = []
         for i in range(self._num_processes):
             exc, pipe_conn = HistoryManager.prepare_event_process(
-                "event_process-%s" % i, self._exec_interval, self._app_queue)
+                "event_process-%s" % i, self._mongo_uri, self._exec_interval, self._app_queue)
             self._executors.append(exc)
             pipe_conns.append(pipe_conn)
             logger.info("Start event process %s", exc)
