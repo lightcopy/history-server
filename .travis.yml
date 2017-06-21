@@ -1,22 +1,13 @@
-language: python
-
+language: scala
+sudo: false
+cache:
+  directories:
+    - $HOME/.ivy2
+    - $HOME/.sbt/launchers
 matrix:
   include:
-    - python: 2.7
-
-before_install:
-  - sudo apt-get update
-
-install:
-  - pip install coveralls
-  # install python dependencies
-  - pip install -r requirements.txt --upgrade --target lib/
-  - touch lib/google/__init__.py
-
+    - jdk: openjdk7
+      scala: 2.11.7
 script:
-  # python, we run lint with coverage and display coverage output
-  - bin/pylint --python=python
-  - bin/coverage --python=python
-
-after_success:
-  coveralls
+  - sbt compile test
+  - sbt assembly
