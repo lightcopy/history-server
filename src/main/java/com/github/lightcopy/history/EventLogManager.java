@@ -18,7 +18,11 @@ package com.github.lightcopy.history;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -35,15 +39,22 @@ class EventLogManager {
   private Path root;
   private WatchProcess watchProcess;
   private Thread watchProcessThread;
+  // map of all event logs that have been processed so far (provides guarantee)
+  // content of the map should eventually be consistent with database
+  private ConcurrentHashMap<String, EventLog> eventLogs;
+  // queue with event logs ready to be processed
+  private BlockingQueue<EventLog> queue;
 
   public EventLogManager(FileSystem fs, String rootDirectory) {
     this.fs = fs;
     this.root = new Path(rootDirectory);
+    this.eventLogs = new ConcurrentHashMap<String, EventLog>();
+    this.queue = new LinkedBlockingQueue<EventLog>();
   }
 
   public void start() {
     LOG.info("Start event log manager");
-    this.watchProcess = new WatchProcess(this.fs, this.root);
+    this.watchProcess = new WatchProcess(this.fs, this.root, this.eventLogs, this.queue);
     this.watchProcessThread = new Thread(this.watchProcess);
     LOG.info("Start watch thread {}", this.watchProcessThread);
     this.watchProcessThread.start();
@@ -75,11 +86,18 @@ class EventLogManager {
     public static final int POLLING_INTERVAL_MS = 1250;
 
     private final FileSystem fs;
+    private final Path root;
+    private final ConcurrentHashMap<String, EventLog> eventLogs;
+    private final BlockingQueue<EventLog> queue;
     private final Random rand;
     private volatile boolean stopped;
 
-    public WatchProcess(FileSystem fs, Path root) {
+    public WatchProcess(FileSystem fs, Path root, ConcurrentHashMap<String, EventLog> eventLogs,
+        BlockingQueue<EventLog> queue) {
       this.fs = fs;
+      this.root = root;
+      this.eventLogs = eventLogs;
+      this.queue = queue;
       this.rand = new Random();
       this.stopped = false;
     }
@@ -88,6 +106,36 @@ class EventLogManager {
     public void run() {
       while (!this.stopped) {
         try {
+          FileStatus[] statuses = fs.listStatus(this.root);
+          if (statuses != null && statuses.length > 0) {
+            for (FileStatus status : statuses) {
+              if (status.isFile()) {
+                EventLog log = EventLog.fromStatus(status);
+                LOG.debug("Found event log " + log);
+                // we only schedule applications that are newly added or existing with failure
+                // status and have been updated since.
+                if (log.inProgress()) {
+                  LOG.debug("Discard in-progress log " + log);
+                } else {
+                  EventLog existingLog = eventLogs.get(log.getAppId());
+                  if (existingLog == null) {
+                    // new application log - add to the map and queue
+                    LOG.info("Add log " + log + " for processing");
+                    eventLogs.put(log.getAppId(), log);
+                    queue.put(log);
+                  } else if (existingLog.getStatus() == EventLog.Status.FAILURE &&
+                      existingLog.getModificationTime() < log.getModificationTime()) {
+                    // check status of the log, if status if failure, but modification time is
+                    // greater than the one existin log has, update status and add to processing
+                    eventLogs.replace(log.getAppId(), log);
+                    queue.put(log);
+                  } else {
+                    LOG.debug("Discard existing log " + existingLog);
+                  }
+                }
+              }
+            }
+          }
           long interval = POLLING_INTERVAL_MS + rand.nextInt(POLLING_INTERVAL_MS);
           LOG.debug("Waiting to poll, interval={}", interval);
           Thread.sleep(interval);
