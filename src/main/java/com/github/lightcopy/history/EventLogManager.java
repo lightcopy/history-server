@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mongodb.MongoClient;
+
 /**
  * Process to list applications in event directory and schedule them for processing.
  */
@@ -37,6 +39,7 @@ class EventLogManager {
 
   private FileSystem fs;
   private Path root;
+  private MongoClient mongo;
   private WatchProcess watchProcess;
   private Thread watchProcessThread;
   // map of all event logs that have been processed so far (provides guarantee)
@@ -45,9 +48,10 @@ class EventLogManager {
   // queue with event logs ready to be processed
   private BlockingQueue<EventLog> queue;
 
-  public EventLogManager(FileSystem fs, String rootDirectory) {
+  public EventLogManager(FileSystem fs, String rootDirectory, MongoClient mongo) {
     this.fs = fs;
     this.root = new Path(rootDirectory);
+    this.mongo = mongo;
     this.eventLogs = new ConcurrentHashMap<String, EventLog>();
     this.queue = new LinkedBlockingQueue<EventLog>();
   }
@@ -111,16 +115,16 @@ class EventLogManager {
             for (FileStatus status : statuses) {
               if (status.isFile()) {
                 EventLog log = EventLog.fromStatus(status);
-                LOG.debug("Found event log " + log);
+                LOG.debug("Found event log {}", log);
                 // we only schedule applications that are newly added or existing with failure
                 // status and have been updated since.
                 if (log.inProgress()) {
-                  LOG.debug("Discard in-progress log " + log);
+                  LOG.debug("Discard in-progress log {}", log);
                 } else {
                   EventLog existingLog = eventLogs.get(log.getAppId());
                   if (existingLog == null) {
                     // new application log - add to the map and queue
-                    LOG.info("Add log " + log + " for processing");
+                    LOG.info("Add log {} for processing", log);
                     eventLogs.put(log.getAppId(), log);
                     queue.put(log);
                   } else if (existingLog.getStatus() == EventLog.Status.FAILURE &&
@@ -130,7 +134,7 @@ class EventLogManager {
                     eventLogs.replace(log.getAppId(), log);
                     queue.put(log);
                   } else {
-                    LOG.debug("Discard existing log " + existingLog);
+                    LOG.debug("Discard existing log {}", existingLog);
                   }
                 }
               }

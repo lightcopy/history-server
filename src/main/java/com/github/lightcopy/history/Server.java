@@ -23,12 +23,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
+
 /** Simple development server for frontend */
 public class Server extends AbstractServer {
   // file system for event logs
   private FileSystem fs;
   // resolved path to the root directory
   private String rootDirectory;
+  // Mongo client
+  private MongoClient mongo;
   // event log manager
   private EventLogManager eventLogManager;
 
@@ -47,13 +52,20 @@ public class Server extends AbstractServer {
       throw new IOException("Path " + path + " is not a directory, got status: " + status);
     }
     this.rootDirectory = status.getPath().toString();
-    LOG.info("Resolved event log directory as " + this.rootDirectory);
-    this.eventLogManager = new EventLogManager(this.fs, this.rootDirectory);
+    LOG.info("Resolved event log directory as {}", this.rootDirectory);
+
+    // shutdown of client is handled by server, classes should not close client connections
+    this.mongo = new MongoClient(new MongoClientURI(this.conf.mongoConnectionString()));
+    LOG.info("Created mongo client {}", this.mongo);
+
+    this.eventLogManager = new EventLogManager(this.fs, this.rootDirectory, this.mongo);
     registerShutdownHook(new EventLogManagerShutdown(this.eventLogManager));
+    registerShutdownHook(new MongoClientShutdown(this.mongo));
   }
 
+  // shutdown hook for the event log manager
   static class EventLogManagerShutdown implements Runnable {
-    private final EventLogManager manager;
+    private EventLogManager manager;
 
     EventLogManagerShutdown(EventLogManager manager) {
       this.manager = manager;
@@ -63,6 +75,24 @@ public class Server extends AbstractServer {
     public void run() {
       if (this.manager != null) {
         this.manager.stop();
+        this.manager = null;
+      }
+    }
+  }
+
+  // shutdown hook for the mongo client
+  static class MongoClientShutdown implements Runnable {
+    private MongoClient client;
+
+    MongoClientShutdown(MongoClient client) {
+      this.client = client;
+    }
+
+    @Override
+    public void run() {
+      if (this.client != null) {
+        this.client.close();
+        this.client = null;
       }
     }
   }
