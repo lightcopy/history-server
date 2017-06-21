@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 Lightcopy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.github.lightcopy.history.conf;
 
 import java.io.IOException;
@@ -34,12 +50,17 @@ public class AppConf {
   public static final String MONGO_CONN_KEY = "mongo.address";
   public static final String MONGO_CONN_DEFAULT = "mongodb://localhost:27017";
 
+  // Spark event log directory
+  public static final String EVENT_LOG_DIR = "spark.eventLog.dir";
+  public static final String EVENT_LOG_DIR_DEFAULT = "file:/tmp/spark-events";
+
   // Keep all keys above registered in the set, used to extract relevant entries from properties
   public static final HashSet<String> REGISTERED_KEYS = new HashSet<String>();
   static {
     REGISTERED_KEYS.add(HTTP_HOST_KEY);
     REGISTERED_KEYS.add(HTTP_PORT_KEY);
     REGISTERED_KEYS.add(MONGO_CONN_KEY);
+    REGISTERED_KEYS.add(EVENT_LOG_DIR);
   }
 
   private ConcurrentHashMap<String, String> options;
@@ -166,5 +187,9 @@ public class AppConf {
 
   public String workingDirectory() {
     return workingDirectory;
+  }
+
+  public String eventLogDir() {
+    return get(EVENT_LOG_DIR, EVENT_LOG_DIR_DEFAULT);
   }
 }
