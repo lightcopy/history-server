@@ -33,7 +33,7 @@ import com.github.lightcopy.history.EventLog;
  * Watch process to list application files in root directory.
  *
  */
-public class WatchProcess extends Thread {
+public class WatchProcess extends InterruptibleThread {
   private static final Logger LOG = LoggerFactory.getLogger(WatchProcess.class);
   // polling interval in milliseconds = 1.25 sec + random interval
   public static final int POLLING_INTERVAL_MS = 1250;
@@ -93,6 +93,9 @@ public class WatchProcess extends Thread {
         long interval = POLLING_INTERVAL_MS + rand.nextInt(POLLING_INTERVAL_MS);
         LOG.debug("Waiting to poll, interval={}", interval);
         Thread.sleep(interval);
+      } catch (InterruptedException err) {
+        LOG.info("{} - thread stopped with inconsistent state", this);
+        this.stopped = true;
       } catch (Exception err) {
         LOG.error("Thread interrupted", err);
         this.stopped = true;
@@ -105,7 +108,7 @@ public class WatchProcess extends Thread {
     return this.stopped;
   }
 
-  /** Mark watch thread as terminated */
+  @Override
   public void terminate() {
     this.stopped = true;
   }

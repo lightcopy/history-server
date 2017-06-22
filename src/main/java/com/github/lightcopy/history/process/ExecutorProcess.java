@@ -38,7 +38,7 @@ import com.github.lightcopy.history.Mongo;
  * Executor thread is allowed and can be interrupted, this should be treated as normal shutdown
  * without state cleanup - this will be done on next start.
  */
-public class ExecutorProcess extends Thread {
+public class ExecutorProcess extends InterruptibleThread {
   private static final Logger LOG = LoggerFactory.getLogger(ExecutorProcess.class);
   // polling interval in milliseconds = 0.5 sec + random interval
   public static final int POLLING_INTERVAL_MS = 500;
@@ -121,7 +121,7 @@ public class ExecutorProcess extends Thread {
     return this.stopped;
   }
 
-  /** Mark executor thread as terminated */
+  @Override
   public void terminate() {
     this.stopped = true;
   }

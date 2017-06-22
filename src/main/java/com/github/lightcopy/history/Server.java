@@ -59,16 +59,17 @@ public class Server extends AbstractServer {
     LOG.info("Created mongo client {}", this.mongo);
 
     this.eventLogManager = new EventLogManager(this.fs, this.rootDirectory, this.mongo);
-    registerShutdownHook(new EventLogManagerShutdown(this.eventLogManager));
-    registerShutdownHook(new MongoClientShutdown(this.mongo));
+    registerShutdownHook(new ResourceShutdown(this.eventLogManager, this.mongo));
   }
 
   // shutdown hook for the event log manager
-  static class EventLogManagerShutdown implements Runnable {
+  static class ResourceShutdown implements Runnable {
     private EventLogManager manager;
+    private MongoClient client;
 
-    EventLogManagerShutdown(EventLogManager manager) {
+    ResourceShutdown(EventLogManager manager, MongoClient client) {
       this.manager = manager;
+      this.client = client;
     }
 
     @Override
@@ -77,19 +78,6 @@ public class Server extends AbstractServer {
         this.manager.stop();
         this.manager = null;
       }
-    }
-  }
-
-  // shutdown hook for the mongo client
-  static class MongoClientShutdown implements Runnable {
-    private MongoClient client;
-
-    MongoClientShutdown(MongoClient client) {
-      this.client = client;
-    }
-
-    @Override
-    public void run() {
       if (this.client != null) {
         this.client.close();
         this.client = null;

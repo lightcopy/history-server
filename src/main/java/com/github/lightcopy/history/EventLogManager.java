@@ -32,6 +32,7 @@ import com.mongodb.Block;
 import com.mongodb.MongoClient;
 
 import com.github.lightcopy.history.process.ExecutorProcess;
+import com.github.lightcopy.history.process.InterruptibleThread;
 import com.github.lightcopy.history.process.WatchProcess;
 
 /**
@@ -113,8 +114,7 @@ class EventLogManager {
     if (watchProcess != null) {
       LOG.info("Stop watch thread {}", watchProcess);
       try {
-        watchProcess.terminate();
-        watchProcess.join();
+        EventLogManager.stopThread(watchProcess, INTERRUPT_TIMEOUT_MS);
         // reset properties to null
         watchProcess = null;
       } catch (InterruptedException err) {
@@ -125,12 +125,7 @@ class EventLogManager {
       if (executors[i] != null) {
         LOG.info("Stop executor thread {}", executors[i]);
         try {
-          executors[i].terminate();
-          Thread.sleep(INTERRUPT_TIMEOUT_MS);
-          if (executors[i].isAlive()) {
-            executors[i].interrupt();
-          }
-          executors[i].join();
+          EventLogManager.stopThread(executors[i], INTERRUPT_TIMEOUT_MS);
           executors[i] = null;
         } catch (InterruptedException err) {
           throw new RuntimeException("Intrerrupted thread " + executors[i], err);
@@ -138,5 +133,31 @@ class EventLogManager {
       }
     }
     LOG.info("Stop event log manager");
+  }
+
+  /**
+   * Shut down thread gracefully.
+   * First ask it to terminate and issue interrupt error after provided timeout, join() is invoked.
+   * @param thread thread to stop
+   * @param timeout timeout in milliseconds
+   */
+  private static void stopThread(InterruptibleThread thread, int timeout)
+      throws InterruptedException {
+    // wait block is 200 milliseconds, we check every block if thread is alive, until full timeout
+    // is exhausted - allows to wait just partial timeout
+    int waitBlock = Math.min(100, timeout);
+    if (thread != null) {
+      thread.terminate();
+      while (timeout > 0 && thread.isAlive()) {
+        timeout -= waitBlock;
+        // put current thread to sleep until next check
+        Thread.sleep(waitBlock);
+      }
+      // if thread is still alive, interrupt it with potentially inconsistent state
+      if (thread.isAlive()) {
+        thread.interrupt();
+      }
+      thread.join();
+    }
   }
 }
