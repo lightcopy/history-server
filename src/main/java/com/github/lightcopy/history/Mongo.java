@@ -16,11 +16,15 @@
 
 package com.github.lightcopy.history;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.IndexOptions;
 
@@ -56,5 +60,29 @@ public class Mongo {
   public static void createUniqueIndex(MongoCollection<?> collection, String field) {
     IndexOptions indexOptions = new IndexOptions().unique(true);
     collection.createIndex(Indexes.ascending(field), indexOptions);
+  }
+
+  /**
+   * Clean up state (remove all data) based on provided app ids.
+   * @param client Mongo client
+   * @param logs event logs to remove
+   */
+  public static void removeData(MongoClient client, List<EventLog> logs) {
+    List<String> appIds = new ArrayList<String>();
+    for (EventLog log : logs) {
+      appIds.add(log.getAppId());
+    }
+    Mongo.eventLogCollection(client).deleteMany(Filters.all(EventLog.FIELD_APP_ID, appIds));
+  }
+
+  /**
+   * Clean up state (remove all data) based on provided app ids.
+   * @param client Mongo client
+   * @param log event log to remove
+   */
+  public static void removeData(MongoClient client, EventLog log) {
+    List<EventLog> logs = new ArrayList<EventLog>();
+    logs.add(log);
+    removeData(client, logs);
   }
 }

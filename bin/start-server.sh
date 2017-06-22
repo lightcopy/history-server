@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sbt compile "runMain com.github.lightcopy.history.Server"
+sbt compile -Dspark.eventLog.dir=work "runMain com.github.lightcopy.history.Server"

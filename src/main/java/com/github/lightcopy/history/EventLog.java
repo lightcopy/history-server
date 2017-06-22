@@ -107,7 +107,7 @@ public class EventLog implements Codec<EventLog> {
    * Has side effect of setting modification time to current system time.
    * @param newStatus new status
    */
-  public synchronized void update(Status newStatus) {
+  public synchronized void updateStatus(Status newStatus) {
     status = newStatus;
     mtime = System.currentTimeMillis();
   }
