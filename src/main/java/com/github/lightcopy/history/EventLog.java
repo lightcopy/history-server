@@ -43,15 +43,19 @@ public class EventLog implements Codec<EventLog> {
   private boolean inProgress;
   // full path to the file
   private Path path;
+  // file size in bytes
+  private long sizeBytes;
   // modification time as timestamp in milliseconds
   private long mtime;
   // processing status
   private Status status;
 
-  private EventLog(String appId, boolean inProgress, Path path, long mtime, Status status) {
+  private EventLog(String appId, boolean inProgress, Path path, long sizeBytes, long mtime,
+      Status status) {
     this.appId = appId;
     this.inProgress = inProgress;
     this.path = path;
+    this.sizeBytes = sizeBytes;
     this.mtime = mtime;
     this.status = status;
   }
@@ -74,6 +78,11 @@ public class EventLog implements Codec<EventLog> {
   /** Get path to the event log */
   public Path getPath() {
     return path;
+  }
+
+  /** Get size in bytes for event log */
+  public long getSize() {
+    return sizeBytes;
   }
 
   /** Get modification time */
@@ -111,14 +120,14 @@ public class EventLog implements Codec<EventLog> {
     String name = fileStatus.getPath().getName();
     boolean inProgress = name.endsWith(".inprogress");
     String appId = inProgress ? name.substring(0, name.lastIndexOf(".inprogress")) : name;
-    return new EventLog(appId, inProgress, fileStatus.getPath(), fileStatus.getModificationTime(),
-      Status.IN_PROGRESS);
+    return new EventLog(appId, inProgress, fileStatus.getPath(), fileStatus.getLen(),
+      fileStatus.getModificationTime(), Status.IN_PROGRESS);
   }
 
   @Override
   public String toString() {
     return getClass().getSimpleName() + "(appId=" + appId + ", inProgress=" + inProgress +
-      ", path=" + path + ", mtime=" + mtime + ", status=" + status + ")";
+      ", path=" + path + ", size=" + sizeBytes + ", mtime=" + mtime + ", status=" + status + ")";
   }
 
   @Override
@@ -127,10 +136,11 @@ public class EventLog implements Codec<EventLog> {
     String appId = reader.readString("appId");
     boolean inProgress = reader.readBoolean("inProgress");
     Path path = new Path(reader.readString("path"));
+    long size = reader.readInt64("size");
     long mtime = reader.readInt64("mtime");
     Status status = Status.valueOf(reader.readString("status"));
     reader.readEndDocument();
-    return new EventLog(appId, inProgress, path, mtime, status);
+    return new EventLog(appId, inProgress, path, size, mtime, status);
   }
 
   @Override
@@ -144,6 +154,7 @@ public class EventLog implements Codec<EventLog> {
     writer.writeString("appId", value.getAppId());
     writer.writeBoolean("inProgress", value.inProgress());
     writer.writeString("path", value.getPath().toString());
+    writer.writeInt64("size", value.getSize());
     writer.writeInt64("mtime", value.getModificationTime());
     writer.writeString("status", value.getStatus().name());
     writer.writeEndDocument();
