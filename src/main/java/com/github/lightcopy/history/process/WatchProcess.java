@@ -61,10 +61,11 @@ public class WatchProcess extends Thread {
       try {
         FileStatus[] statuses = fs.listStatus(this.root);
         if (statuses != null && statuses.length > 0) {
+          LOG.debug("Found {} statuses by listing directory", statuses.length);
           for (FileStatus status : statuses) {
             if (status.isFile()) {
               EventLog log = EventLog.fromStatus(status);
-              LOG.debug("Found event log {}", log);
+              LOG.debug("Found event log {}", log.getAppId());
               // we only schedule applications that are newly added or existing with failure
               // status and have been updated since.
               if (log.inProgress()) {

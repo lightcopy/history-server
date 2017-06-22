@@ -66,8 +66,15 @@ public class ExecutorProcess extends Thread {
     while (!this.stopped) {
       try {
         while ((log = queue.poll(POLLING_INTERVAL_MS, TimeUnit.MILLISECONDS)) != null) {
+          // executor only runs event logs that are marked as PROGRESS
+          if (log.getStatus() != EventLog.Status.IN_PROGRESS) {
+            throw new RuntimeException(
+              "Scheduled event log " + log + " is not marked for progress");
+          }
           LOG.debug("{} - prepare state for {}", id, log);
           // always clean up data before processing new app id
+          // since we can end up with partial if log was in progress before shutdown or failed to
+          // process
           Mongo.removeData(mongo, log);
           // initial insert of the processing event log
           Mongo.eventLogCollection(mongo).insertOne(log);
@@ -76,7 +83,7 @@ public class ExecutorProcess extends Thread {
           // instead of processing just invoke sleep
           try {
             Thread.sleep(10000);
-            if (rand.nextDouble() > 0.7) {
+            if (rand.nextDouble() > 0.3) {
               throw new EventProcessException("Test");
             }
             log.updateStatus(EventLog.Status.SUCCESS);

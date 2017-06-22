@@ -77,7 +77,12 @@ class EventLogManager {
     Mongo.eventLogCollection(mongo).find().forEach(new Block<EventLog>() {
       @Override
       public void apply(EventLog log) {
-        if (log.getStatus() == EventLog.Status.SUCCESS) {
+        // we put log in map if status is either success or failure. Failed logs will be
+        // reconsidered later when actual watch process is triggered, we will compare modification
+        // time. Otherwise, we will have to load failed log and reprocess it again to get same
+        // failure (can be > 2G file).
+        if (log.getStatus() == EventLog.Status.SUCCESS ||
+            log.getStatus() == EventLog.Status.FAILURE) {
           eventLogs.put(log.getAppId(), log);
         } else {
           logsToRemove.add(log);
