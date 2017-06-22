@@ -81,13 +81,15 @@ class EventLogManager {
           eventLogs.put(log.getAppId(), log);
         } else {
           logsToRemove.add(log);
-          LOG.info("Remove log {}", log);
+          LOG.debug("Remove log {}", log);
         }
       }
     });
     // clean up state for all events based on provided app ids
     Mongo.removeData(mongo, logsToRemove);
+    LOG.info("Removed {} logs", logsToRemove.size());
 
+    LOG.info("Discovered {} logs", eventLogs.size());
     LOG.info("Start processes");
     // start processes
     watchProcess = new WatchProcess(fs, root, eventLogs, queue);

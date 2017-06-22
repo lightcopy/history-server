@@ -102,6 +102,32 @@ public class EventLog implements Codec<EventLog> {
     return inProgress;
   }
 
+  // == Setters for codec ==
+
+  private void setAppId(String value) {
+    this.appId = value;
+  }
+
+  private void setInProgress(boolean value) {
+    this.inProgress = value;
+  }
+
+  private void setPath(Path value) {
+    this.path = value;
+  }
+
+  private void setSize(long value) {
+    this.sizeBytes = value;
+  }
+
+  private void setModificationTime(long value) {
+    this.mtime = value;
+  }
+
+  private void setStatus(Status status) {
+    this.status = status;
+  }
+
   /**
    * Update status for current event log.
    * Has side effect of setting modification time to current system time.
@@ -139,15 +165,36 @@ public class EventLog implements Codec<EventLog> {
 
   @Override
   public EventLog decode(BsonReader reader, DecoderContext decoderContext) {
+    EventLog log = new EventLog();
     reader.readStartDocument();
-    String appId = reader.readString(FIELD_APP_ID);
-    boolean inProgress = reader.readBoolean(FIELD_IN_PROGRESS);
-    Path path = new Path(reader.readString(FIELD_PATH));
-    long size = reader.readInt64(FIELD_SIZE);
-    long mtime = reader.readInt64(FIELD_MTIME);
-    Status status = Status.valueOf(reader.readString(FIELD_STATUS));
+    while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+      switch (reader.readName()) {
+        case FIELD_APP_ID:
+          log.setAppId(reader.readString());
+          break;
+        case FIELD_IN_PROGRESS:
+          log.setInProgress(reader.readBoolean());
+          break;
+        case FIELD_PATH:
+          log.setPath(new Path(reader.readString()));
+          break;
+        case FIELD_SIZE:
+          log.setSize(reader.readInt64());
+          break;
+        case FIELD_MTIME:
+          log.setModificationTime(reader.readInt64());
+          break;
+        case FIELD_STATUS:
+          log.setStatus(Status.valueOf(reader.readString()));
+          break;
+        default:
+          // ignore any other fields, e.g. object id
+          reader.skipValue();
+          break;
+      }
+    }
     reader.readEndDocument();
-    return new EventLog(appId, inProgress, path, size, mtime, status);
+    return log;
   }
 
   @Override
