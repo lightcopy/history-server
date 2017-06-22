@@ -37,6 +37,13 @@ public class EventLog implements Codec<EventLog> {
     IN_PROGRESS, SUCCESS, FAILURE
   }
 
+  public static final String FIELD_APP_ID = "appId";
+  public static final String FIELD_IN_PROGRESS = "inProgress";
+  public static final String FIELD_PATH = "path";
+  public static final String FIELD_SIZE = "size";
+  public static final String FIELD_MTIME = "mtime";
+  public static final String FIELD_STATUS = "status";
+
   // app id (will not match file name in case of in progress application)
   private String appId;
   // whether or not application is in progress
@@ -133,12 +140,12 @@ public class EventLog implements Codec<EventLog> {
   @Override
   public EventLog decode(BsonReader reader, DecoderContext decoderContext) {
     reader.readStartDocument();
-    String appId = reader.readString("appId");
-    boolean inProgress = reader.readBoolean("inProgress");
-    Path path = new Path(reader.readString("path"));
-    long size = reader.readInt64("size");
-    long mtime = reader.readInt64("mtime");
-    Status status = Status.valueOf(reader.readString("status"));
+    String appId = reader.readString(FIELD_APP_ID);
+    boolean inProgress = reader.readBoolean(FIELD_IN_PROGRESS);
+    Path path = new Path(reader.readString(FIELD_PATH));
+    long size = reader.readInt64(FIELD_SIZE);
+    long mtime = reader.readInt64(FIELD_MTIME);
+    Status status = Status.valueOf(reader.readString(FIELD_STATUS));
     reader.readEndDocument();
     return new EventLog(appId, inProgress, path, size, mtime, status);
   }
@@ -151,12 +158,12 @@ public class EventLog implements Codec<EventLog> {
   @Override
   public void encode(BsonWriter writer, EventLog value, EncoderContext encoderContext) {
     writer.writeStartDocument();
-    writer.writeString("appId", value.getAppId());
-    writer.writeBoolean("inProgress", value.inProgress());
-    writer.writeString("path", value.getPath().toString());
-    writer.writeInt64("size", value.getSize());
-    writer.writeInt64("mtime", value.getModificationTime());
-    writer.writeString("status", value.getStatus().name());
+    writer.writeString(FIELD_APP_ID, value.getAppId());
+    writer.writeBoolean(FIELD_IN_PROGRESS, value.inProgress());
+    writer.writeString(FIELD_PATH, value.getPath().toString());
+    writer.writeInt64(FIELD_SIZE, value.getSize());
+    writer.writeInt64(FIELD_MTIME, value.getModificationTime());
+    writer.writeString(FIELD_STATUS, value.getStatus().name());
     writer.writeEndDocument();
   }
 }

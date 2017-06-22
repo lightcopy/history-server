@@ -17,6 +17,8 @@
 package com.github.lightcopy.history;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,7 +31,9 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mongodb.Block;
 import com.mongodb.MongoClient;
+import com.mongodb.client.model.Filters;
 
 /**
  * Process to list applications in event directory and schedule them for processing.
@@ -57,27 +61,52 @@ class EventLogManager {
   }
 
   public void start() {
+    LOG.info("Create index for tables");
+    // prepare all tables
+    Mongo.createUniqueIndex(Mongo.eventLogCollection(mongo), EventLog.FIELD_APP_ID);
+
+    LOG.info("Recover state");
+    // clean up state before launching any process:
+    // current approach is removing data for all non successfull event logs in all operational
+    // tables, since we do not show failed or in loading progress event logs in ui.
+    List<String> logsToRemove = new ArrayList<String>();
+    Mongo.eventLogCollection(mongo).find().forEach(new Block<EventLog>() {
+      @Override
+      public void apply(EventLog log) {
+        if (log.getStatus() == EventLog.Status.SUCCESS) {
+          eventLogs.put(log.getAppId(), log);
+        } else {
+          logsToRemove.add(log.getAppId());
+          LOG.info("Remove log {}", log);
+        }
+      }
+    });
+    Mongo.eventLogCollection(mongo).deleteMany(Filters.all(EventLog.FIELD_APP_ID, logsToRemove));
+
+    LOG.info("Start processes");
+    // start processes
+    watchProcess = new WatchProcess(fs, root, eventLogs, queue);
+    watchProcessThread = new Thread(watchProcess);
+    LOG.info("Start watch thread {}", watchProcessThread);
+    watchProcessThread.start();
     LOG.info("Start event log manager");
-    this.watchProcess = new WatchProcess(this.fs, this.root, this.eventLogs, this.queue);
-    this.watchProcessThread = new Thread(this.watchProcess);
-    LOG.info("Start watch thread {}", this.watchProcessThread);
-    this.watchProcessThread.start();
   }
 
   public void stop() {
-    LOG.info("Stop event log manager");
-    if (this.watchProcessThread != null) {
+    LOG.info("Stop processes");
+    if (watchProcessThread != null) {
+      LOG.info("Stop watch thread {}", watchProcessThread);
       try {
-        this.watchProcess.terminate();
-        this.watchProcessThread.join();
-        LOG.info("Stopped watch process");
+        watchProcess.terminate();
+        watchProcessThread.join();
         // reset properties to null
-        this.watchProcessThread = null;
-        this.watchProcess = null;
+        watchProcessThread = null;
+        watchProcess = null;
       } catch (InterruptedException err) {
-        throw new RuntimeException("Intrerrupted thread " + this.watchProcessThread, err);
+        throw new RuntimeException("Intrerrupted thread " + watchProcessThread, err);
       }
     }
+    LOG.info("Stop event log manager");
   }
 
   /**

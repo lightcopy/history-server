@@ -21,6 +21,8 @@ import org.bson.codecs.configuration.CodecRegistry;
 
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Indexes;
+import com.mongodb.client.model.IndexOptions;
 
 /**
  * Class to keep constants for MongoDB, e.g. database names, collections, etc.
@@ -44,5 +46,15 @@ public class Mongo {
     return collection
       .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
       .withDocumentClass(EventLog.class);
+  }
+
+  /**
+   * Method to create unique ascending index for collection.
+   * @param collection any Mongo collection
+   * @param field field to index
+   */
+  public static void createUniqueIndex(MongoCollection<?> collection, String field) {
+    IndexOptions indexOptions = new IndexOptions().unique(true);
+    collection.createIndex(Indexes.ascending(field), indexOptions);
   }
 }
