@@ -172,33 +172,54 @@ public class Application implements Codec<Application> {
 
   /**
    * Read map from bson document.
+   * We use array of tuples (key: "key", value: "value") to work around "." in key names.
    * @param reader bson reader
    * @return Map<string, string> instance
    */
   private Map<String, String> readMap(BsonReader reader) {
     Map<String, String> map = new HashMap<String, String>();
-    reader.readStartDocument();
+    reader.readStartArray();
     while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-      map.put(reader.readName(), safeReadString(reader));
+      String key = null;
+      String value = null;
+      reader.readStartDocument();
+      while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+        switch (reader.readName()) {
+          case "key":
+            key = safeReadString(reader);
+            break;
+          case "value":
+            value = safeReadString(reader);
+            break;
+          default:
+            break;
+        }
+      }
+      map.put(key, value);
+      reader.readEndDocument();
     }
-    reader.readEndDocument();
+    reader.readEndArray();
     return map;
   }
 
   /**
    * Write map as bson document.
+   * We use array of tuples (key: "key", value: "value") to work around "." in key names.
    * @param writer bson writer
    * @param key document field name
    * @param value map value for that key
    */
   private void writeMap(BsonWriter writer, String key, Map<String, String> value) {
-    writer.writeStartDocument(key);
+    writer.writeStartArray(key);
     if (value != null) {
       for (Map.Entry<String, String> entry : value.entrySet()) {
-        safeWriteString(writer, entry.getKey(), entry.getValue());
+        writer.writeStartDocument();
+        safeWriteString(writer, "key", entry.getKey());
+        safeWriteString(writer, "value", entry.getValue());
+        writer.writeEndDocument();
       }
     }
-    writer.writeEndDocument();
+    writer.writeEndArray();
   }
 
   @Override

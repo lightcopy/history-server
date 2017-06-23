@@ -42,12 +42,12 @@ import com.github.lightcopy.history.model.EventLog;
  * Parser for Spark listener events. Also performs aggregation for metrics.
  * Created per event log.
  */
-class EventParser {
+public class EventParser {
   private static final Logger LOG = LoggerFactory.getLogger(EventParser.class);
 
   private Gson gson;
 
-  EventParser() {
+  public EventParser() {
     this.gson = new Gson();
   }
 
@@ -72,7 +72,6 @@ class EventParser {
           LOG.warn("Drop event {} for app {}", json, log.getAppId());
         }
       }
-      Thread.sleep(1000L);
     } catch (Exception err) {
       throw new EventProcessException(err.getMessage(), err);
     } finally {
@@ -87,7 +86,7 @@ class EventParser {
   }
 
   /** Parse individual event from json string */
-  private void parseJsonEvent(String appId, Event event, String json, MongoClient client) {
+  private void parseJsonEvent(final String appId, Event event, String json, MongoClient client) {
     // block for upsert
     Mongo.UpsertBlock<Application> block = null;
 
@@ -105,10 +104,11 @@ class EventParser {
           public Application update(Application app) {
             if (app == null) {
               app = new Application();
+              // update appId, because it is new application
+              app.setId(appId);
             }
             // update application based on event
             app.setName(start.appName);
-            app.setId(start.appId);
             app.setStartTime(start.timestamp);
             app.setUser(start.user);
             return app;
@@ -127,6 +127,8 @@ class EventParser {
           public Application update(Application app) {
             if (app == null) {
               app = new Application();
+              // update appId, because it is new application
+              app.setId(appId);
             }
             app.setEndTime(end.timestamp);
             return app;
@@ -145,6 +147,8 @@ class EventParser {
           public Application update(Application app) {
             if (app == null) {
               app = new Application();
+              // update appId, because it is new application
+              app.setId(appId);
             }
             app.setJvmInformation(env.jvmInformation);
             app.setSparkProperties(env.sparkProperties);

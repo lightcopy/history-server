@@ -30,6 +30,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.UpdateResult;
 
+import com.github.lightcopy.history.EventParser;
 import com.github.lightcopy.history.EventProcessException;
 import com.github.lightcopy.history.Mongo;
 import com.github.lightcopy.history.model.EventLog;
@@ -83,13 +84,11 @@ public class ExecutorProcess extends InterruptibleThread {
           LOG.info("{} - processing {}", id, log);
           // instead of processing just invoke sleep
           try {
-            Thread.sleep(10000);
-            if (rand.nextDouble() > 0.3) {
-              throw new EventProcessException("Test");
-            }
+            EventParser parser = new EventParser();
+            parser.parseEventLog(fs, mongo, log);
             log.updateStatus(EventLog.Status.SUCCESS);
           } catch (EventProcessException err) {
-            LOG.error("Failed to process log {}", log);
+            LOG.error("Failed to process log " + log, err);
             log.updateStatus(EventLog.Status.FAILURE);
           }
 

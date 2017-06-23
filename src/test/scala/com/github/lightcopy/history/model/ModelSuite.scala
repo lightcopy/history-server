@@ -54,10 +54,10 @@ class ModelSuite extends UnitTestSuite {
     app.setStartTime(1000L)
     app.setEndTime(2000L)
     app.setUser("user")
-    app.setJvmInformation(Map("a" -> "b").asJava)
-    app.setSparkProperties(Map("c" -> "d").asJava)
-    app.setSystemProperties(Map("e" -> "f").asJava)
-    app.setClasspathEntries(Map("g" -> "h").asJava)
+    app.setJvmInformation(Map("a.1" -> "b.1", "a.2" -> "b.2").asJava)
+    app.setSparkProperties(Map("c.1" -> "d.1", "c.2" -> "d.2").asJava)
+    app.setSystemProperties(Map("e.1" -> "f.1", "e.2" -> "f.2").asJava)
+    app.setClasspathEntries(Map("g.1" -> "h.1", "g.2" -> "h.2").asJava)
 
     val doc = new BsonDocument()
     val writer = new BsonDocumentWriter(doc)
@@ -73,9 +73,9 @@ class ModelSuite extends UnitTestSuite {
     res.getStartTime() should be (1000L)
     res.getEndTime() should be (2000L)
     res.getUser() should be ("user")
-    res.getJvmInformation() should be (Map("a" -> "b").asJava)
-    res.getSparkProperties() should be (Map("c" -> "d").asJava)
-    res.getSystemProperties() should be (Map("e" -> "f").asJava)
-    res.getClasspathEntries() should be (Map("g" -> "h").asJava)
+    res.getJvmInformation() should be (Map("a.1" -> "b.1", "a.2" -> "b.2").asJava)
+    res.getSparkProperties() should be (Map("c.1" -> "d.1", "c.2" -> "d.2").asJava)
+    res.getSystemProperties() should be (Map("e.1" -> "f.1", "e.2" -> "f.2").asJava)
+    res.getClasspathEntries() should be (Map("g.1" -> "h.1", "g.2" -> "h.2").asJava)
   }
 }

@@ -81,7 +81,8 @@ public class WatchProcess extends InterruptibleThread {
                 } else if (existingLog.getStatus() == EventLog.Status.FAILURE &&
                     existingLog.getModificationTime() < log.getModificationTime()) {
                   // check status of the log, if status if failure, but modification time is
-                  // greater than the one existin log has, update status and add to processing
+                  // greater than the one existing log has, update status and add to processing
+                  LOG.info("Reprocess log {}", log);
                   eventLogs.replace(log.getAppId(), log);
                   queue.put(log);
                 } else {
