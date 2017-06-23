@@ -30,8 +30,9 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.UpdateResult;
 
-import com.github.lightcopy.history.EventLog;
+import com.github.lightcopy.history.EventProcessException;
 import com.github.lightcopy.history.Mongo;
+import com.github.lightcopy.history.model.EventLog;
 
 /**
  * Executor process to parse event logs.

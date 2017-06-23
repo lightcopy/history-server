@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.lightcopy.history.process;
+package com.github.lightcopy.history;
 
 /**
  * Event processing exception is thrown when parsing of individual event or aggregation fails,

@@ -27,7 +27,8 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.lightcopy.history.EventLog;
+import com.github.lightcopy.history.EventProcessException;
+import com.github.lightcopy.history.model.EventLog;
 
 /**
  * Watch process to list application files in root directory.

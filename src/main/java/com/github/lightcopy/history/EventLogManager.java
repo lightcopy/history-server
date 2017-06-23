@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 
+import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.EventLog;
 import com.github.lightcopy.history.process.ExecutorProcess;
 import com.github.lightcopy.history.process.InterruptibleThread;
 import com.github.lightcopy.history.process.WatchProcess;
@@ -69,6 +71,7 @@ class EventLogManager {
     LOG.info("Create index for tables");
     // prepare all tables
     Mongo.createUniqueIndex(Mongo.eventLogCollection(mongo), EventLog.FIELD_APP_ID);
+    Mongo.createUniqueIndex(Mongo.applicationCollection(mongo), Application.FIELD_APP_ID);
 
     LOG.info("Recover state");
     // clean up state before launching any process:

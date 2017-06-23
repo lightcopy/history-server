@@ -21,12 +21,18 @@ import java.util.List;
 
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.conversions.Bson;
 
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.result.UpdateResult;
+
+import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.EventLog;
 
 /**
  * Class to keep constants for MongoDB, e.g. database names, collections, etc.
@@ -35,6 +41,7 @@ import com.mongodb.client.model.IndexOptions;
 public class Mongo {
   public static final String DATABASE = "history_server";
   public static final String EVENT_LOG_COLLECTION = "event_log";
+  public static final String APPLICATION_COLLECTION = "applications";
 
   /**
    * Get mongo collection for EventLog based on client.
@@ -50,6 +57,22 @@ public class Mongo {
     return collection
       .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
       .withDocumentClass(EventLog.class);
+  }
+
+  /**
+   * Get mongo collection for Application based on client.
+   * @param client Mongo client
+   * @return collection for Application
+   */
+  public static MongoCollection<Application> applicationCollection(MongoClient client) {
+    MongoCollection<?> collection = client.getDatabase(DATABASE)
+      .getCollection(APPLICATION_COLLECTION);
+    // extract codec registries to add new support
+    CodecRegistry defaults = collection.getCodecRegistry();
+    CodecRegistry support = CodecRegistries.fromCodecs(new Application());
+    return collection
+      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
+      .withDocumentClass(Application.class);
   }
 
   /**
@@ -73,6 +96,7 @@ public class Mongo {
       appIds.add(log.getAppId());
     }
     Mongo.eventLogCollection(client).deleteMany(Filters.all(EventLog.FIELD_APP_ID, appIds));
+    Mongo.applicationCollection(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
   }
 
   /**
@@ -84,5 +108,39 @@ public class Mongo {
     List<EventLog> logs = new ArrayList<EventLog>();
     logs.add(log);
     removeData(client, logs);
+  }
+
+  /** Smple upsert block to provide when updating single item in collection */
+  static interface UpsertBlock<T> {
+    /**
+     * Update provided item and return that update.
+     * @param item found item or null if there is no filter match
+     * @return updated item
+     */
+    T update(T item);
+  }
+
+  /**
+   * Find document for provided filter in collection and apply update in block and upsert item in
+   * collection. If original item exists, it will be replaced with new item; otherwise new item will
+   * be inserted. This is similar to update, but allows us to work with Java classes directly rather
+   * than constructing update.
+   *
+   * Client must ensure that filter returns only one record, otherwise upsert might update the
+   * wrong document.
+   *
+   * @param collection Mongo collection
+   * @param filter filter to fetch one item
+   * @param block block with upsert logic
+   */
+  public static <T> void findOneAndUpsert(
+      MongoCollection<T> collection, Bson filter, UpsertBlock<T> block) {
+    T item = collection.find(filter).first();
+    T update = block.update(item);
+    UpdateOptions options = new UpdateOptions().upsert(true);
+    UpdateResult res = collection.replaceOne(filter, update, options);
+    if (!res.wasAcknowledged()) {
+      throw new RuntimeException("Failed to upsert item " + update + ", original " + item);
+    }
   }
 }

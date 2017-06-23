@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.lightcopy.history;
+package com.github.lightcopy.history.model;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
