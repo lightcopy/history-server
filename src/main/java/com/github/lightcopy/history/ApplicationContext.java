@@ -23,6 +23,7 @@ import java.io.InputStream;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Configuration;
 import javax.ws.rs.core.Context;
@@ -52,9 +53,6 @@ public class ApplicationContext extends ResourceConfig {
 
   @Path("/")
   public static class ContextProvider {
-    // html
-    private static final String INDEX_HTML_PATH = "index.html";
-
     @Context
     Configuration config;
 
@@ -84,8 +82,24 @@ public class ApplicationContext extends ResourceConfig {
     @GET
     @Produces("text/html")
     public Response getIndex() {
-      InputStream index = open(dir("static", INDEX_HTML_PATH));
+      InputStream index = open(dir("dist", "index.html"));
       return Response.ok(index).build();
+    }
+
+    @GET
+    @Path("{path}.css")
+    @Produces("text/css")
+    public Response getCSS(@PathParam("path") String path) {
+      InputStream css = open(dir("dist", path + ".css"));
+      return Response.ok(css).build();
+    }
+
+    @GET
+    @Path("{path}.js")
+    @Produces("text/javascript")
+    public Response getJS(@PathParam("path") String path) {
+      InputStream js = open(dir("dist", path + ".js"));
+      return Response.ok(js).build();
     }
   }
 }

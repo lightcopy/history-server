@@ -19,3 +19,7 @@ project/plugins/project/
 
 # application logs
 work/
+
+node_modules/
+
+dist/

@@ -1,0 +1,23 @@
+{
+  "name": "history-server",
+  "private": true,
+  "scripts": {
+    "setup": "if [ ! -d \"dist\" ]; then mkdir dist; fi",
+    "make_css": "cp ./static/*.css ./dist/",
+    "make_js": "webpack -d --display-error-details",
+    "make_html": "cp ./static/*.html ./dist/",
+    "dev": "npm run setup && npm run make_html && npm run make_css && npm run make_js",
+    "build" : "webpack -p"
+  },
+  "dependencies": {
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2"
+  },
+  "devDependencies": {
+    "babel-core": "^6.4.1",
+    "babel-loader": "^6.4.1",
+    "babel-preset-es2015": "^6.4.1",
+    "babel-preset-react": "^6.4.1",
+    "webpack": "^2.2.0"
+  }
+}
