@@ -24,10 +24,12 @@ import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
 import com.mongodb.MongoClient;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.UpdateResult;
 
@@ -171,5 +173,26 @@ public class Mongo {
     if (!res.wasAcknowledged()) {
       throw new RuntimeException("Failed to upsert item " + update + ", original " + item);
     }
+  }
+
+  /**
+   * Find documents on a specific page.
+   * @param page page number, 1-based
+   * @param pageSize page size
+   * @param sortBy field to sort by
+   * @param asc true if ascending sort, false otherwise
+   * @return iterable with documents
+   */
+  public static <T> FindIterable<T> page(
+      MongoCollection<T> collection, int page, int pageSize, String sortBy, boolean asc) {
+    if (page <= 0 || page >= 100000) {
+      throw new IllegalArgumentException("Invalid page " + page);
+    }
+    if (pageSize <= 0 || pageSize >= 100000) {
+      throw new IllegalArgumentException("Invalid page size " + pageSize);
+    }
+    int skipRecords = (page - 1) * pageSize;
+    Bson sortedBy = asc ? Sorts.ascending(sortBy) : Sorts.descending(sortBy);
+    return collection.find().sort(sortedBy).skip(skipRecords).limit(pageSize);
   }
 }

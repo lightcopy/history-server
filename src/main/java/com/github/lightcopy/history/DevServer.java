@@ -37,7 +37,8 @@ public class DevServer extends AbstractServer {
   /** Test API provider with hardcoded examples of data */
   static class TestApiProvider implements ApiProvider {
     @Override
-    public List<ApplicationLog> applications() {
+    public List<ApplicationLog> applications(int page, int pageSize, String sortBy, boolean asc) {
+      LOG.info("apps: page={}, pageSize={}, sortBy={}, asc={}", page, pageSize, sortBy, asc);
       List<ApplicationLog> list = new ArrayList<ApplicationLog>();
       list.add(
         new ApplicationLog(

@@ -21,10 +21,12 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Configuration;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -53,6 +55,27 @@ public class ApplicationContext extends ResourceConfig {
     property(ServerProperties.METAINF_SERVICES_LOOKUP_DISABLE, true);
     property(WORKING_DIRECTORY, conf.workingDirectory());
     property(API_PROVIDER, provider);
+  }
+
+  /** Simple class to wrap server error message */
+  static class Error {
+    private Response.Status code;
+    private String msg;
+
+    public Error(Response.Status code, String msg) {
+      this.code = code;
+      this.msg = msg;
+    }
+
+    /** Get current error code */
+    public Response.Status code() {
+      return code;
+    }
+
+    @Override
+    public String toString() {
+      return "[code=" + code + ", msg=" + msg + "]";
+    }
   }
 
   @Path("/")
@@ -130,8 +153,18 @@ public class ApplicationContext extends ResourceConfig {
     @GET
     @Path("api/apps")
     @Produces("application/json")
-    public Response listApplications() {
-      return Response.ok(gson.toJson(getProvider().applications())).build();
+    public Response listApplications(
+        @DefaultValue("1") @QueryParam("page") int page,
+        @DefaultValue("100") @QueryParam("pageSize") int pageSize,
+        @DefaultValue("") @QueryParam("sortBy") String sortBy,
+        @DefaultValue("true") @QueryParam("asc") boolean asc) {
+      try {
+        return Response.ok(
+          gson.toJson(getProvider().applications(page, pageSize, sortBy, asc))).build();
+      } catch (Exception err) {
+        Error msg = new Error(Response.Status.BAD_REQUEST, err.getMessage());
+        return Response.ok(gson.toJson(msg)).status(msg.code()).build();
+      }
     }
   }
 }

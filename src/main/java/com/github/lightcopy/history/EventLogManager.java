@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
+import com.mongodb.client.model.Sorts;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationLog;
@@ -167,18 +168,20 @@ class EventLogManager implements ApiProvider {
   // == API methods ==
 
   @Override
-  public List<ApplicationLog> applications() {
+  public List<ApplicationLog> applications(int page, int pageSize, String sortBy, boolean asc) {
     final List<ApplicationLog> list = new ArrayList<ApplicationLog>();
-    Mongo.applicationCollection(mongo).find().forEach(new Block<Application>() {
-      @Override
-      public void apply(Application app) {
-        // only add applications that are available in event logs
-        EventLog log = (app == null || app.getId() == null) ? null : eventLogs.get(app.getId());
-        if (app != null && log != null) {
-          list.add(new ApplicationLog(app, log));
+    Mongo.page(Mongo.applicationCollection(mongo), page, pageSize, sortBy, asc).forEach(
+      new Block<Application>() {
+        @Override
+        public void apply(Application app) {
+          // only add applications that are available in event logs
+          EventLog log = (app == null || app.getId() == null) ? null : eventLogs.get(app.getId());
+          if (app != null && log != null) {
+            list.add(new ApplicationLog(app, log));
+          }
         }
       }
-    });
+    );
     return list;
   }
 }

@@ -27,7 +27,12 @@ public interface ApiProvider {
 
   /**
    * Return available application logs.
+   * Parameters are guaranteed to be valid.
+   * @param page page number, 1-based
+   * @param pageSize size of records per page, > 0
+   * @param sortBy field name to sort by
+   * @param asc return is ascending order if true, descending otherwise
    * @return list of ApplicationLog instances.
    */
-  List<ApplicationLog> applications();
+  List<ApplicationLog> applications(int page, int pageSize, String sortBy, boolean asc);
 }
