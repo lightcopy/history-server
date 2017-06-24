@@ -128,9 +128,9 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
-    @Path("apps")
+    @Path("api/apps")
     @Produces("application/json")
-    public Response listEventLogs() {
+    public Response listApplications() {
       return Response.ok(gson.toJson(getProvider().applications())).build();
     }
   }
