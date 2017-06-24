@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.Path;
 import org.bson.BsonReader;
 import org.bson.BsonType;
 import org.bson.BsonWriter;
-import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
@@ -31,7 +30,7 @@ import org.bson.codecs.EncoderContext;
  * Used to identify uniquely each processed application. App id should match Spark application
  * app id.
  */
-public class EventLog implements Codec<EventLog> {
+public class EventLog extends AbstractCodec<EventLog> {
   // Processing status for event log instance
   public enum Status {
     IN_PROGRESS, SUCCESS, FAILURE
@@ -57,7 +56,7 @@ public class EventLog implements Codec<EventLog> {
   // processing status
   private Status status;
 
-  private EventLog(String appId, boolean inProgress, Path path, long sizeBytes, long mtime,
+  public EventLog(String appId, boolean inProgress, Path path, long sizeBytes, long mtime,
       Status status) {
     this.appId = appId;
     this.inProgress = inProgress;

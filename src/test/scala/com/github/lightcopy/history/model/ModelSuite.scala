@@ -16,66 +16,133 @@
 
 package com.github.lightcopy.history.model
 
-import scala.collection.JavaConverters._
+import java.util.HashMap
 
+import org.apache.hadoop.fs.Path
 import org.bson.{BsonDocument, BsonDocumentWriter, BsonDocumentReader}
 import org.bson.codecs.{DecoderContext, EncoderContext}
 
 import com.github.lightcopy.testutil.UnitTestSuite
 
 class ModelSuite extends UnitTestSuite {
-  test("Empty application to Bson") {
-    val app = new Application()
 
+  def serialize[T](codec: AbstractCodec[T], obj: T): BsonDocument = {
     val doc = new BsonDocument()
     val writer = new BsonDocumentWriter(doc)
     val encoder = EncoderContext.builder().build()
-    app.encode(writer, app, encoder)
-
-    val reader = new BsonDocumentReader(doc)
-    val decoder = DecoderContext.builder().build()
-    val res = app.decode(reader, decoder)
-
-    res.getId() should be (app.getId())
-    res.getName() should be (app.getName())
-    res.getStartTime() should be (app.getStartTime())
-    res.getEndTime() should be (app.getEndTime())
-    res.getUser() should be (app.getUser())
-    res.getJvmInformation() should be (app.getJvmInformation())
-    res.getSparkProperties() should be (app.getSparkProperties())
-    res.getSystemProperties() should be (app.getSystemProperties())
-    res.getClasspathEntries() should be (app.getClasspathEntries())
+    codec.encode(writer, obj, encoder)
+    doc
   }
 
-  test("Complete application to Bson") {
+  def deserialize[T](codec: AbstractCodec[T], doc: BsonDocument): T = {
+    val reader = new BsonDocumentReader(doc)
+    val decoder = DecoderContext.builder().build()
+    codec.decode(reader, decoder)
+  }
+
+  def hm(map: Map[String, String]): java.util.HashMap[String, String] = {
+    val res = new java.util.HashMap[String, String]()
+    for ((key, value) <- map) {
+      res.put(key, value)
+    }
+    res
+  }
+
+  test("Create application log") {
     val app = new Application()
     app.setId("app-id")
     app.setName("app-name")
     app.setStartTime(1000L)
     app.setEndTime(2000L)
     app.setUser("user")
-    app.setJvmInformation(Map("a.1" -> "b.1", "a.2" -> "b.2").asJava)
-    app.setSparkProperties(Map("c.1" -> "d.1", "c.2" -> "d.2").asJava)
-    app.setSystemProperties(Map("e.1" -> "f.1", "e.2" -> "f.2").asJava)
-    app.setClasspathEntries(Map("g.1" -> "h.1", "g.2" -> "h.2").asJava)
+    val log = new EventLog("app-id", true, new Path("/tmp"), 128L, 3000L, EventLog.Status.SUCCESS)
 
-    val doc = new BsonDocument()
-    val writer = new BsonDocumentWriter(doc)
-    val encoder = EncoderContext.builder().build()
-    app.encode(writer, app, encoder)
+    val res = new ApplicationLog(app, log)
+    res.getName() should be ("app-name")
+    res.getId() should be ("app-id")
+    res.getStartTime() should be (1000L)
+    res.getEndTime() should be (2000L)
+    res.getUser() should be ("user")
+    res.getPath() should be ("/tmp")
+    res.getSize() should be (128L)
+    res.getModificationTime() should be (3000L)
+    res.getStatus() should be (EventLog.Status.SUCCESS)
+  }
 
-    val reader = new BsonDocumentReader(doc)
-    val decoder = DecoderContext.builder().build()
-    val res = app.decode(reader, decoder)
+  test("Create empty application log") {
+    val app = new Application()
+    val log = new EventLog()
+    val res = new ApplicationLog(app, log)
+
+    res.getName() should be (null)
+    res.getId() should be (null)
+    res.getStartTime() should be (-1L)
+    res.getEndTime() should be (-1L)
+    res.getUser() should be (null)
+    res.getPath() should be (null)
+    res.getSize() should be (0L)
+    res.getModificationTime() should be (0L)
+    res.getStatus() should be (null)
+  }
+
+  test("Empty application to bson") {
+    val app = new Application()
+    val doc = serialize(app, app)
+    val res = deserialize(app, doc)
+
+    res.getId() should be (app.getId())
+    res.getName() should be (app.getName())
+    res.getStartTime() should be (app.getStartTime())
+    res.getEndTime() should be (app.getEndTime())
+    res.getUser() should be (app.getUser())
+  }
+
+  test("Complete application to bson") {
+    val app = new Application()
+    app.setId("app-id")
+    app.setName("app-name")
+    app.setStartTime(1000L)
+    app.setEndTime(2000L)
+    app.setUser("user")
+
+    val doc = serialize(app, app)
+    val res = deserialize(app, doc)
 
     res.getId() should be ("app-id")
     res.getName() should be ("app-name")
     res.getStartTime() should be (1000L)
     res.getEndTime() should be (2000L)
     res.getUser() should be ("user")
-    res.getJvmInformation() should be (Map("a.1" -> "b.1", "a.2" -> "b.2").asJava)
-    res.getSparkProperties() should be (Map("c.1" -> "d.1", "c.2" -> "d.2").asJava)
-    res.getSystemProperties() should be (Map("e.1" -> "f.1", "e.2" -> "f.2").asJava)
-    res.getClasspathEntries() should be (Map("g.1" -> "h.1", "g.2" -> "h.2").asJava)
+  }
+
+  test("Empty environment to bson") {
+    val env = new Environment()
+
+    val doc = serialize(env, env)
+    val res = deserialize(env, doc)
+
+    res.getAppId() should be (env.getAppId())
+    res.getJvmInformation() should be (env.getJvmInformation())
+    res.getSparkProperties() should be (env.getSparkProperties())
+    res.getSystemProperties() should be (env.getSystemProperties())
+    res.getClasspathEntries() should be (env.getClasspathEntries())
+  }
+
+  test("Complete environment into bson") {
+    val env = new Environment()
+    env.setAppId("app-id")
+    env.setJvmInformation(hm(Map("a.1" -> "b.1", "a.2" -> "b.2")))
+    env.setSparkProperties(hm(Map("c.1" -> "d.1", "c.2" -> "d.2")))
+    env.setSystemProperties(hm(Map("e.1" -> "f.1", "e.2" -> "f.2")))
+    env.setClasspathEntries(hm(Map("g.1" -> "h.1", "g.2" -> "h.2")))
+
+    val doc = serialize(env, env)
+    val res = deserialize(env, doc)
+
+    res.getAppId() should be ("app-id")
+    res.getJvmInformation() should be (hm(Map("a.1" -> "b.1", "a.2" -> "b.2")))
+    res.getSparkProperties() should be (hm(Map("c.1" -> "d.1", "c.2" -> "d.2")))
+    res.getSystemProperties() should be (hm(Map("e.1" -> "f.1", "e.2" -> "f.2")))
+    res.getClasspathEntries() should be (hm(Map("g.1" -> "h.1", "g.2" -> "h.2")))
   }
 }

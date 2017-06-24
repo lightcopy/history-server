@@ -32,6 +32,7 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.UpdateResult;
 
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.EventLog;
 
 /**
@@ -42,6 +43,7 @@ public class Mongo {
   public static final String DATABASE = "history_server";
   public static final String EVENT_LOG_COLLECTION = "event_log";
   public static final String APPLICATION_COLLECTION = "applications";
+  public static final String ENVIRONMENT_COLLECTION = "environment";
 
   /**
    * Get mongo collection for EventLog based on client.
@@ -76,6 +78,22 @@ public class Mongo {
   }
 
   /**
+   * Get mongo collection for Environment based on client.
+   * @param client Mongo client
+   * @return collection for Environment
+   */
+  public static MongoCollection<Environment> environmentCollection(MongoClient client) {
+    MongoCollection<?> collection = client.getDatabase(DATABASE)
+      .getCollection(ENVIRONMENT_COLLECTION);
+    // extract codec registries to add new support
+    CodecRegistry defaults = collection.getCodecRegistry();
+    CodecRegistry support = CodecRegistries.fromCodecs(new Environment());
+    return collection
+      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
+      .withDocumentClass(Environment.class);
+  }
+
+  /**
    * Method to create unique ascending index for collection.
    * @param collection any Mongo collection
    * @param field field to index
@@ -92,6 +110,7 @@ public class Mongo {
   public static void buildIndexes(MongoClient client) {
     createUniqueIndex(eventLogCollection(client), EventLog.FIELD_APP_ID);
     createUniqueIndex(applicationCollection(client), Application.FIELD_APP_ID);
+    createUniqueIndex(environmentCollection(client), Environment.FIELD_APP_ID);
   }
 
   /**
@@ -106,6 +125,7 @@ public class Mongo {
     }
     eventLogCollection(client).deleteMany(Filters.all(EventLog.FIELD_APP_ID, appIds));
     applicationCollection(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
+    environmentCollection(client).deleteMany(Filters.all(Environment.FIELD_APP_ID, appIds));
   }
 
   /**
