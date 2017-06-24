@@ -86,6 +86,15 @@ public class Mongo {
   }
 
   /**
+   * Build all indexes for collections.
+   * @param client Mongo client
+   */
+  public static void buildIndexes(MongoClient client) {
+    createUniqueIndex(eventLogCollection(client), EventLog.FIELD_APP_ID);
+    createUniqueIndex(applicationCollection(client), Application.FIELD_APP_ID);
+  }
+
+  /**
    * Clean up state (remove all data) based on provided app ids.
    * @param client Mongo client
    * @param logs event logs to remove
@@ -95,8 +104,8 @@ public class Mongo {
     for (EventLog log : logs) {
       appIds.add(log.getAppId());
     }
-    Mongo.eventLogCollection(client).deleteMany(Filters.all(EventLog.FIELD_APP_ID, appIds));
-    Mongo.applicationCollection(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
+    eventLogCollection(client).deleteMany(Filters.all(EventLog.FIELD_APP_ID, appIds));
+    applicationCollection(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
   }
 
   /**
