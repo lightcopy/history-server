@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 
+import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.ApplicationLog;
 import com.github.lightcopy.history.model.EventLog;
 import com.github.lightcopy.history.process.ExecutorProcess;
 import com.github.lightcopy.history.process.InterruptibleThread;
@@ -165,7 +167,18 @@ class EventLogManager implements ApiProvider {
   // == API methods ==
 
   @Override
-  public List<EventLog> eventLogs() {
-    return new ArrayList<EventLog>();
+  public List<ApplicationLog> eventLogs() {
+    final List<ApplicationLog> list = new ArrayList<ApplicationLog>();
+    Mongo.applicationCollection(mongo).find().forEach(new Block<Application>() {
+      @Override
+      public void apply(Application app) {
+        // only add applications that are available in event logs
+        EventLog log = (app == null || app.getId() == null) ? null : eventLogs.get(app.getId());
+        if (app != null && log != null) {
+          list.add(new ApplicationLog(app, log));
+        }
+      }
+    });
+    return list;
   }
 }

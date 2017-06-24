@@ -18,7 +18,7 @@ package com.github.lightcopy.history;
 
 import java.util.List;
 
-import com.github.lightcopy.history.model.EventLog;
+import com.github.lightcopy.history.model.ApplicationLog;
 
 /**
  * Interface for providing REST API calls implementation.
@@ -26,8 +26,8 @@ import com.github.lightcopy.history.model.EventLog;
 public interface ApiProvider {
 
   /**
-   * Return available event logs.
-   * @return list of EventLog instances.
+   * Return available application logs.
+   * @return list of ApplicationLog instances.
    */
-  List<EventLog> eventLogs();
+  List<ApplicationLog> eventLogs();
 }

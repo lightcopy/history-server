@@ -19,7 +19,7 @@ package com.github.lightcopy.history;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.github.lightcopy.history.model.EventLog;
+import com.github.lightcopy.history.model.ApplicationLog;
 
 /** Simple development server for frontend */
 public class DevServer extends AbstractServer {
@@ -36,8 +36,8 @@ public class DevServer extends AbstractServer {
   /** Test API provider with hardcoded examples of data */
   static class TestApiProvider implements ApiProvider {
     @Override
-    public List<EventLog> eventLogs() {
-      return new ArrayList<EventLog>();
+    public List<ApplicationLog> eventLogs() {
+      return new ArrayList<ApplicationLog>();
     }
   }
 
