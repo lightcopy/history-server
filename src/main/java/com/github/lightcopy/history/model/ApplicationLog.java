@@ -55,6 +55,21 @@ public class ApplicationLog {
     this.status = log.getStatus();
   }
 
+  /** Direct constructor, used for testing */
+  public ApplicationLog(
+      String name, String id, long start, long end, String user,
+      String path, long size, long mtime, EventLog.Status status) {
+    this.name = name;
+    this.id = id;
+    this.starttime = start;
+    this.endtime = end;
+    this.user = user;
+    this.filepath = path;
+    this.size = size;
+    this.mtime = mtime;
+    this.status = status;
+  }
+
   /** Get application name */
   public String getName() {
     return name;

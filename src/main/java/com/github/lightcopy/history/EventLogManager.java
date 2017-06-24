@@ -167,7 +167,7 @@ class EventLogManager implements ApiProvider {
   // == API methods ==
 
   @Override
-  public List<ApplicationLog> eventLogs() {
+  public List<ApplicationLog> applications() {
     final List<ApplicationLog> list = new ArrayList<ApplicationLog>();
     Mongo.applicationCollection(mongo).find().forEach(new Block<Application>() {
       @Override

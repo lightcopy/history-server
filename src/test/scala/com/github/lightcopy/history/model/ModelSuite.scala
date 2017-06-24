@@ -85,6 +85,20 @@ class ModelSuite extends UnitTestSuite {
     res.getStatus() should be (null)
   }
 
+  test("Create application log directly") {
+    val res = new ApplicationLog("name", "id", 1L, 2L, "user", "/a/b/c", 123L, 3L,
+      EventLog.Status.IN_PROGRESS)
+    res.getName() should be ("name")
+    res.getId() should be ("id")
+    res.getStartTime() should be (1L)
+    res.getEndTime() should be (2L)
+    res.getUser() should be ("user")
+    res.getPath() should be ("/a/b/c")
+    res.getSize() should be (123L)
+    res.getModificationTime() should be (3L)
+    res.getStatus() should be (EventLog.Status.IN_PROGRESS)
+  }
+
   test("Empty application to bson") {
     val app = new Application()
     val doc = serialize(app, app)

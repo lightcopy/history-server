@@ -123,7 +123,7 @@ public class ApplicationContext extends ResourceConfig {
     @Path("logs")
     @Produces("application/json")
     public Response listEventLogs() {
-      return Response.ok(gson.toJson(getProvider().eventLogs())).build();
+      return Response.ok(gson.toJson(getProvider().applications())).build();
     }
   }
 }

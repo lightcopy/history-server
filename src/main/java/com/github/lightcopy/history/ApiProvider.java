@@ -29,5 +29,5 @@ public interface ApiProvider {
    * Return available application logs.
    * @return list of ApplicationLog instances.
    */
-  List<ApplicationLog> eventLogs();
+  List<ApplicationLog> applications();
 }
