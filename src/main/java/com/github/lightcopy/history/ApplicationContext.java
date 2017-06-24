@@ -120,7 +120,15 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
-    @Path("logs")
+    @Path("{path}.png")
+    @Produces("image/png")
+    public Response getPNG(@PathParam("path") String path) {
+      InputStream img = open(dir("dist", path + ".png"));
+      return Response.ok(img).build();
+    }
+
+    @GET
+    @Path("apps")
     @Produces("application/json")
     public Response listEventLogs() {
       return Response.ok(gson.toJson(getProvider().applications())).build();

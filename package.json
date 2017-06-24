@@ -3,17 +3,21 @@
   "private": true,
   "scripts": {
     "setup": "if [ ! -d \"dist\" ]; then mkdir dist; fi",
+    "make_scss": "node-sass ./static/app.scss --output-style compressed ./dist/app.css",
     "make_css": "cp ./static/*.css ./dist/",
     "make_js": "webpack -d --display-error-details",
+    "make_png": "cp ./static/*.png ./dist/",
     "make_html": "cp ./static/*.html ./dist/",
-    "dev": "npm run setup && npm run make_html && npm run make_css && npm run make_js",
+    "dev": "npm run setup && npm run make_html && npm run make_css && npm run make_scss && npm run make_js && npm run make_png",
     "build" : "webpack -p"
   },
   "dependencies": {
     "react": "^15.4.2",
-    "react-dom": "^15.4.2"
+    "react-dom": "^15.4.2",
+    "fixed-data-table": "^0.6.4"
   },
   "devDependencies": {
+    "node-sass": "^3.7.0",
     "babel-core": "^6.4.1",
     "babel-loader": "^6.4.1",
     "babel-preset-es2015": "^6.4.1",
