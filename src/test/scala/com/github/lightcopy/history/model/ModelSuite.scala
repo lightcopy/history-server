@@ -47,7 +47,7 @@ class ModelSuite extends UnitTestSuite {
     res.getClasspathEntries() should be (app.getClasspathEntries())
   }
 
-  test("Filled application to Bson") {
+  test("Complete application to Bson") {
     val app = new Application()
     app.setId("app-id")
     app.setName("app-name")

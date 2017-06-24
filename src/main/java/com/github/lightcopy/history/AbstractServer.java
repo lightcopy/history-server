@@ -41,7 +41,7 @@ public abstract class AbstractServer {
   protected final String host;
   protected final int port;
   protected AppConf conf;
-  private final HttpServer server;
+  private HttpServer server;
   private ArrayList<Runnable> events;
 
   /**
@@ -77,36 +77,10 @@ public abstract class AbstractServer {
     this.port = this.conf.httpPort();
     // initialize events list and internal server
     this.events = new ArrayList<Runnable>();
-    this.server = createHttpServer(this.conf);
   }
 
   public AbstractServer() {
     this(System.getProperties());
-  }
-
-  /** Create endpoint uri from initialized properties */
-  protected URI createEndpoint() {
-    return UriBuilder.fromPath("")
-      .scheme(this.scheme)
-      .host(this.host)
-      .port(this.port)
-      .build();
-  }
-
-  /** Create http server from initialized properties */
-  protected HttpServer createHttpServer(AppConf conf) {
-    URI endpoint = createEndpoint();
-    ApplicationContext context = new ApplicationContext(conf);
-    return GrizzlyHttpServerFactory.createHttpServer(endpoint, context);
-  }
-
-  /**
-   * Shutdown server. This should not be used directly, instead call launch() method. It will
-   * add shutdown hook to gracefully stop server.
-   */
-  protected void shutdown() {
-    LOG.info("Stop server {}", this);
-    this.server.shutdown();
   }
 
   /** Get current host */
@@ -120,18 +94,11 @@ public abstract class AbstractServer {
   }
 
   /**
-   * Register shutdown hook to call when server is about to be stopped. These events are always
-   * called before server shutdown.
-   */
-  public void registerShutdownHook(Runnable event) {
-    this.events.add(event);
-  }
-
-  /**
    * Start web server using provided options. As part of initialization registers all shutdown
    * hooks, including one for the server.
    */
   public void launch() throws IOException, InterruptedException {
+    this.server = createHttpServer(this.conf);
     // register shutdown hook for server after all events
     registerShutdownHook(new ServerShutdown(this));
     for (Runnable event : this.events) {
@@ -143,12 +110,57 @@ public abstract class AbstractServer {
     afterLaunch();
   }
 
+  /** Create http server from initialized properties */
+  protected HttpServer createHttpServer(AppConf conf) {
+    URI endpoint = createEndpoint();
+    ApiProvider provider = apiProvider();
+    LOG.info("Register API provider {}", provider);
+    ApplicationContext context = new ApplicationContext(conf, provider);
+    return GrizzlyHttpServerFactory.createHttpServer(endpoint, context);
+  }
+
+  /** Create endpoint uri from initialized properties */
+  protected URI createEndpoint() {
+    return UriBuilder.fromPath("")
+      .scheme(this.scheme)
+      .host(this.host)
+      .port(this.port)
+      .build();
+  }
+
   /**
    * Launch functionality provided by subclasses, if required.
    * This gets invoked after server is up and running.
    */
   public void afterLaunch() {
     /* no-op */
+  }
+
+  /**
+   * Return API provider for this server to serve REST.
+   * By default, is null, which will throw NPE when not set.
+   * @return ApiProvider instance
+   */
+  public ApiProvider apiProvider() {
+    /* no-op, should be overwritten in subclasses */
+    return null;
+  }
+
+  /**
+   * Register shutdown hook to call when server is about to be stopped. These events are always
+   * called before server shutdown.
+   */
+  public void registerShutdownHook(Runnable event) {
+    this.events.add(event);
+  }
+
+  /**
+   * Shutdown server. This should not be used directly, instead call launch() method. It will
+   * add shutdown hook to gracefully stop server.
+   */
+  protected void shutdown() {
+    LOG.info("Stop server {}", this);
+    this.server.shutdown();
   }
 
   @Override

@@ -32,6 +32,8 @@ import javax.ws.rs.core.Response;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.ServerProperties;
 
+import com.google.gson.Gson;
+
 import com.github.lightcopy.history.conf.AppConf;
 
 /**
@@ -41,20 +43,24 @@ import com.github.lightcopy.history.conf.AppConf;
 public class ApplicationContext extends ResourceConfig {
   // current working directory
   private static final String WORKING_DIRECTORY = "working.directory";
+  private static final String API_PROVIDER = "api.provider";
 
-  private final transient AppConf conf;
+  private final AppConf conf;
 
-  public ApplicationContext(AppConf conf) {
+  public ApplicationContext(AppConf conf, ApiProvider provider) {
     this.conf = conf;
     register(ContextProvider.class);
     property(ServerProperties.METAINF_SERVICES_LOOKUP_DISABLE, true);
     property(WORKING_DIRECTORY, conf.workingDirectory());
+    property(API_PROVIDER, provider);
   }
 
   @Path("/")
   public static class ContextProvider {
     @Context
     Configuration config;
+    Gson gson = new Gson();
+    ApiProvider provider;
 
     /** Get current working directory from context */
     private File workingDirectory() {
@@ -79,6 +85,17 @@ public class ApplicationContext extends ResourceConfig {
       }
     }
 
+    /**
+     * Get API provider for context.
+     * @return API provider
+     */
+    private ApiProvider getProvider() {
+      if (provider == null) {
+        provider = (ApiProvider) config.getProperty(API_PROVIDER);
+      }
+      return provider;
+    }
+
     @GET
     @Produces("text/html")
     public Response getIndex() {
@@ -100,6 +117,13 @@ public class ApplicationContext extends ResourceConfig {
     public Response getJS(@PathParam("path") String path) {
       InputStream js = open(dir("dist", path + ".js"));
       return Response.ok(js).build();
+    }
+
+    @GET
+    @Path("logs")
+    @Produces("application/json")
+    public Response listEventLogs() {
+      return Response.ok(gson.toJson(getProvider().eventLogs())).build();
     }
   }
 }

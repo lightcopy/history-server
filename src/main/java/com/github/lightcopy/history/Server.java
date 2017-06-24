@@ -91,6 +91,11 @@ public class Server extends AbstractServer {
     this.eventLogManager.start();
   }
 
+  @Override
+  public ApiProvider apiProvider() {
+    return this.eventLogManager;
+  }
+
   public static void main(String[] args) {
     try {
       LOG.info("Initialize web server");

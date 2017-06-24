@@ -39,7 +39,7 @@ import com.github.lightcopy.history.process.WatchProcess;
 /**
  * Process to list applications in event directory and schedule them for processing.
  */
-class EventLogManager {
+class EventLogManager implements ApiProvider {
   private static final Logger LOG = LoggerFactory.getLogger(EventLogManager.class);
   // shutdown interval in milliseconds, after this, thread will be interrupted
   private static final int INTERRUPT_TIMEOUT_MS = 2000;
@@ -160,5 +160,12 @@ class EventLogManager {
       }
       thread.join();
     }
+  }
+
+  // == API methods ==
+
+  @Override
+  public List<EventLog> eventLogs() {
+    return new ArrayList<EventLog>();
   }
 }

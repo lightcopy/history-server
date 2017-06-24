@@ -16,6 +16,11 @@
 
 package com.github.lightcopy.history;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import com.github.lightcopy.history.model.EventLog;
+
 /** Simple development server for frontend */
 public class DevServer extends AbstractServer {
 
@@ -23,9 +28,22 @@ public class DevServer extends AbstractServer {
     super();
   }
 
+  @Override
+  public ApiProvider apiProvider() {
+    return new TestApiProvider();
+  }
+
+  /** Test API provider with hardcoded examples of data */
+  static class TestApiProvider implements ApiProvider {
+    @Override
+    public List<EventLog> eventLogs() {
+      return new ArrayList<EventLog>();
+    }
+  }
+
   public static void main(String[] args) {
     try {
-      LOG.info("Initialize web server");
+      LOG.info("Initialize dev web server");
       DevServer server = new DevServer();
       LOG.info("Created server {}", server);
       server.launch();
