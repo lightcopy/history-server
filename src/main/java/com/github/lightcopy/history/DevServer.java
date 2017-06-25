@@ -38,49 +38,47 @@ public class DevServer extends AbstractServer {
     @Override
     public List<Application> applications(int page, int pageSize, String sortBy, boolean asc) {
       LOG.info("apps: page={}, pageSize={}, sortBy={}, asc={}", page, pageSize, sortBy, asc);
-      /*
-      List<ApplicationLog> list = new ArrayList<ApplicationLog>();
-      list.add(
-        new ApplicationLog(
-          "Spark shell",
-          "app-20170618085827-0000",
-          1497733105297L,
-          1497733151594L,
-          "sadikovi",
-          "file:/work/app-20170618085827-0000",
-          26974L,
-          1498271111876L,
-          EventLog.Status.SUCCESS
-        )
-      );
-      list.add(
-        new ApplicationLog(
-          "Spark shell",
-          "app-20170616163546-0000",
-          1497587745620L,
-          1497587854143L,
-          "sadikovi",
-          "file:/work/app-20170616163546-0000",
-          227041L,
-          1498271111923L,
-          EventLog.Status.SUCCESS
-        )
-      );
-      list.add(
-        new ApplicationLog(
-          "Spark shell",
-          "local-1497733035840",
-          1497733033849L,
-          1497733079367L,
-          "sadikovi",
-          "file:/work/local-1497733035840",
-          26536L,
-          1498271111959L,
-          EventLog.Status.SUCCESS
-        )
-      );
-      */
-      return null;
+      List<Application> list = new ArrayList<Application>();
+      Application app = new Application();
+      app.setAppId("app-20170618085827-0000");
+      app.setAppName("Spark shell");
+      app.setStartTime(1497733105297L);
+      app.setEndTime(1497733151594L);
+      app.setUser("sadikovi");
+      app.setInProgress(false);
+      app.setPath("file:/work/app-20170618085827-0000");
+      app.setSize(26974L);
+      app.setModificationTime(1498271111876L);
+      app.setStatus(Application.Status.SUCCESS);
+      list.add(app);
+
+      app = new Application();
+      app.setAppId("app-20170616163546-0000");
+      app.setAppName("Spark shell");
+      app.setStartTime(1497587745620L);
+      app.setEndTime(1497587854143L);
+      app.setUser("sadikovi");
+      app.setInProgress(false);
+      app.setPath("file:/work/app-20170616163546-000");
+      app.setSize(227041L);
+      app.setModificationTime(1498271111923L);
+      app.setStatus(Application.Status.SUCCESS);
+      list.add(app);
+
+      app = new Application();
+      app.setAppId("local-1497733035840");
+      app.setAppName("Spark shell");
+      app.setStartTime(1497733033849L);
+      app.setEndTime(1497733079367L);
+      app.setUser("sadikovi");
+      app.setInProgress(false);
+      app.setPath("file:/work/local-1497733035840");
+      app.setSize(26536L);
+      app.setModificationTime(1498271111959L);
+      app.setStatus(Application.Status.SUCCESS);
+      list.add(app);
+
+      return list;
     }
   }
 
