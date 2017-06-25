@@ -35,7 +35,6 @@ import com.mongodb.client.result.UpdateResult;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
-import com.github.lightcopy.history.model.EventLog;
 
 /**
  * Class to keep constants for MongoDB, e.g. database names, collections, etc.
@@ -43,28 +42,11 @@ import com.github.lightcopy.history.model.EventLog;
  */
 public class Mongo {
   public static final String DATABASE = "history_server";
-  public static final String EVENT_LOG_COLLECTION = "event_log";
   public static final String APPLICATION_COLLECTION = "applications";
   public static final String ENVIRONMENT_COLLECTION = "environment";
 
   /**
-   * Get mongo collection for EventLog based on client.
-   * @param client Mongo client
-   * @return collection for EventLog
-   */
-  public static MongoCollection<EventLog> eventLogCollection(MongoClient client) {
-    MongoCollection<?> collection = client.getDatabase(DATABASE)
-      .getCollection(EVENT_LOG_COLLECTION);
-    // extract codec registries to add new support
-    CodecRegistry defaults = collection.getCodecRegistry();
-    CodecRegistry support = CodecRegistries.fromCodecs(new EventLog());
-    return collection
-      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
-      .withDocumentClass(EventLog.class);
-  }
-
-  /**
-   * Get mongo collection for Application based on client.
+   * Get mongo collection for Application.
    * @param client Mongo client
    * @return collection for Application
    */
@@ -80,7 +62,7 @@ public class Mongo {
   }
 
   /**
-   * Get mongo collection for Environment based on client.
+   * Get mongo collection for Environment.
    * @param client Mongo client
    * @return collection for Environment
    */
@@ -110,7 +92,6 @@ public class Mongo {
    * @param client Mongo client
    */
   public static void buildIndexes(MongoClient client) {
-    createUniqueIndex(eventLogCollection(client), EventLog.FIELD_APP_ID);
     createUniqueIndex(applicationCollection(client), Application.FIELD_APP_ID);
     createUniqueIndex(environmentCollection(client), Environment.FIELD_APP_ID);
   }
@@ -118,14 +99,9 @@ public class Mongo {
   /**
    * Clean up state (remove all data) based on provided app ids.
    * @param client Mongo client
-   * @param logs event logs to remove
+   * @param appIds list of application ids to remove
    */
-  public static void removeData(MongoClient client, List<EventLog> logs) {
-    List<String> appIds = new ArrayList<String>();
-    for (EventLog log : logs) {
-      appIds.add(log.getAppId());
-    }
-    eventLogCollection(client).deleteMany(Filters.all(EventLog.FIELD_APP_ID, appIds));
+  public static void removeData(MongoClient client, List<String> appIds) {
     applicationCollection(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
     environmentCollection(client).deleteMany(Filters.all(Environment.FIELD_APP_ID, appIds));
   }
@@ -133,16 +109,16 @@ public class Mongo {
   /**
    * Clean up state (remove all data) based on provided app ids.
    * @param client Mongo client
-   * @param log event log to remove
+   * @param appId application id to remove
    */
-  public static void removeData(MongoClient client, EventLog log) {
-    List<EventLog> logs = new ArrayList<EventLog>();
-    logs.add(log);
-    removeData(client, logs);
+  public static void removeData(MongoClient client, String appId) {
+    List<String> appIds = new ArrayList<String>();
+    appIds.add(appId);
+    removeData(client, appIds);
   }
 
   /** Smple upsert block to provide when updating single item in collection */
-  static interface UpsertBlock<T> {
+  public static interface UpsertBlock<T> {
     /**
      * Update provided item and return that update.
      * @param item found item or null if there is no filter match
@@ -191,8 +167,14 @@ public class Mongo {
     if (pageSize <= 0 || pageSize >= 100000) {
       throw new IllegalArgumentException("Invalid page size " + pageSize);
     }
+    FindIterable<T> iter = collection.find();
+    // if sortBy field is empty - do not sort at all
+    if (sortBy != null && !sortBy.isEmpty()) {
+      Bson sortedBy = asc ? Sorts.ascending(sortBy) : Sorts.descending(sortBy);
+      iter = iter.sort(sortedBy);
+    }
+    // calculate number of records to skip before requested page
     int skipRecords = (page - 1) * pageSize;
-    Bson sortedBy = asc ? Sorts.ascending(sortBy) : Sorts.descending(sortBy);
-    return collection.find().sort(sortedBy).skip(skipRecords).limit(pageSize);
+    return iter.skip(skipRecords).limit(pageSize);
   }
 }

@@ -33,8 +33,6 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.model.Sorts;
 
 import com.github.lightcopy.history.model.Application;
-import com.github.lightcopy.history.model.ApplicationLog;
-import com.github.lightcopy.history.model.EventLog;
 import com.github.lightcopy.history.process.ExecutorProcess;
 import com.github.lightcopy.history.process.InterruptibleThread;
 import com.github.lightcopy.history.process.WatchProcess;
@@ -52,11 +50,11 @@ class EventLogManager implements ApiProvider {
   private Path root;
   private MongoClient mongo;
   private WatchProcess watchProcess;
-  // map of all event logs that have been processed so far (provides guarantee)
+  // map of all application logs that have been processed so far (provides guarantee)
   // content of the map should eventually be consistent with database
-  private ConcurrentHashMap<String, EventLog> eventLogs;
-  // queue with event logs ready to be processed
-  private BlockingQueue<EventLog> queue;
+  private ConcurrentHashMap<String, Application> apps;
+  // queue with application logs ready to be processed
+  private BlockingQueue<Application> queue;
   // number of executor threads to start
   private ExecutorProcess[] executors;
 
@@ -64,8 +62,8 @@ class EventLogManager implements ApiProvider {
     this.fs = fs;
     this.root = new Path(rootDirectory);
     this.mongo = mongo;
-    this.eventLogs = new ConcurrentHashMap<String, EventLog>();
-    this.queue = new LinkedBlockingQueue<EventLog>();
+    this.apps = new ConcurrentHashMap<String, Application>();
+    this.queue = new LinkedBlockingQueue<Application>();
     this.executors = new ExecutorProcess[NUM_EXECUTORS];
   }
 
@@ -76,33 +74,33 @@ class EventLogManager implements ApiProvider {
 
     LOG.info("Recover state");
     // clean up state before launching any process:
-    // current approach is removing data for all non successfull event logs in all operational
-    // tables, since we do not show failed or in loading progress event logs in ui.
-    final List<EventLog> logsToRemove = new ArrayList<EventLog>();
-    Mongo.eventLogCollection(mongo).find().forEach(new Block<EventLog>() {
+    // current approach is removing data for all non successfull application logs in all operational
+    // tables; we do not allow details for failed or in loading progress application logs in ui.
+    final List<String> appsToRemove = new ArrayList<String>();
+    Mongo.applicationCollection(mongo).find().forEach(new Block<Application>() {
       @Override
-      public void apply(EventLog log) {
+      public void apply(Application app) {
         // we put log in map if status is either success or failure. Failed logs will be
         // reconsidered later when actual watch process is triggered, we will compare modification
         // time. Otherwise, we will have to load failed log and reprocess it again to get same
         // failure (can be > 2G file).
-        if (log.getStatus() == EventLog.Status.SUCCESS ||
-            log.getStatus() == EventLog.Status.FAILURE) {
-          eventLogs.put(log.getAppId(), log);
+        if (app.getStatus() == Application.Status.SUCCESS ||
+            app.getStatus() == Application.Status.FAILURE) {
+          apps.put(app.getAppId(), app);
         } else {
-          logsToRemove.add(log);
-          LOG.debug("Remove log {}", log);
+          appsToRemove.add(app.getAppId());
+          LOG.debug("Remove application log {}", app);
         }
       }
     });
     // clean up state for all events based on provided app ids
-    Mongo.removeData(mongo, logsToRemove);
-    LOG.info("Removed {} logs", logsToRemove.size());
+    Mongo.removeData(mongo, appsToRemove);
+    LOG.info("Removed {} applications", appsToRemove.size());
 
-    LOG.info("Discovered {} logs", eventLogs.size());
+    LOG.info("Discovered {} applications", apps.size());
     LOG.info("Start processes");
     // start processes
-    watchProcess = new WatchProcess(fs, root, eventLogs, queue);
+    watchProcess = new WatchProcess(fs, root, apps, queue);
     LOG.info("Start watch thread {}", watchProcess);
     watchProcess.start();
     for (int i = 0; i < executors.length; i++) {
@@ -137,6 +135,8 @@ class EventLogManager implements ApiProvider {
       }
     }
     LOG.info("Stop event log manager");
+    queue = null;
+    apps = null;
   }
 
   /**
@@ -168,17 +168,13 @@ class EventLogManager implements ApiProvider {
   // == API methods ==
 
   @Override
-  public List<ApplicationLog> applications(int page, int pageSize, String sortBy, boolean asc) {
-    final List<ApplicationLog> list = new ArrayList<ApplicationLog>();
+  public List<Application> applications(int page, int pageSize, String sortBy, boolean asc) {
+    final List<Application> list = new ArrayList<Application>();
     Mongo.page(Mongo.applicationCollection(mongo), page, pageSize, sortBy, asc).forEach(
       new Block<Application>() {
         @Override
         public void apply(Application app) {
-          // only add applications that are available in event logs
-          EventLog log = (app == null || app.getId() == null) ? null : eventLogs.get(app.getId());
-          if (app != null && log != null) {
-            list.add(new ApplicationLog(app, log));
-          }
+          list.add(app);
         }
       }
     );

@@ -48,55 +48,44 @@ class ModelSuite extends UnitTestSuite {
     res
   }
 
-  test("Create application log") {
+  test("Create application") {
     val app = new Application()
-    app.setId("app-id")
-    app.setName("app-name")
+    app.setAppId("app-id")
+    app.setAppName("app-name")
     app.setStartTime(1000L)
     app.setEndTime(2000L)
     app.setUser("user")
-    val log = new EventLog("app-id", true, new Path("/tmp"), 128L, 3000L, EventLog.Status.SUCCESS)
+    app.setInProgress(true)
+    app.setPath("file:/tmp")
+    app.setSize(128L)
+    app.setModificationTime(3000L)
+    app.setStatus(Application.Status.SUCCESS)
 
-    val res = new ApplicationLog(app, log)
-    res.getName() should be ("app-name")
-    res.getId() should be ("app-id")
-    res.getStartTime() should be (1000L)
-    res.getEndTime() should be (2000L)
-    res.getUser() should be ("user")
-    res.getPath() should be ("/tmp")
-    res.getSize() should be (128L)
-    res.getModificationTime() should be (3000L)
-    res.getStatus() should be (EventLog.Status.SUCCESS)
+    app.getAppName() should be ("app-name")
+    app.getAppId() should be ("app-id")
+    app.getStartTime() should be (1000L)
+    app.getEndTime() should be (2000L)
+    app.getUser() should be ("user")
+    app.inProgress() should be (true)
+    app.getPath() should be ("file:/tmp")
+    app.getSize() should be (128L)
+    app.getModificationTime() should be (3000L)
+    app.getStatus() should be (Application.Status.SUCCESS)
   }
 
-  test("Create empty application log") {
+  test("Create empty application") {
     val app = new Application()
-    val log = new EventLog()
-    val res = new ApplicationLog(app, log)
 
-    res.getName() should be (null)
-    res.getId() should be (null)
-    res.getStartTime() should be (-1L)
-    res.getEndTime() should be (-1L)
-    res.getUser() should be (null)
-    res.getPath() should be (null)
-    res.getSize() should be (0L)
-    res.getModificationTime() should be (0L)
-    res.getStatus() should be (null)
-  }
-
-  test("Create application log directly") {
-    val res = new ApplicationLog("name", "id", 1L, 2L, "user", "/a/b/c", 123L, 3L,
-      EventLog.Status.IN_PROGRESS)
-    res.getName() should be ("name")
-    res.getId() should be ("id")
-    res.getStartTime() should be (1L)
-    res.getEndTime() should be (2L)
-    res.getUser() should be ("user")
-    res.getPath() should be ("/a/b/c")
-    res.getSize() should be (123L)
-    res.getModificationTime() should be (3L)
-    res.getStatus() should be (EventLog.Status.IN_PROGRESS)
+    app.getAppId() should be (null)
+    app.getAppName() should be (null)
+    app.getStartTime() should be (-1L)
+    app.getEndTime() should be (-1L)
+    app.getUser() should be (null)
+    app.inProgress() should be (false)
+    app.getPath() should be (null)
+    app.getSize() should be (0L)
+    app.getModificationTime() should be (-1L)
+    app.getStatus() should be (Application.Status.PROCESSING)
   }
 
   test("Empty application to bson") {
@@ -104,29 +93,44 @@ class ModelSuite extends UnitTestSuite {
     val doc = serialize(app, app)
     val res = deserialize(app, doc)
 
-    res.getId() should be (app.getId())
-    res.getName() should be (app.getName())
+    res.getAppId() should be (app.getAppId())
+    res.getAppName() should be (app.getAppName())
     res.getStartTime() should be (app.getStartTime())
     res.getEndTime() should be (app.getEndTime())
     res.getUser() should be (app.getUser())
+    res.inProgress() should be (app.inProgress())
+    res.getPath() should be (app.getPath())
+    res.getSize() should be (app.getSize())
+    res.getModificationTime() should be (app.getModificationTime())
+    res.getStatus() should be (app.getStatus())
   }
 
   test("Complete application to bson") {
     val app = new Application()
-    app.setId("app-id")
-    app.setName("app-name")
+    app.setAppId("app-id")
+    app.setAppName("app-name")
     app.setStartTime(1000L)
     app.setEndTime(2000L)
     app.setUser("user")
+    app.setInProgress(true)
+    app.setPath("file:/tmp")
+    app.setSize(128L)
+    app.setModificationTime(3000L)
+    app.setStatus(Application.Status.SUCCESS)
 
     val doc = serialize(app, app)
     val res = deserialize(app, doc)
 
-    res.getId() should be ("app-id")
-    res.getName() should be ("app-name")
+    res.getAppId() should be ("app-id")
+    res.getAppName() should be ("app-name")
     res.getStartTime() should be (1000L)
     res.getEndTime() should be (2000L)
     res.getUser() should be ("user")
+    app.inProgress() should be (true)
+    app.getPath() should be ("file:/tmp")
+    app.getSize() should be (128L)
+    app.getModificationTime() should be (3000L)
+    app.getStatus() should be (Application.Status.SUCCESS)
   }
 
   test("Empty environment to bson") {

@@ -19,8 +19,7 @@ package com.github.lightcopy.history;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.github.lightcopy.history.model.ApplicationLog;
-import com.github.lightcopy.history.model.EventLog;
+import com.github.lightcopy.history.model.Application;
 
 /** Simple development server for frontend */
 public class DevServer extends AbstractServer {
@@ -37,8 +36,9 @@ public class DevServer extends AbstractServer {
   /** Test API provider with hardcoded examples of data */
   static class TestApiProvider implements ApiProvider {
     @Override
-    public List<ApplicationLog> applications(int page, int pageSize, String sortBy, boolean asc) {
+    public List<Application> applications(int page, int pageSize, String sortBy, boolean asc) {
       LOG.info("apps: page={}, pageSize={}, sortBy={}, asc={}", page, pageSize, sortBy, asc);
+      /*
       List<ApplicationLog> list = new ArrayList<ApplicationLog>();
       list.add(
         new ApplicationLog(
@@ -79,7 +79,8 @@ public class DevServer extends AbstractServer {
           EventLog.Status.SUCCESS
         )
       );
-      return list;
+      */
+      return null;
     }
   }
 

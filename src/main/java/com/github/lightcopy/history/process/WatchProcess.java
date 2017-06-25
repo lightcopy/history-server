@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.lightcopy.history.EventProcessException;
-import com.github.lightcopy.history.model.EventLog;
+import com.github.lightcopy.history.model.Application;
 
 /**
  * Watch process to list application files in root directory.
@@ -41,16 +41,16 @@ public class WatchProcess extends InterruptibleThread {
 
   private final FileSystem fs;
   private final Path root;
-  private final ConcurrentHashMap<String, EventLog> eventLogs;
-  private final BlockingQueue<EventLog> queue;
+  private final ConcurrentHashMap<String, Application> apps;
+  private final BlockingQueue<Application> queue;
   private final Random rand;
   private volatile boolean stopped;
 
-  public WatchProcess(FileSystem fs, Path root, ConcurrentHashMap<String, EventLog> eventLogs,
-      BlockingQueue<EventLog> queue) {
+  public WatchProcess(FileSystem fs, Path root, ConcurrentHashMap<String, Application> apps,
+      BlockingQueue<Application> queue) {
     this.fs = fs;
     this.root = root;
-    this.eventLogs = eventLogs;
+    this.apps = apps;
     this.queue = queue;
     this.rand = new Random();
     this.stopped = false;
@@ -65,28 +65,28 @@ public class WatchProcess extends InterruptibleThread {
           LOG.debug("Found {} statuses by listing directory", statuses.length);
           for (FileStatus status : statuses) {
             if (status.isFile()) {
-              EventLog log = EventLog.fromStatus(status);
-              LOG.debug("Found event log {}", log.getAppId());
+              Application app = Application.fromStatus(status);
+              LOG.debug("Found application log {}", app.getAppId());
               // we only schedule applications that are newly added or existing with failure
               // status and have been updated since.
-              if (log.inProgress()) {
-                LOG.debug("Discard in-progress log {}", log);
+              if (app.inProgress()) {
+                LOG.debug("Discard '.inprogress' application {}", app);
               } else {
-                EventLog existingLog = eventLogs.get(log.getAppId());
-                if (existingLog == null) {
+                Application existingApp = apps.get(app.getAppId());
+                if (existingApp == null) {
                   // new application log - add to the map and queue
-                  LOG.info("Add log {} for processing", log);
-                  eventLogs.put(log.getAppId(), log);
-                  queue.put(log);
-                } else if (existingLog.getStatus() == EventLog.Status.FAILURE &&
-                    existingLog.getModificationTime() < log.getModificationTime()) {
+                  LOG.info("Add new log {} for processing", app);
+                  apps.put(app.getAppId(), app);
+                  queue.put(app);
+                } else if (existingApp.getStatus() == Application.Status.FAILURE &&
+                    existingApp.getModificationTime() < app.getModificationTime()) {
                   // check status of the log, if status if failure, but modification time is
                   // greater than the one existing log has, update status and add to processing
-                  LOG.info("Reprocess log {}", log);
-                  eventLogs.replace(log.getAppId(), log);
-                  queue.put(log);
+                  LOG.info("Reprocess existing log {} => {}", existingApp, app);
+                  apps.replace(app.getAppId(), app);
+                  queue.put(app);
                 } else {
-                  LOG.debug("Discard existing log {}", existingLog);
+                  LOG.debug("Discard already processed log {}", existingApp);
                 }
               }
             }

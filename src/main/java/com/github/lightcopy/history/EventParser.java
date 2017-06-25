@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,6 @@ import com.github.lightcopy.history.event.SparkListenerApplicationEnd;
 import com.github.lightcopy.history.event.SparkListenerEnvironmentUpdate;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
-import com.github.lightcopy.history.model.EventLog;
 
 /**
  * Parser for Spark listener events. Also performs aggregation for metrics.
@@ -53,24 +53,24 @@ public class EventParser {
   }
 
   /**
-   * Parse event logs from file.
+   * Parse application logs from file.
    * @param fs file system
    * @param client Mongo client
-   * @param log event log to parse
+   * @param app application to parse (has partial data related to fs file)
    */
-  public void parseEventLog(FileSystem fs, MongoClient client, EventLog log)
+  public void parseApplicationLog(FileSystem fs, MongoClient client, Application app)
       throws EventProcessException {
     FSDataInputStream in = null;
     try {
-      in = fs.open(log.getPath());
+      in = fs.open(new Path(app.getPath()));
       BufferedReader reader = new BufferedReader(new InputStreamReader(in));
       String json;
       while ((json = reader.readLine()) != null) {
         Event event = gson.fromJson(json, Event.class);
         if (event.getEventName() != null) {
-          parseJsonEvent(log.getAppId(), event, json, client);
+          parseJsonEvent(app.getAppId(), event, json, client);
         } else {
-          LOG.warn("Drop event {} for app {}", json, log.getAppId());
+          LOG.warn("Drop event {} for app {}", json, app.getAppId());
         }
       }
     } catch (Exception err) {
@@ -109,10 +109,10 @@ public class EventParser {
               if (obj == null) {
                 obj = new Application();
                 // update appId, because it is new application
-                obj.setId(appId);
+                obj.setAppId(appId);
               }
               // update application based on event
-              obj.setName(start.appName);
+              obj.setAppName(start.appName);
               obj.setStartTime(start.timestamp);
               obj.setUser(start.user);
               return obj;
@@ -133,7 +133,7 @@ public class EventParser {
               if (obj == null) {
                 obj = new Application();
                 // update appId, because it is new application
-                obj.setId(appId);
+                obj.setAppId(appId);
               }
               obj.setEndTime(end.timestamp);
               return obj;

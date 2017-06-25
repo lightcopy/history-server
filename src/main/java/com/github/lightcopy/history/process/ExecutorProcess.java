@@ -33,7 +33,7 @@ import com.mongodb.client.result.UpdateResult;
 import com.github.lightcopy.history.EventParser;
 import com.github.lightcopy.history.EventProcessException;
 import com.github.lightcopy.history.Mongo;
-import com.github.lightcopy.history.model.EventLog;
+import com.github.lightcopy.history.model.Application;
 
 /**
  * Executor process to parse event logs.
@@ -49,11 +49,12 @@ public class ExecutorProcess extends InterruptibleThread {
   private int id;
   private FileSystem fs;
   private MongoClient mongo;
-  private BlockingQueue<EventLog> queue;
+  private BlockingQueue<Application> queue;
   private final Random rand;
   private volatile boolean stopped;
 
-  public ExecutorProcess(int id, FileSystem fs, MongoClient mongo, BlockingQueue<EventLog> queue) {
+  public ExecutorProcess(int id, FileSystem fs, MongoClient mongo,
+      BlockingQueue<Application> queue) {
     this.id = id;
     this.fs = fs;
     this.mongo = mongo;
@@ -64,43 +65,36 @@ public class ExecutorProcess extends InterruptibleThread {
 
   @Override
   public void run() {
-    EventLog log;
+    Application app;
     while (!this.stopped) {
       try {
-        while ((log = queue.poll(POLLING_INTERVAL_MS, TimeUnit.MILLISECONDS)) != null) {
-          // executor only runs event logs that are marked as PROGRESS
-          if (log.getStatus() != EventLog.Status.IN_PROGRESS) {
-            throw new RuntimeException(
-              "Scheduled event log " + log + " is not marked for progress");
+        while ((app = queue.poll(POLLING_INTERVAL_MS, TimeUnit.MILLISECONDS)) != null) {
+          Application.Status currentStatus = app.getStatus();
+          // executor only runs event logs that are marked as PROCESSING
+          if (currentStatus != Application.Status.PROCESSING) {
+            throw new RuntimeException("Scheduled application log " + app +
+              " is not marked for progress (was " + currentStatus + ")");
           }
-          LOG.debug("{} - prepare state for {}", id, log);
+          LOG.debug("{} - prepare state for {}", id, app);
           // always clean up data before processing new app id
           // since we can end up with partial if log was in progress before shutdown or failed to
           // process
-          Mongo.removeData(mongo, log);
-          // initial insert of the processing event log
-          Mongo.eventLogCollection(mongo).insertOne(log);
+          Mongo.removeData(mongo, app.getAppId());
+          // initial insert of the processing application log
+          Mongo.applicationCollection(mongo).insertOne(app);
 
-          LOG.info("{} - processing {}", id, log);
-          // instead of processing just invoke sleep
+          LOG.info("{} - processing {}", id, app);
           try {
             EventParser parser = new EventParser();
-            parser.parseEventLog(fs, mongo, log);
-            log.updateStatus(EventLog.Status.SUCCESS);
+            parser.parseApplicationLog(fs, mongo, app);
+            currentStatus = Application.Status.SUCCESS;
           } catch (EventProcessException err) {
-            LOG.error("Failed to process log " + log, err);
-            log.updateStatus(EventLog.Status.FAILURE);
-          }
-
-          UpdateOptions opts = new UpdateOptions().upsert(false);
-          UpdateResult res = Mongo.eventLogCollection(mongo)
-            .replaceOne(Filters.eq(EventLog.FIELD_APP_ID, log.getAppId()), log, opts);
-          // roll back update if write failed
-          if (!res.wasAcknowledged()) {
-            LOG.error("Failed to update log {}, res={}", log, res);
-            log.updateStatus(EventLog.Status.FAILURE);
-          } else {
-            LOG.info("Updated log {}", log);
+            LOG.error("Failed to process application log " + app, err);
+            currentStatus = Application.Status.FAILURE;
+          } finally {
+            // upsert application log status
+            updateApplication(mongo, app, currentStatus);
+            LOG.info("Updated application log {}", app);
           }
         }
         long interval = POLLING_INTERVAL_MS + rand.nextInt(POLLING_INTERVAL_MS);
@@ -114,6 +108,29 @@ public class ExecutorProcess extends InterruptibleThread {
         this.stopped = true;
       }
     }
+  }
+
+  /**
+   * Update application in database with provided status.
+   * Has a side effect of updating current application with latest changes from Mongo.
+   */
+  private void updateApplication(MongoClient client, final Application app,
+      final Application.Status currentStatus) {
+    // upsert application log status
+    Mongo.findOneAndUpsert(
+      Mongo.applicationCollection(mongo),
+      Filters.eq(Application.FIELD_APP_ID, app.getAppId()),
+      new Mongo.UpsertBlock<Application>() {
+        @Override
+        public Application update(Application obj) {
+          // here we need to update application in Mongo to assign status
+          // we assume that Mongo always has the latest updates
+          obj.updateStatus(currentStatus);
+          app.copyFrom(obj);
+          return obj;
+        }
+      }
+    );
   }
 
   /** Whether or not executor thread is stopped */
