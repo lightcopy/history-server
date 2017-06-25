@@ -130,7 +130,7 @@ public class ApplicationContext extends ResourceConfig {
     @Path("{path}.css")
     @Produces("text/css")
     public Response getCSS(@PathParam("path") String path) {
-      InputStream css = open(dir("dist", path + ".css"));
+      InputStream css = open(dir("dist", "css", path + ".css"));
       return Response.ok(css).build();
     }
 
@@ -138,7 +138,7 @@ public class ApplicationContext extends ResourceConfig {
     @Path("{path}.js")
     @Produces("text/javascript")
     public Response getJS(@PathParam("path") String path) {
-      InputStream js = open(dir("dist", path + ".js"));
+      InputStream js = open(dir("dist", "js", path + ".js"));
       return Response.ok(js).build();
     }
 
@@ -146,8 +146,48 @@ public class ApplicationContext extends ResourceConfig {
     @Path("{path}.png")
     @Produces("image/png")
     public Response getPNG(@PathParam("path") String path) {
-      InputStream img = open(dir("dist", path + ".png"));
+      InputStream img = open(dir("dist", "img", path + ".png"));
       return Response.ok(img).build();
+    }
+
+    @GET
+    @Path("fonts/{path}.eot")
+    @Produces("application/vnd.ms-fontobject")
+    public Response getEOT(@PathParam("path") String path) {
+      InputStream in = open(dir("dist", "fonts", path + ".eot"));
+      return Response.ok(in).build();
+    }
+
+    @GET
+    @Path("fonts/{path}.svg")
+    @Produces("image/svg+xml")
+    public Response getSVG(@PathParam("path") String path) {
+      InputStream in = open(dir("dist", "fonts", path + ".svg"));
+      return Response.ok(in).build();
+    }
+
+    @GET
+    @Path("fonts/{path}.ttf")
+    @Produces("application/font-sfnt")
+    public Response getTTF(@PathParam("path") String path) {
+      InputStream in = open(dir("dist", "fonts", path + ".ttf"));
+      return Response.ok(in).build();
+    }
+
+    @GET
+    @Path("fonts/{path}.woff")
+    @Produces("application/font-woff")
+    public Response getWOFF(@PathParam("path") String path) {
+      InputStream in = open(dir("dist", "fonts", path + ".woff"));
+      return Response.ok(in).build();
+    }
+
+    @GET
+    @Path("fonts/{path}.woff2")
+    @Produces("font/woff2")
+    public Response getWOFF2(@PathParam("path") String path) {
+      InputStream in = open(dir("dist", "fonts", path + ".woff2"));
+      return Response.ok(in).build();
     }
 
     @GET
