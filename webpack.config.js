@@ -1,8 +1,8 @@
 var config = {
-  entry: './static/app.jsx',
+  entry: './static/js/app.jsx',
 
   output: {
-    path: __dirname + '/dist',
+    path: __dirname + '/dist/js',
     filename: 'app.js',
   },
 
