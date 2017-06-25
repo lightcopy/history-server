@@ -27,3 +27,7 @@
     display: inline;
   }
 }
+// whether or not column is sortable
+th.sortable {
+  cursor: pointer;
+}
