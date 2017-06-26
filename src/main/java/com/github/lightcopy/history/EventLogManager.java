@@ -84,8 +84,8 @@ class EventLogManager implements ApiProvider {
         // reconsidered later when actual watch process is triggered, we will compare modification
         // time. Otherwise, we will have to load failed log and reprocess it again to get same
         // failure (can be > 2G file).
-        if (app.getStatus() == Application.Status.SUCCESS ||
-            app.getStatus() == Application.Status.FAILURE) {
+        if (app.getLoadStatus() == Application.LoadStatus.LOAD_SUCCESS ||
+            app.getLoadStatus() == Application.LoadStatus.LOAD_FAILURE) {
           apps.put(app.getAppId(), app);
         } else {
           appsToRemove.add(app.getAppId());

@@ -65,7 +65,7 @@ public class WatchProcess extends InterruptibleThread {
           LOG.debug("Found {} statuses by listing directory", statuses.length);
           for (FileStatus status : statuses) {
             if (status.isFile()) {
-              Application app = Application.fromStatus(status);
+              Application app = Application.fromFileStatus(status);
               LOG.debug("Found application log {}", app.getAppId());
               // we only schedule applications that are newly added or existing with failure
               // status and have been updated since.
@@ -78,7 +78,7 @@ public class WatchProcess extends InterruptibleThread {
                   LOG.info("Add new log {} for processing", app);
                   apps.put(app.getAppId(), app);
                   queue.put(app);
-                } else if (existingApp.getStatus() == Application.Status.FAILURE &&
+                } else if (existingApp.getLoadStatus() == Application.LoadStatus.LOAD_FAILURE &&
                     existingApp.getModificationTime() < app.getModificationTime()) {
                   // check status of the log, if status if failure, but modification time is
                   // greater than the one existing log has, update status and add to processing

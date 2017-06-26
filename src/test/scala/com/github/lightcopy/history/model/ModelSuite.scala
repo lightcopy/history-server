@@ -59,7 +59,7 @@ class ModelSuite extends UnitTestSuite {
     app.setPath("file:/tmp")
     app.setSize(128L)
     app.setModificationTime(3000L)
-    app.setStatus(Application.Status.SUCCESS)
+    app.setLoadStatus(Application.LoadStatus.LOAD_SUCCESS)
 
     app.getAppName() should be ("app-name")
     app.getAppId() should be ("app-id")
@@ -70,7 +70,7 @@ class ModelSuite extends UnitTestSuite {
     app.getPath() should be ("file:/tmp")
     app.getSize() should be (128L)
     app.getModificationTime() should be (3000L)
-    app.getStatus() should be (Application.Status.SUCCESS)
+    app.getLoadStatus() should be (Application.LoadStatus.LOAD_SUCCESS)
   }
 
   test("Create empty application") {
@@ -85,7 +85,7 @@ class ModelSuite extends UnitTestSuite {
     app.getPath() should be (null)
     app.getSize() should be (0L)
     app.getModificationTime() should be (-1L)
-    app.getStatus() should be (Application.Status.PROCESSING)
+    app.getLoadStatus() should be (Application.LoadStatus.LOAD_PROGRESS)
   }
 
   test("Empty application to bson") {
@@ -102,7 +102,7 @@ class ModelSuite extends UnitTestSuite {
     res.getPath() should be (app.getPath())
     res.getSize() should be (app.getSize())
     res.getModificationTime() should be (app.getModificationTime())
-    res.getStatus() should be (app.getStatus())
+    res.getLoadStatus() should be (app.getLoadStatus())
   }
 
   test("Complete application to bson") {
@@ -116,7 +116,7 @@ class ModelSuite extends UnitTestSuite {
     app.setPath("file:/tmp")
     app.setSize(128L)
     app.setModificationTime(3000L)
-    app.setStatus(Application.Status.SUCCESS)
+    app.setLoadStatus(Application.LoadStatus.LOAD_SUCCESS)
 
     val doc = serialize(app, app)
     val res = deserialize(app, doc)
@@ -130,7 +130,7 @@ class ModelSuite extends UnitTestSuite {
     app.getPath() should be ("file:/tmp")
     app.getSize() should be (128L)
     app.getModificationTime() should be (3000L)
-    app.getStatus() should be (Application.Status.SUCCESS)
+    app.getLoadStatus() should be (Application.LoadStatus.LOAD_SUCCESS)
   }
 
   test("Empty environment to bson") {

@@ -31,8 +31,8 @@ import com.github.lightcopy.history.model.AbstractCodec;
  */
 public class Application extends AbstractCodec<Application> {
   // Processing status for event log instance
-  public enum Status {
-    PROCESSING, SUCCESS, FAILURE
+  public enum LoadStatus {
+    LOAD_PROGRESS, LOAD_SUCCESS, LOAD_FAILURE
   }
 
   public static final String FIELD_APP_ID = "appId";
@@ -44,7 +44,7 @@ public class Application extends AbstractCodec<Application> {
   public static final String FIELD_PATH = "path";
   public static final String FIELD_SIZE = "size";
   public static final String FIELD_MTIME = "mtime";
-  public static final String FIELD_STATUS = "status";
+  public static final String FIELD_LOAD_STATUS = "loadStatus";
 
   // application id (globally unique)
   private String appId;
@@ -67,7 +67,7 @@ public class Application extends AbstractCodec<Application> {
   // modification time as timestamp in milliseconds
   private long mtime;
   // processing status
-  private Status status;
+  private LoadStatus loadStatus;
 
   // default constructor for encode/decode
   public Application() {
@@ -80,7 +80,7 @@ public class Application extends AbstractCodec<Application> {
     this.path = null;
     this.size = 0L;
     this.mtime = -1L;
-    this.status = Status.PROCESSING;
+    this.loadStatus = LoadStatus.LOAD_PROGRESS;
   }
 
   // == getters ==
@@ -116,8 +116,8 @@ public class Application extends AbstractCodec<Application> {
   }
 
   /** Get processing status */
-  public Status getStatus() {
-    return status;
+  public LoadStatus getLoadStatus() {
+    return loadStatus;
   }
 
   /** Get path to the event log */
@@ -173,8 +173,8 @@ public class Application extends AbstractCodec<Application> {
     this.mtime = value;
   }
 
-  public void setStatus(Status status) {
-    this.status = status;
+  public void setLoadStatus(LoadStatus status) {
+    this.loadStatus = status;
   }
 
   /**
@@ -182,8 +182,8 @@ public class Application extends AbstractCodec<Application> {
    * Has side effect of setting modification time to current system time.
    * @param newStatus new status
    */
-  public synchronized void updateStatus(Status newStatus) {
-    status = newStatus;
+  public synchronized void updateLoadStatus(LoadStatus newStatus) {
+    loadStatus = newStatus;
     mtime = System.currentTimeMillis();
   }
 
@@ -201,7 +201,7 @@ public class Application extends AbstractCodec<Application> {
     setPath(other.getPath());
     setSize(other.getSize());
     setModificationTime(other.getModificationTime());
-    setStatus(other.getStatus());
+    setLoadStatus(other.getLoadStatus());
   }
 
   /**
@@ -212,7 +212,7 @@ public class Application extends AbstractCodec<Application> {
    * @param fileStatus FileStatus instance
    * @return Application instance
    */
-  public static Application fromStatus(FileStatus fileStatus) {
+  public static Application fromFileStatus(FileStatus fileStatus) {
     if (!fileStatus.isFile()) {
       throw new IllegalArgumentException("Cannot create application from non-file: " + fileStatus);
     }
@@ -227,7 +227,7 @@ public class Application extends AbstractCodec<Application> {
     app.setPath(fileStatus.getPath().toString());
     app.setSize(fileStatus.getLen());
     app.setModificationTime(fileStatus.getModificationTime());
-    app.setStatus(Status.PROCESSING);
+    app.setLoadStatus(LoadStatus.LOAD_PROGRESS);
     return app;
   }
 
@@ -236,7 +236,10 @@ public class Application extends AbstractCodec<Application> {
     // we only display attributes that processes rely on to make decision on scheduling app
     // plus, app name to see if application has been updated in map
     return getClass().getSimpleName() +
-      "(appId=" + appId + ", appName=" + appName + ", mtime=" + mtime + ", status=" + status + ")";
+      "(appId=" + appId +
+      ", appName=" + appName +
+      ", mtime=" + mtime +
+      ", loadStatus=" + loadStatus + ")";
   }
 
   // == Codec methods ==
@@ -274,8 +277,8 @@ public class Application extends AbstractCodec<Application> {
         case FIELD_MTIME:
           app.setModificationTime(reader.readInt64());
           break;
-        case FIELD_STATUS:
-          app.setStatus(Status.valueOf(safeReadString(reader)));
+        case FIELD_LOAD_STATUS:
+          app.setLoadStatus(LoadStatus.valueOf(safeReadString(reader)));
           break;
         default:
           reader.skipValue();
@@ -303,7 +306,7 @@ public class Application extends AbstractCodec<Application> {
     safeWriteString(writer, FIELD_PATH, value.getPath());
     writer.writeInt64(FIELD_SIZE, value.getSize());
     writer.writeInt64(FIELD_MTIME, value.getModificationTime());
-    safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
+    safeWriteString(writer, FIELD_LOAD_STATUS, value.getLoadStatus().name());
     writer.writeEndDocument();
   }
 }

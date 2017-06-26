@@ -69,9 +69,9 @@ public class ExecutorProcess extends InterruptibleThread {
     while (!this.stopped) {
       try {
         while ((app = queue.poll(POLLING_INTERVAL_MS, TimeUnit.MILLISECONDS)) != null) {
-          Application.Status currentStatus = app.getStatus();
+          Application.LoadStatus currentStatus = app.getLoadStatus();
           // executor only runs event logs that are marked as PROCESSING
-          if (currentStatus != Application.Status.PROCESSING) {
+          if (currentStatus != Application.LoadStatus.LOAD_PROGRESS) {
             throw new RuntimeException("Scheduled application log " + app +
               " is not marked for progress (was " + currentStatus + ")");
           }
@@ -87,10 +87,10 @@ public class ExecutorProcess extends InterruptibleThread {
           try {
             EventParser parser = new EventParser();
             parser.parseApplicationLog(fs, mongo, app);
-            currentStatus = Application.Status.SUCCESS;
+            currentStatus = Application.LoadStatus.LOAD_SUCCESS;
           } catch (EventProcessException err) {
             LOG.error("Failed to process application log " + app, err);
-            currentStatus = Application.Status.FAILURE;
+            currentStatus = Application.LoadStatus.LOAD_FAILURE;
           } finally {
             // upsert application log status
             updateApplication(mongo, app, currentStatus);
@@ -115,7 +115,7 @@ public class ExecutorProcess extends InterruptibleThread {
    * Has a side effect of updating current application with latest changes from Mongo.
    */
   private void updateApplication(MongoClient client, final Application app,
-      final Application.Status currentStatus) {
+      final Application.LoadStatus currentStatus) {
     // upsert application log status
     Mongo.findOneAndUpsert(
       Mongo.applicationCollection(mongo),
@@ -125,7 +125,7 @@ public class ExecutorProcess extends InterruptibleThread {
         public Application update(Application obj) {
           // here we need to update application in Mongo to assign status
           // we assume that Mongo always has the latest updates
-          obj.updateStatus(currentStatus);
+          obj.updateLoadStatus(currentStatus);
           app.copyFrom(obj);
           return obj;
         }

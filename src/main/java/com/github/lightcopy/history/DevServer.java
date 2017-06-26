@@ -49,7 +49,7 @@ public class DevServer extends AbstractServer {
       app.setPath("file:/work/app-20170618085827-0000");
       app.setSize(26974L);
       app.setModificationTime(1498271111876L);
-      app.setStatus(Application.Status.SUCCESS);
+      app.setLoadStatus(Application.LoadStatus.LOAD_SUCCESS);
       list.add(app);
 
       app = new Application();
@@ -62,7 +62,7 @@ public class DevServer extends AbstractServer {
       app.setPath("file:/work/app-20170616163546-000");
       app.setSize(227041L);
       app.setModificationTime(1498271111923L);
-      app.setStatus(Application.Status.SUCCESS);
+      app.setLoadStatus(Application.LoadStatus.LOAD_SUCCESS);
       list.add(app);
 
       app = new Application();
@@ -75,7 +75,7 @@ public class DevServer extends AbstractServer {
       app.setPath("file:/work/local-1497733035840");
       app.setSize(26536L);
       app.setModificationTime(1498271111959L);
-      app.setStatus(Application.Status.SUCCESS);
+      app.setLoadStatus(Application.LoadStatus.LOAD_SUCCESS);
       list.add(app);
 
       return list;
