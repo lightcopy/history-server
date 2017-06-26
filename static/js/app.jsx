@@ -17,16 +17,16 @@ class Applications extends React.Component {
       },
       cols: [
         // application settings
-        {name: "appId", desc: "App ID", sortable: true},
-        {name: "appName", desc: "App name", sortable: true},
-        {name: "starttime", desc: "Start time", sortable: true},
-        {name: "endtime", desc: "End time", sortable: true},
-        {name: "user", desc: "User", sortable: true},
-        {name: "appStatus", desc: "App status", sortable: true},
+        {name: "appId", desc: "App ID", sortable: true, hidden: false},
+        {name: "appName", desc: "App name", sortable: true, hidden: false},
+        {name: "starttime", desc: "Start time", sortable: true, hidden: false},
+        {name: "endtime", desc: "End time", sortable: true, hidden: false},
+        {name: "user", desc: "User", sortable: true, hidden: false},
+        {name: "appStatus", desc: "App status", sortable: true, hidden: false},
         // application log settings
         {name: "size", desc: "File size", sortable: false},
-        {name: "mtime", desc: "Last modified", sortable: false},
-        {name: "loadStatus", desc: "Load status", sortable: false}
+        {name: "mtime", desc: "Last modified", sortable: false, hidden: true},
+        {name: "loadStatus", desc: "Load status", sortable: false, hidden: true}
       ]
     };
     this.state = {data: []};
@@ -67,8 +67,8 @@ class Applications extends React.Component {
       prevState.ascending != state.ascending;
     if (shouldUpdate) {
       this.updateData(state.currentPage, state.pageSize, state.sortCol, state.ascending);
+      console.log(state);
     }
-    console.log(state);
   }
 
   render() {

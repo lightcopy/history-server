@@ -14,11 +14,11 @@ const spec = {
     pageSize: 100
   },
   cols: [
-    {name: "appId", desc: "App ID", sortable: true},
-    {name: "appName", desc: "App name", sortable: true},
-    {name: "starttime", desc: "Start time", sortable: true},
-    {name: "endtime", desc: "End time", sortable: true},
-    {name: "user", desc: "User", sortable: true}
+    {name: "appId", desc: "App ID", sortable: true, hidden: false},
+    {name: "appName", desc: "App name", sortable: true, hidden: false},
+    {name: "starttime", desc: "Start time", sortable: true, hidden: false},
+    {name: "endtime", desc: "End time", sortable: true, hidden: false},
+    {name: "user", desc: "User", sortable: true, hidden: false}
   ]
 };
 
@@ -43,7 +43,56 @@ class TableTitle extends React.Component {
           <button type="button" className="btn btn-link" aria-label="Expand/collapse" onClick={this.props.expandAction} >
             <span className={"glyphicon glyphicon-triangle-" + visible} aria-hidden="true"></span>
           </button>
+          <button type="button" className="btn btn-link" aria-label="Configure" onClick={this.props.configureAction}>
+            <span className="glyphicon glyphicon-cog" aria-hidden="true"></span>
+          </button>
         </div>
+      </div>
+    );
+  }
+}
+
+/** Element that shows list of column to show/hide */
+class ColumnConfigator extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {visible: false};
+    this.handleChange = this.handleChange.bind(this);
+  }
+
+  handleChange(event) {
+    this.props.toggleColumn(event.target.value);
+  }
+
+  column(col, displayCols, toggleColumn) {
+    var checked = (displayCols.indexOf(col.name) < 0) ? "" : "checked";
+    return (
+      <div key={col.name} className="checkbox">
+        <label className="active">
+          <input
+            type="checkbox"
+            value={col.name}
+            checked={checked}
+            onChange={this.handleChange} /> {col.desc}
+        </label>
+      </div>
+    );
+  }
+
+  columns(cols, displayCols, toggleColumn) {
+    // array with initial header
+    var arr = [<h5 key="__title">Show/hide columns</h5>];
+    for (var i = 0; i < cols.length; i++) {
+      arr.push(this.column(cols[i], displayCols, toggleColumn));
+    }
+    return arr;
+  }
+
+  render() {
+    var visible = this.props.displayColsEnabled ? "" : "hidden";
+    return (
+      <div className={visible}>
+        {this.columns(this.props.cols, this.props.displayCols, this.props.toggleColumn)}
       </div>
     );
   }
@@ -112,11 +161,18 @@ class TableBody extends React.Component {
 
   render() {
     var visible = this.props.visible ? "" : "hidden";
+    // filter out columns based on display columns
+    var cols = [];
+    for (var i = 0; i < this.props.cols.length; i++) {
+      if (this.props.displayCols.indexOf(this.props.cols[i].name) >= 0) {
+        cols.push(this.props.cols[i]);
+      }
+    }
     // header columns as "tr" tag of "th" elements
-    var headerCols = this.header(this.props.cols,
+    var headerCols = this.header(cols,
       this.props.sortAction, this.props.sortCol, this.props.sortAsc);
     // table rows as "tr" tags
-    var tableRows = this.rows(this.props.cols, this.props.data);
+    var tableRows = this.rows(cols, this.props.data);
     return (
       <table className={"table table-bordered table-striped " + visible}>
         <thead>{headerCols}</thead>
@@ -178,6 +234,17 @@ class Table extends React.Component {
     this.toggleSort = this.toggleSort.bind(this);
     this.togglePrevious = this.togglePrevious.bind(this);
     this.toggleNext = this.toggleNext.bind(this);
+    this.toggleColumnPanel = this.toggleColumnPanel.bind(this);
+    this.toggleColumn = this.toggleColumn.bind(this);
+    // `displayCols` is internal state for showing/hiding columns
+    // user should use "hidden" attribute for each column in spec
+    var displayCols = [];
+    for (var i = 0; i < this.props.spec.cols.length; i++) {
+      if (this.props.spec.cols[i] && !this.props.spec.cols[i].hidden) {
+        displayCols.push(this.props.spec.cols[i].name);
+      }
+    }
+    this.state.displayCols = displayCols;
   }
 
   toggleVisible() {
@@ -211,6 +278,20 @@ class Table extends React.Component {
     this.setState({currentPage: this.nextPage(this.state.currentPage)});
   }
 
+  toggleColumnPanel() {
+    this.setState({displayColsEnabled: !this.state.displayColsEnabled})
+  }
+
+  toggleColumn(colName) {
+    var arr = this.state.displayCols;
+    if (arr.indexOf(colName) < 0) {
+      arr.push(colName);
+    } else {
+      arr.splice(arr.indexOf(colName), 1);
+    }
+    this.setState({displayCols: arr});
+  }
+
   componentDidMount() {
     this.setState({
       visible: true,
@@ -233,9 +314,16 @@ class Table extends React.Component {
         <TableTitle
           title={this.props.spec.info.title}
           expandAction={this.toggleVisible}
+          configureAction={this.toggleColumnPanel}
           visible={this.state.visible} />
+        <ColumnConfigator
+          cols={this.props.spec.cols}
+          displayColsEnabled={this.state.displayColsEnabled}
+          displayCols={this.state.displayCols}
+          toggleColumn={this.toggleColumn} />
         <TableBody
           cols={this.props.spec.cols}
+          displayCols={this.state.displayCols}
           data={this.props.data}
           visible={this.state.visible}
           sortAction={this.toggleSort}
