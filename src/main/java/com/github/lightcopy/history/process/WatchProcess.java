@@ -19,10 +19,12 @@ package com.github.lightcopy.history.process;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +40,20 @@ public class WatchProcess extends InterruptibleThread {
   private static final Logger LOG = LoggerFactory.getLogger(WatchProcess.class);
   // polling interval in milliseconds = 1.25 sec + random interval
   public static final int POLLING_INTERVAL_MS = 1250;
+  // filter to apply when listing directory, [.inprogress] files are discarded
+  private static final PathFilter LIST_FILTER = new PathFilter() {
+    // pattern matches files: work/app-20170616163546-0000
+    private final Pattern appPattern = Pattern.compile("^app-\\d{14}-\\d{4}$");
+    // pattern matches files: work/local-1498349971751
+    private final Pattern localPattern = Pattern.compile("^local-\\d{13}$");
+
+    @Override
+    public boolean accept(Path path) {
+      return
+        appPattern.matcher(path.getName()).matches() ||
+        localPattern.matcher(path.getName()).matches();
+    }
+  };
 
   private final FileSystem fs;
   private final Path root;
@@ -60,7 +76,8 @@ public class WatchProcess extends InterruptibleThread {
   public void run() {
     while (!this.stopped) {
       try {
-        FileStatus[] statuses = fs.listStatus(this.root);
+        // check out filter to see what files get discarded
+        FileStatus[] statuses = fs.listStatus(this.root, LIST_FILTER);
         if (statuses != null && statuses.length > 0) {
           LOG.debug("Found {} statuses by listing directory", statuses.length);
           for (FileStatus status : statuses) {
@@ -69,25 +86,21 @@ public class WatchProcess extends InterruptibleThread {
               LOG.debug("Found application log {}", app.getAppId());
               // we only schedule applications that are newly added or existing with failure
               // status and have been updated since.
-              if (app.inProgress()) {
-                LOG.debug("Discard '.inprogress' application {}", app);
+              Application existingApp = apps.get(app.getAppId());
+              if (existingApp == null) {
+                // new application log - add to the map and queue
+                LOG.info("Add new log {} for processing", app);
+                apps.put(app.getAppId(), app);
+                queue.put(app);
+              } else if (existingApp.getLoadStatus() == Application.LoadStatus.LOAD_FAILURE &&
+                  existingApp.getModificationTime() < app.getModificationTime()) {
+                // check status of the log, if status if failure, but modification time is
+                // greater than the one existing log has, update status and add to processing
+                LOG.info("Reprocess existing log {} => {}", existingApp, app);
+                apps.replace(app.getAppId(), app);
+                queue.put(app);
               } else {
-                Application existingApp = apps.get(app.getAppId());
-                if (existingApp == null) {
-                  // new application log - add to the map and queue
-                  LOG.info("Add new log {} for processing", app);
-                  apps.put(app.getAppId(), app);
-                  queue.put(app);
-                } else if (existingApp.getLoadStatus() == Application.LoadStatus.LOAD_FAILURE &&
-                    existingApp.getModificationTime() < app.getModificationTime()) {
-                  // check status of the log, if status if failure, but modification time is
-                  // greater than the one existing log has, update status and add to processing
-                  LOG.info("Reprocess existing log {} => {}", existingApp, app);
-                  apps.replace(app.getAppId(), app);
-                  queue.put(app);
-                } else {
-                  LOG.debug("Discard already processed log {}", existingApp);
-                }
+                LOG.debug("Discard already processed log {}", existingApp);
               }
             }
           }

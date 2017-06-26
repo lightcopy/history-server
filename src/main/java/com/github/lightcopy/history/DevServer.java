@@ -45,7 +45,7 @@ public class DevServer extends AbstractServer {
       app.setStartTime(1497733105297L);
       app.setEndTime(1497733151594L);
       app.setUser("sadikovi");
-      app.setInProgress(false);
+      app.setAppStatus(Application.AppStatus.FINISHED);
       app.setPath("file:/work/app-20170618085827-0000");
       app.setSize(26974L);
       app.setModificationTime(1498271111876L);
@@ -58,7 +58,7 @@ public class DevServer extends AbstractServer {
       app.setStartTime(1497587745620L);
       app.setEndTime(1497587854143L);
       app.setUser("sadikovi");
-      app.setInProgress(false);
+      app.setAppStatus(Application.AppStatus.FINISHED);
       app.setPath("file:/work/app-20170616163546-000");
       app.setSize(227041L);
       app.setModificationTime(1498271111923L);
@@ -71,7 +71,7 @@ public class DevServer extends AbstractServer {
       app.setStartTime(1497733033849L);
       app.setEndTime(1497733079367L);
       app.setUser("sadikovi");
-      app.setInProgress(false);
+      app.setAppStatus(Application.AppStatus.FINISHED);
       app.setPath("file:/work/local-1497733035840");
       app.setSize(26536L);
       app.setModificationTime(1498271111959L);

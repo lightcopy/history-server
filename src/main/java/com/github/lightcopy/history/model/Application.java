@@ -35,12 +35,17 @@ public class Application extends AbstractCodec<Application> {
     LOAD_PROGRESS, LOAD_SUCCESS, LOAD_FAILURE
   }
 
+  // List of available Spark application statuses
+  public enum AppStatus {
+    NONE, IN_PROGRESS, FINISHED
+  }
+
   public static final String FIELD_APP_ID = "appId";
   public static final String FIELD_APP_NAME = "appName";
   public static final String FIELD_STARTTIME = "starttime";
   public static final String FIELD_ENDTIME = "endtime";
   public static final String FIELD_USER = "user";
-  public static final String FIELD_IN_PROGRESS = "inProgress";
+  public static final String FIELD_APP_STATUS = "appStatus";
   public static final String FIELD_PATH = "path";
   public static final String FIELD_SIZE = "size";
   public static final String FIELD_MTIME = "mtime";
@@ -56,10 +61,10 @@ public class Application extends AbstractCodec<Application> {
   private long endtime;
   // user that launched application
   private String user;
+  // application status
+  private AppStatus appStatus;
 
   // == File statistics ==
-  // whether or not application is in progress
-  private boolean inProgress;
   // full path to the file
   private String path;
   // file size in bytes
@@ -76,7 +81,7 @@ public class Application extends AbstractCodec<Application> {
     this.starttime = -1L;
     this.endtime = -1L;
     this.user = null;
-    this.inProgress = false;
+    this.appStatus = AppStatus.NONE;
     this.path = null;
     this.size = 0L;
     this.mtime = -1L;
@@ -110,12 +115,12 @@ public class Application extends AbstractCodec<Application> {
     return user;
   }
 
-  /** Return true, if current application is in progress, false otherwise */
-  public boolean inProgress() {
-    return inProgress;
+  /** Get application status */
+  public AppStatus getAppStatus() {
+    return appStatus;
   }
 
-  /** Get processing status */
+  /** Get processing (loading by history server) status */
   public LoadStatus getLoadStatus() {
     return loadStatus;
   }
@@ -157,8 +162,8 @@ public class Application extends AbstractCodec<Application> {
     this.user = user;
   }
 
-  public void setInProgress(boolean value) {
-    this.inProgress = value;
+  public void setAppStatus(AppStatus status) {
+    this.appStatus = status;
   }
 
   public void setPath(String value) {
@@ -175,6 +180,14 @@ public class Application extends AbstractCodec<Application> {
 
   public void setLoadStatus(LoadStatus status) {
     this.loadStatus = status;
+  }
+
+  /**
+   * Update application status for current instance.
+   * @param newStatus new application status
+   */
+  public synchronized void updateAppStatus(AppStatus newStatus) {
+    appStatus = newStatus;
   }
 
   /**
@@ -197,7 +210,7 @@ public class Application extends AbstractCodec<Application> {
     setStartTime(other.getStartTime());
     setEndTime(other.getEndTime());
     setUser(other.getUser());
-    setInProgress(other.inProgress());
+    setAppStatus(other.getAppStatus());
     setPath(other.getPath());
     setSize(other.getSize());
     setModificationTime(other.getModificationTime());
@@ -223,7 +236,7 @@ public class Application extends AbstractCodec<Application> {
     String appId = inProgress ? name.substring(0, name.lastIndexOf(".inprogress")) : name;
     Application app = new Application();
     app.setAppId(appId);
-    app.setInProgress(inProgress);
+    app.setAppStatus(AppStatus.NONE);
     app.setPath(fileStatus.getPath().toString());
     app.setSize(fileStatus.getLen());
     app.setModificationTime(fileStatus.getModificationTime());
@@ -238,6 +251,7 @@ public class Application extends AbstractCodec<Application> {
     return getClass().getSimpleName() +
       "(appId=" + appId +
       ", appName=" + appName +
+      ", appStatus=" + appStatus +
       ", mtime=" + mtime +
       ", loadStatus=" + loadStatus + ")";
   }
@@ -265,8 +279,8 @@ public class Application extends AbstractCodec<Application> {
         case FIELD_USER:
           app.setUser(safeReadString(reader));
           break;
-        case FIELD_IN_PROGRESS:
-          app.setInProgress(reader.readBoolean());
+        case FIELD_APP_STATUS:
+          app.setAppStatus(AppStatus.valueOf(safeReadString(reader)));
           break;
         case FIELD_PATH:
           app.setPath(safeReadString(reader));
@@ -302,7 +316,7 @@ public class Application extends AbstractCodec<Application> {
     writer.writeInt64(FIELD_STARTTIME, value.getStartTime());
     writer.writeInt64(FIELD_ENDTIME, value.getEndTime());
     safeWriteString(writer, FIELD_USER, value.getUser());
-    writer.writeBoolean(FIELD_IN_PROGRESS, value.inProgress());
+    safeWriteString(writer, FIELD_APP_STATUS, value.getAppStatus().name());
     safeWriteString(writer, FIELD_PATH, value.getPath());
     writer.writeInt64(FIELD_SIZE, value.getSize());
     writer.writeInt64(FIELD_MTIME, value.getModificationTime());

@@ -115,6 +115,7 @@ public class EventParser {
               obj.setAppName(start.appName);
               obj.setStartTime(start.timestamp);
               obj.setUser(start.user);
+              obj.setAppStatus(Application.AppStatus.IN_PROGRESS);
               return obj;
             }
           }
@@ -136,6 +137,7 @@ public class EventParser {
                 obj.setAppId(appId);
               }
               obj.setEndTime(end.timestamp);
+              obj.setAppStatus(Application.AppStatus.FINISHED);
               return obj;
             }
           }
