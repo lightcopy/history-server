@@ -24,7 +24,7 @@ class Applications extends React.Component {
         {name: "user", desc: "User", sortable: true, hidden: false},
         {name: "appStatus", desc: "App status", sortable: true, hidden: false},
         // application log settings
-        {name: "size", desc: "File size", sortable: false},
+        {name: "size", desc: "File size", sortable: false, hidden: true},
         {name: "mtime", desc: "Last modified", sortable: false, hidden: true},
         {name: "loadStatus", desc: "Load status", sortable: false, hidden: true}
       ]
@@ -44,8 +44,9 @@ class Applications extends React.Component {
     fetch(url)
     .then(response => response.json())
     .then(json => {
-      // apply preprocessing on fields, json is array
+      // apply preprocessing on field values, json is array
       for (var i = 0; i < json.length; i++) {
+        json[i].appId = <a href={`/apps/${json[i].appId}`}>{json[i].appId}</a>;
         json[i].starttime = Util.displayTime(json[i].starttime);
         json[i].endtime = Util.displayTime(json[i].endtime);
         json[i].mtime = Util.displayTime(json[i].mtime);
