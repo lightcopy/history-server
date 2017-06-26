@@ -6,13 +6,14 @@ import Util from "./util";
 class Applications extends React.Component {
   constructor(props) {
     super(props);
-    // number of applications per page
-    this.pageSize = 100;
     // table spec
     this.spec = {
       info: {
         title: "Applications",
-        paging: true
+        sortCol: "starttime",
+        ascending: false,
+        paging: true,
+        pageSize: 4
       },
       cols: [
         // application settings
@@ -21,20 +22,16 @@ class Applications extends React.Component {
         {name: "starttime", desc: "Start time", sortable: true},
         {name: "endtime", desc: "End time", sortable: true},
         {name: "user", desc: "User", sortable: true},
+        {name: "appStatus", desc: "App status", sortable: true},
         // application log settings
         {name: "size", desc: "File size", sortable: false},
         {name: "mtime", desc: "Last modified", sortable: false},
-        {name: "status", desc: "Load status", sortable: false}
+        {name: "loadStatus", desc: "Load status", sortable: false}
       ]
     };
     this.state = {data: []};
     this.onStateChanged = this.onStateChanged.bind(this);
     this.updateData = this.updateData.bind(this);
-  }
-
-  componentDidMount() {
-    // launch with default parameters
-    this.updateData(1, this.pageSize, "starttime", false);
   }
 
   updateData(page, pageSize, sortBy, asc) {
@@ -61,6 +58,7 @@ class Applications extends React.Component {
     })
   }
 
+  /** Table API, invoked when table state has changed */
   onStateChanged(prevState, state) {
     // whether or not we should request data
     var shouldUpdate =
@@ -68,10 +66,9 @@ class Applications extends React.Component {
       prevState.sortCol != state.sortCol ||
       prevState.ascending != state.ascending;
     if (shouldUpdate) {
-      // page size is constant
-      this.updateData(state.currentPage, this.pageSize, state.sortCol, state.ascending);
-      console.log(state);
+      this.updateData(state.currentPage, state.pageSize, state.sortCol, state.ascending);
     }
+    console.log(state);
   }
 
   render() {

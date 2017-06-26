@@ -2,11 +2,16 @@ import React from "react";
 
 /*
 == Table specification ==
+Paging is enabled via flag "paging", pageSize is only considered when paging is enabled, and is
+used to hide "next" button and add page size value as part of payload in requests.
 
 const spec = {
   info: {
     title: "Applications",
-    paging: true
+    sortCol: "starttime",
+    ascending: false,
+    paging: true,
+    pageSize: 100
   },
   cols: [
     {name: "appId", desc: "App ID", sortable: true},
@@ -158,19 +163,16 @@ class Pagination extends React.Component {
 class Table extends React.Component {
   constructor(props) {
     super(props);
-    // global state for table:
+    // global available state for table:
     // - visible: table is either shown or hidden, title is always displayed
     // - sortCol: column name to sort by, null means no sorting
     // - ascending: if column name is not null, sorts in asc order, otherwise desc
     // - currentPage: if page is null then paging is disabled, otherwise it is current page number
-    this.state = {
-      visible: true,
-      sortCol: null,
-      ascending: true,
-      currentPage: (this.props.spec.info.paging ? 1 : null)
-    };
+    // - pageSize: number of records per page
+    // See `componentDidMount` method
+    this.state = {};
     // optional method to trigger when state has changed
-    this.stateChanged = this.props.stateChanged;
+    this.stateChanged = props.stateChanged;
     // bind internal methods
     this.toggleVisible = this.toggleVisible.bind(this);
     this.toggleSort = this.toggleSort.bind(this);
@@ -207,6 +209,16 @@ class Table extends React.Component {
 
   toggleNext() {
     this.setState({currentPage: this.nextPage(this.state.currentPage)});
+  }
+
+  componentDidMount() {
+    this.setState({
+      visible: true,
+      sortCol: this.props.spec.info.sortCol,
+      ascending: this.props.spec.info.ascending,
+      currentPage: (this.props.spec.info.paging ? 1 : null),
+      pageSize: this.props.spec.info.pageSize
+    });
   }
 
   componentDidUpdate(prevProps, prevState) {
