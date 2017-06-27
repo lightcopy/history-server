@@ -31,3 +31,13 @@
 th.sortable {
   cursor: pointer;
 }
+
+// utility to truncate long text
+.truncate {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  max-width: 240px;
+}

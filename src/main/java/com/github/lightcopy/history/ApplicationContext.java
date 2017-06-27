@@ -127,7 +127,15 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
-    @Path("{path}.css")
+    @Path("apps/{default: .*}")
+    @Produces("text/html")
+    public Response getAppsRoute() {
+      // returns same index.html page
+      return getIndex();
+    }
+
+    @GET
+    @Path("css/{path}.css")
     @Produces("text/css")
     public Response getCSS(@PathParam("path") String path) {
       InputStream css = open(dir("dist", "css", path + ".css"));
@@ -135,7 +143,7 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
-    @Path("{path}.js")
+    @Path("js/{path}.js")
     @Produces("text/javascript")
     public Response getJS(@PathParam("path") String path) {
       InputStream js = open(dir("dist", "js", path + ".js"));
@@ -143,7 +151,7 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
-    @Path("{path}.png")
+    @Path("img/{path}.png")
     @Produces("image/png")
     public Response getPNG(@PathParam("path") String path) {
       InputStream img = open(dir("dist", "img", path + ".png"));
