@@ -16,7 +16,8 @@
 
 package com.github.lightcopy.history.model;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 
 import org.bson.BsonReader;
@@ -35,18 +36,100 @@ public class Environment extends AbstractCodec<Environment> {
   public static final String FIELD_SYSTEM_PROPS = "systemProperties";
   public static final String FIELD_CLASSPATH_ENT = "classpathEntries";
 
+  /**
+   * Internal entry format as key-value pair for environment properties.
+   * Similar to tuple in both equality and comparison.
+   */
+  public static class Entry implements Comparable<Entry> {
+    private String name;
+    private String value;
+
+    public Entry() {
+      /* no-op */
+    }
+
+    public Entry(String name, String value) {
+      this.name = name;
+      this.value = value;
+    }
+
+    /** Get name for this entry */
+    public String getName() {
+      return name;
+    }
+
+    /** Get value for this entry */
+    public String getValue() {
+      return value;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == null || !(obj instanceof Entry)) return false;
+      Entry that = (Entry) obj;
+      return this.name.equals(that.name) && this.value.equals(that.value);
+    }
+
+    @Override
+    public int compareTo(Entry other) {
+      int res = this.name.compareTo(other.name);
+      if (res != 0) return res;
+      return this.value.compareTo(other.value);
+    }
+
+    @Override
+    public String toString() {
+      return "(" + name + " -> " + value + ")";
+    }
+  }
+
+  // read block for Mongo serde
+  public static final ReadItem<Entry> READ_BLOCK = new ReadItem<Entry>() {
+    @Override
+    public Entry read(BsonReader reader) {
+      String name = null;
+      String value = null;
+      reader.readStartDocument();
+      while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+        switch (reader.readName()) {
+          case "name":
+            name = safeReadString(reader);
+            break;
+          case "value":
+            value = safeReadString(reader);
+            break;
+          default:
+            break;
+        }
+      }
+      reader.readEndDocument();
+      return new Entry(name, value);
+    }
+  };
+
+  // write block for Mongo serde
+  public static final WriteItem<Entry> WRITE_BLOCK = new WriteItem<Entry>() {
+    @Override
+    public void write(BsonWriter writer, Entry entry) {
+      writer.writeStartDocument();
+      safeWriteString(writer, "name", entry.getName());
+      safeWriteString(writer, "value", entry.getValue());
+      writer.writeEndDocument();
+    }
+  };
+
   private String appId;
   // environment information
-  private HashMap<String, String> jvmInformation;
-  private HashMap<String, String> sparkProperties;
-  private HashMap<String, String> systemProperties;
-  private HashMap<String, String> classpathEntries;
+  private ArrayList<Entry> jvmInformation;
+  private ArrayList<Entry> sparkProperties;
+  private ArrayList<Entry> systemProperties;
+  private ArrayList<Entry> classpathEntries;
 
   public Environment() {
-    this.jvmInformation = new HashMap<String, String>();
-    this.sparkProperties = new HashMap<String, String>();
-    this.systemProperties = new HashMap<String, String>();
-    this.classpathEntries = new HashMap<String, String>();
+    this.jvmInformation = new ArrayList<Entry>();
+    this.sparkProperties = new ArrayList<Entry>();
+    this.systemProperties = new ArrayList<Entry>();
+    this.classpathEntries = new ArrayList<Entry>();
   }
 
   // == Getters ==
@@ -55,19 +138,19 @@ public class Environment extends AbstractCodec<Environment> {
     return appId;
   }
 
-  public HashMap<String, String> getJvmInformation() {
+  public ArrayList<Entry> getJvmInformation() {
     return jvmInformation;
   }
 
-  public HashMap<String, String> getSparkProperties() {
+  public ArrayList<Entry> getSparkProperties() {
     return sparkProperties;
   }
 
-  public HashMap<String, String> getSystemProperties() {
+  public ArrayList<Entry> getSystemProperties() {
     return systemProperties;
   }
 
-  public HashMap<String, String> getClasspathEntries() {
+  public ArrayList<Entry> getClasspathEntries() {
     return classpathEntries;
   }
 
@@ -77,20 +160,47 @@ public class Environment extends AbstractCodec<Environment> {
     this.appId = appId;
   }
 
+  /** Convert map into list of entries, sorted in ascending order */
+  private ArrayList<Entry> mapToSortedList(Map<String, String> map) {
+    ArrayList<Entry> list = new ArrayList<Entry>();
+    for (Map.Entry<String, String> entry : map.entrySet()) {
+      list.add(new Entry(entry.getKey(), entry.getValue()));
+    }
+    // sort in ascending order
+    Collections.sort(list);
+    return list;
+  }
+
   public void setJvmInformation(Map<String, String> info) {
-    this.jvmInformation = new HashMap<String, String>(info);
+    this.jvmInformation = mapToSortedList(info);
   }
 
   public void setSparkProperties(Map<String, String> props) {
-    this.sparkProperties = new HashMap<String, String>(props);
+    this.sparkProperties = mapToSortedList(props);
   }
 
   public void setSystemProperties(Map<String, String> props) {
-    this.systemProperties = new HashMap<String, String>(props);
+    this.systemProperties = mapToSortedList(props);
   }
 
   public void setClasspathEntries(Map<String, String> entries) {
-    this.classpathEntries = new HashMap<String, String>(entries);
+    this.classpathEntries = mapToSortedList(entries);
+  }
+
+  public void setJvmInformation(ArrayList<Entry> info) {
+    this.jvmInformation = info;
+  }
+
+  public void setSparkProperties(ArrayList<Entry> props) {
+    this.sparkProperties = props;
+  }
+
+  public void setSystemProperties(ArrayList<Entry> props) {
+    this.systemProperties = props;
+  }
+
+  public void setClasspathEntries(ArrayList<Entry> entries) {
+    this.classpathEntries = entries;
   }
 
   // == Codec methods ==
@@ -105,16 +215,16 @@ public class Environment extends AbstractCodec<Environment> {
           env.setAppId(safeReadString(reader));
           break;
         case FIELD_JVM_INFO:
-          env.setJvmInformation(readMap(reader));
+          env.setJvmInformation(readList(reader, READ_BLOCK));
           break;
         case FIELD_SPARK_PROPS:
-          env.setSparkProperties(readMap(reader));
+          env.setSparkProperties(readList(reader, READ_BLOCK));
           break;
         case FIELD_SYSTEM_PROPS:
-          env.setSystemProperties(readMap(reader));
+          env.setSystemProperties(readList(reader, READ_BLOCK));
           break;
         case FIELD_CLASSPATH_ENT:
-          env.setClasspathEntries(readMap(reader));
+          env.setClasspathEntries(readList(reader, READ_BLOCK));
           break;
         default:
           reader.skipValue();
@@ -135,13 +245,13 @@ public class Environment extends AbstractCodec<Environment> {
     writer.writeStartDocument();
     safeWriteString(writer, FIELD_APP_ID, value.getAppId());
     // write jvm information as nested document
-    writeMap(writer, FIELD_JVM_INFO, value.getJvmInformation());
+    writeList(writer, FIELD_JVM_INFO, value.getJvmInformation(), WRITE_BLOCK);
     // write spark properties
-    writeMap(writer, FIELD_SPARK_PROPS, value.getSparkProperties());
+    writeList(writer, FIELD_SPARK_PROPS, value.getSparkProperties(), WRITE_BLOCK);
     // write system properties
-    writeMap(writer, FIELD_SYSTEM_PROPS, value.getSystemProperties());
+    writeList(writer, FIELD_SYSTEM_PROPS, value.getSystemProperties(), WRITE_BLOCK);
     // write classpath entries
-    writeMap(writer, FIELD_CLASSPATH_ENT, value.getClasspathEntries());
+    writeList(writer, FIELD_CLASSPATH_ENT, value.getClasspathEntries(), WRITE_BLOCK);
     writer.writeEndDocument();
   }
 }

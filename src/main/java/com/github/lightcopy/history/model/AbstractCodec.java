@@ -16,6 +16,7 @@
 
 package com.github.lightcopy.history.model;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,7 +32,7 @@ public abstract class AbstractCodec<T> implements Codec<T> {
    * @param name key
    * @param value string value or null
    */
-  public void safeWriteString(BsonWriter writer, String name, String value) {
+  public static void safeWriteString(BsonWriter writer, String name, String value) {
     if (value == null) {
       writer.writeNull(name);
     } else {
@@ -44,13 +45,58 @@ public abstract class AbstractCodec<T> implements Codec<T> {
    * @param reader bson reader
    * @return string or null
    */
-  public String safeReadString(BsonReader reader) {
+  public static String safeReadString(BsonReader reader) {
     if (reader.getCurrentBsonType() == BsonType.NULL) {
       reader.readNull();
       return null;
     } else {
       return reader.readString();
     }
+  }
+
+  /** ReadItem for for deserializing collection */
+  public static interface ReadItem<T> {
+    T read(BsonReader reader);
+  }
+
+  /** WriteItem for serializing collection */
+  public static interface WriteItem<T> {
+    void write(BsonWriter writer, T value);
+  }
+
+  /**
+   * Read list from bson document.
+   * Requires deserialization block to parse T items.
+   * @param reader bson reader
+   * @param block deserialization block
+   * @return list
+   */
+  public <T> ArrayList<T> readList(BsonReader reader, ReadItem<T> block) {
+    ArrayList<T> list = new ArrayList<T>();
+    reader.readStartArray();
+    while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+      list.add(block.read(reader));
+    }
+    reader.readEndArray();
+    return list;
+  }
+
+  /**
+   * Write list as bson document.
+   * Requires serialization block to parse T item.
+   * @param writer bson writer
+   * @param key document field key
+   * @param value list value for that key
+   * @param block serialization block
+   */
+  public <T> void writeList(BsonWriter writer, String key, ArrayList<T> value, WriteItem<T> block) {
+    writer.writeStartArray(key);
+    if (value != null) {
+      for (T item : value) {
+        block.write(writer, item);
+      }
+    }
+    writer.writeEndArray();
   }
 
   /**

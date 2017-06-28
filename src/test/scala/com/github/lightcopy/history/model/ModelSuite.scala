@@ -48,6 +48,14 @@ class ModelSuite extends UnitTestSuite {
     res
   }
 
+  def al[T](seq: Seq[T]): java.util.ArrayList[T] = {
+    val res = new java.util.ArrayList[T]()
+    for (item <- seq) {
+      res.add(item)
+    }
+    res
+  }
+
   test("Create application") {
     val app = new Application()
     app.setAppId("app-id")
@@ -147,6 +155,7 @@ class ModelSuite extends UnitTestSuite {
   }
 
   test("Complete environment into bson") {
+    import Environment._
     val env = new Environment()
     env.setAppId("app-id")
     env.setJvmInformation(hm(Map("a.1" -> "b.1", "a.2" -> "b.2")))
@@ -158,9 +167,45 @@ class ModelSuite extends UnitTestSuite {
     val res = deserialize(env, doc)
 
     res.getAppId() should be ("app-id")
-    res.getJvmInformation() should be (hm(Map("a.1" -> "b.1", "a.2" -> "b.2")))
-    res.getSparkProperties() should be (hm(Map("c.1" -> "d.1", "c.2" -> "d.2")))
-    res.getSystemProperties() should be (hm(Map("e.1" -> "f.1", "e.2" -> "f.2")))
-    res.getClasspathEntries() should be (hm(Map("g.1" -> "h.1", "g.2" -> "h.2")))
+    res.getJvmInformation() should be (
+      al(new Entry("a.1", "b.1") :: new Entry("a.2", "b.2") :: Nil))
+    res.getSparkProperties() should be (
+      al(new Entry("c.1", "d.1") :: new Entry("c.2", "d.2") :: Nil))
+    res.getSystemProperties() should be (
+      al(new Entry("e.1", "f.1") :: new Entry("e.2", "f.2") :: Nil))
+    res.getClasspathEntries() should be (
+      al(new Entry("g.1", "h.1") :: new Entry("g.2", "h.2") :: Nil))
+  }
+
+  test("Sort entries for environment") {
+    import Environment._
+    val env = new Environment()
+    val map = Map("a" -> "1", "e" -> "2", "b" -> "3", "d" -> "5", "c" -> "4")
+    env.setAppId("app-id")
+    env.setJvmInformation(hm(map))
+    env.setSparkProperties(hm(map))
+    env.setSystemProperties(hm(map))
+    env.setClasspathEntries(hm(map))
+
+    val lst = al(Seq(
+      new Entry("a", "1"),
+      new Entry("b", "3"),
+      new Entry("c", "4"),
+      new Entry("d", "5"),
+      new Entry("e", "2")
+    ))
+
+    env.getJvmInformation() should be (lst)
+    env.getSparkProperties() should be (lst)
+    env.getSystemProperties() should be (lst)
+    env.getClasspathEntries() should be (lst)
+
+    val doc = serialize(env, env)
+    val res = deserialize(env, doc)
+
+    res.getJvmInformation() should be (lst)
+    res.getSparkProperties() should be (lst)
+    res.getSystemProperties() should be (lst)
+    res.getClasspathEntries() should be (lst)
   }
 }
