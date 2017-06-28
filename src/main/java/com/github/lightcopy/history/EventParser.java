@@ -40,8 +40,9 @@ import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 
 /**
- * Parser for Spark listener events. Also performs aggregation for metrics.
- * Created per event log.
+ * Parser for Spark listener events.
+ * Performs aggregation for metrics and keeps aggregation state, and is initialized per
+ * application log.
  */
 public class EventParser {
   private static final Logger LOG = LoggerFactory.getLogger(EventParser.class);
@@ -87,91 +88,98 @@ public class EventParser {
   }
 
   /** Parse individual event from json string */
-  private void parseJsonEvent(final String appId, Event event, String json, MongoClient client) {
-    // block for upsert
-    Mongo.UpsertBlock<Application> block = null;
-
+  private void parseJsonEvent(String appId, Event event, String json, MongoClient client) {
     switch (event.getEventName()) {
       case "SparkListenerApplicationStart":
-        final SparkListenerApplicationStart start =
-          gson.fromJson(json, SparkListenerApplicationStart.class);
-        // check that app id is the same as event log id
-        if (!appId.equals(start.appId)) {
-          throw new RuntimeException("App ID mismatch: " + appId + " != " + start.appId);
-        }
-
-        Mongo.findOneAndUpsert(
-          Mongo.applicationCollection(client),
-          Filters.eq(Application.FIELD_APP_ID, appId),
-          new Mongo.UpsertBlock<Application>() {
-            @Override
-            public Application update(Application obj) {
-              if (obj == null) {
-                obj = new Application();
-                // update appId, because it is new application
-                obj.setAppId(appId);
-              }
-              // update application based on event
-              obj.setAppName(start.appName);
-              obj.setStartTime(start.timestamp);
-              obj.setUser(start.user);
-              obj.setAppStatus(Application.AppStatus.IN_PROGRESS);
-              return obj;
-            }
-          }
-        );
+        processEvent(client, appId, gson.fromJson(json, SparkListenerApplicationStart.class));
         break;
-
       case "SparkListenerApplicationEnd":
-        final SparkListenerApplicationEnd end =
-          gson.fromJson(json, SparkListenerApplicationEnd.class);
-        Mongo.findOneAndUpsert(
-          Mongo.applicationCollection(client),
-          Filters.eq(Application.FIELD_APP_ID, appId),
-          new Mongo.UpsertBlock<Application>() {
-            @Override
-            public Application update(Application obj) {
-              if (obj == null) {
-                obj = new Application();
-                // update appId, because it is new application
-                obj.setAppId(appId);
-              }
-              obj.setEndTime(end.timestamp);
-              obj.setAppStatus(Application.AppStatus.FINISHED);
-              return obj;
-            }
-          }
-        );
+        processEvent(client, appId, gson.fromJson(json, SparkListenerApplicationEnd.class));
         break;
-
       case "SparkListenerEnvironmentUpdate":
-        final SparkListenerEnvironmentUpdate env =
-          gson.fromJson(json, SparkListenerEnvironmentUpdate.class);
-        // block to update environment information of the application
-        Mongo.findOneAndUpsert(
-          Mongo.environmentCollection(client),
-          Filters.eq(Environment.FIELD_APP_ID, appId),
-          new Mongo.UpsertBlock<Environment>() {
-            @Override
-            public Environment update(Environment obj) {
-              if (obj == null) {
-                obj = new Environment();
-                // update appId, because it is new application
-                obj.setAppId(appId);
-              }
-              obj.setJvmInformation(env.jvmInformation);
-              obj.setSparkProperties(env.sparkProperties);
-              obj.setSystemProperties(env.systemProperties);
-              obj.setClasspathEntries(env.classpathEntries);
-              return obj;
-            }
-          }
-        );
+        processEvent(client, appId, gson.fromJson(json, SparkListenerEnvironmentUpdate.class));
         break;
-
       default:
         LOG.warn("Unrecongnized event {} ", event);
         break;
     }
+  }
+
+  // == Processing methods for listener events ==
+
+  // == SparkListenerApplicationStart ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerApplicationStart event) {
+    // check that app id is the same as event log id
+    if (!appId.equals(event.appId)) {
+      throw new RuntimeException("App ID mismatch: " + appId + " != " + event.appId);
+    }
+
+    Mongo.findOneAndUpsert(
+      Mongo.applicationCollection(client),
+      Filters.eq(Application.FIELD_APP_ID, appId),
+      new Mongo.UpsertBlock<Application>() {
+        @Override
+        public Application update(Application obj) {
+          if (obj == null) {
+            obj = new Application();
+            // update appId, because it is new application
+            obj.setAppId(appId);
+          }
+          // update application based on event
+          obj.setAppName(event.appName);
+          obj.setStartTime(event.timestamp);
+          obj.setUser(event.user);
+          obj.setAppStatus(Application.AppStatus.IN_PROGRESS);
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerApplicationEnd ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerApplicationEnd event) {
+    Mongo.findOneAndUpsert(
+      Mongo.applicationCollection(client),
+      Filters.eq(Application.FIELD_APP_ID, appId),
+      new Mongo.UpsertBlock<Application>() {
+        @Override
+        public Application update(Application obj) {
+          if (obj == null) {
+            // this covers test when application start event is missing
+            obj = new Application();
+            obj.setAppId(appId);
+          }
+          obj.setEndTime(event.timestamp);
+          obj.setAppStatus(Application.AppStatus.FINISHED);
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerEnvironmentUpdate ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerEnvironmentUpdate event) {
+    Mongo.findOneAndUpsert(
+      Mongo.environmentCollection(client),
+      Filters.eq(Environment.FIELD_APP_ID, appId),
+      new Mongo.UpsertBlock<Environment>() {
+        @Override
+        public Environment update(Environment obj) {
+          if (obj == null) {
+            // this is done because environment update comes before application start event
+            obj = new Environment();
+            obj.setAppId(appId);
+          }
+          obj.setJvmInformation(event.jvmInformation);
+          obj.setSparkProperties(event.sparkProperties);
+          obj.setSystemProperties(event.systemProperties);
+          obj.setClasspathEntries(event.classpathEntries);
+          return obj;
+        }
+      }
+    );
   }
 }
