@@ -30,9 +30,11 @@ import org.slf4j.LoggerFactory;
 
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
+import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
 
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.process.ExecutorProcess;
 import com.github.lightcopy.history.process.InterruptibleThread;
 import com.github.lightcopy.history.process.WatchProcess;
@@ -179,5 +181,21 @@ class EventLogManager implements ApiProvider {
       }
     );
     return list;
+  }
+
+  @Override
+  public Application application(String appId) {
+    // this method returns either first application that has appId or null if not found.
+    return Mongo.applicationCollection(mongo)
+      .find(Filters.eq(Application.FIELD_APP_ID, appId))
+      .first();
+  }
+
+  @Override
+  public Environment environment(String appId) {
+    // this method returns either environment that has appId or null if not found.
+    return Mongo.environmentCollection(mongo)
+      .find(Filters.eq(Environment.FIELD_APP_ID, appId))
+      .first();
   }
 }

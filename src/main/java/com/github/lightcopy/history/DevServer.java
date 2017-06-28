@@ -17,9 +17,11 @@
 package com.github.lightcopy.history;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.Environment;
 
 /** Simple development server for frontend */
 public class DevServer extends AbstractServer {
@@ -79,6 +81,53 @@ public class DevServer extends AbstractServer {
       list.add(app);
 
       return list;
+    }
+
+    @Override
+    public Application application(String appId) {
+      Application app = new Application();
+      app.setAppId(appId);
+      app.setAppName("Sample application");
+      app.setStartTime(1497733105297L);
+      app.setEndTime(1497733151594L);
+      app.setUser("sadikovi");
+      app.setAppStatus(Application.AppStatus.FINISHED);
+      app.setPath("file:/work/app-20170618085827-0000");
+      app.setSize(26974L);
+      app.setModificationTime(1498271111876L);
+      app.setLoadStatus(Application.LoadStatus.LOAD_SUCCESS);
+      return app;
+    }
+
+    @Override
+    public Environment environment(String appId) {
+      Environment env = new Environment();
+
+      HashMap<String, String> jvmProps = new HashMap<String, String>();
+      jvmProps.put("Java Home", "/usr/local/share/jdk1.8.0_131/jre");
+      jvmProps.put("Java Version", "1.8.0_131 (Oracle Corporation)");
+      jvmProps.put("Scala Version", "version 2.11.8");
+      env.setJvmInformation(jvmProps);
+
+      HashMap<String, String> sparkProps = new HashMap<String, String>();
+      sparkProps.put("spark.app.id", "app-20170628110009-0019");
+      sparkProps.put("spark.driver.memory", "40g");
+      sparkProps.put("spark.eventLog.enabled", "true");
+      env.setSparkProperties(sparkProps);
+
+      HashMap<String, String> sysProps = new HashMap<String, String>();
+      sysProps.put("os.arch", "amd64");
+      sysProps.put("os.name", "Linux");
+      sysProps.put("os.version", "4.4.0-79-generic");
+      env.setSystemProperties(sysProps);
+
+      HashMap<String, String> clsProps = new HashMap<String, String>();
+      clsProps.put("/usr/local/spark/jars/spark-catalyst_2.11-2.1.0.jar", "System Classpath");
+      clsProps.put("/usr/local/spark/jars/spark-core_2.11-2.1.0.jar", "System Classpath");
+      clsProps.put("/usr/local/spark/jars/spark-graphx_2.11-2.1.0.jar", "System Classpath");
+      env.setClasspathEntries(clsProps);
+
+      return env;
     }
   }
 

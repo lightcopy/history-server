@@ -19,6 +19,7 @@ package com.github.lightcopy.history;
 import java.util.List;
 
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.Environment;
 
 /**
  * Interface for providing REST API calls implementation.
@@ -35,4 +36,21 @@ public interface ApiProvider {
    * @return list of Application instances.
    */
   List<Application> applications(int page, int pageSize, String sortBy, boolean asc);
+
+  /**
+   * Return application for provided appId.
+   * Result can be null, if application is not found.
+   * @param appId
+   * @return Application instance or null, if not found
+   *
+   */
+  Application application(String appId);
+
+  /**
+   * Return environment for provided appId.
+   * Result can be null, if environment is not found.
+   * @param appId
+   * @return valid environment or null, if not found
+   */
+  Environment environment(String appId);
 }

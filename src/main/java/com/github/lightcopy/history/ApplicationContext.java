@@ -35,8 +35,11 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.ServerProperties;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import com.github.lightcopy.history.conf.AppConf;
+import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.Environment;
 
 /**
  * Application context.
@@ -46,6 +49,7 @@ public class ApplicationContext extends ResourceConfig {
   // current working directory
   private static final String WORKING_DIRECTORY = "working.directory";
   private static final String API_PROVIDER = "api.provider";
+  private static final Gson gson = new Gson();
 
   private final AppConf conf;
 
@@ -57,32 +61,28 @@ public class ApplicationContext extends ResourceConfig {
     property(API_PROVIDER, provider);
   }
 
-  /** Simple class to wrap server error message */
-  static class Error {
-    private Response.Status code;
-    private String msg;
+  /** API methdo to return error message with provided code */
+  private static Response apiError(Response.Status status, String msg) {
+    JsonObject obj = new JsonObject();
+    obj.addProperty("code", status.getStatusCode());
+    obj.addProperty("msg", msg);
+    return Response.accepted(gson.toJson(obj)).status(status).build();
+  }
 
-    public Error(Response.Status code, String msg) {
-      this.code = code;
-      this.msg = msg;
-    }
+  /** API method to return 400 error as JSON */
+  private static Response apiError400(String msg) {
+    return apiError(Response.Status.BAD_REQUEST, msg);
+  }
 
-    /** Get current error code */
-    public Response.Status code() {
-      return code;
-    }
-
-    @Override
-    public String toString() {
-      return "[code=" + code + ", msg=" + msg + "]";
-    }
+  /** API method to return 404 error as JSON */
+  private static Response apiError404(String msg) {
+    return apiError(Response.Status.NOT_FOUND, msg);
   }
 
   @Path("/")
   public static class ContextProvider {
     @Context
     Configuration config;
-    Gson gson = new Gson();
     ApiProvider provider;
 
     /** Get current working directory from context */
@@ -198,6 +198,8 @@ public class ApplicationContext extends ResourceConfig {
       return Response.ok(in).build();
     }
 
+    // == REST API ==
+
     @GET
     @Path("api/apps")
     @Produces("application/json")
@@ -210,8 +212,29 @@ public class ApplicationContext extends ResourceConfig {
         return Response.ok(
           gson.toJson(getProvider().applications(page, pageSize, sortBy, asc))).build();
       } catch (Exception err) {
-        Error msg = new Error(Response.Status.BAD_REQUEST, err.getMessage());
-        return Response.ok(gson.toJson(msg)).status(msg.code()).build();
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/environment")
+    @Produces("application/json")
+    public Response getAppEnvironment(@PathParam("appId") String appId) {
+      try {
+        Application app = getProvider().application(appId);
+        if (app == null) {
+          return apiError404("Application " + appId + " is not found");
+        } else {
+          Environment env = getProvider().environment(appId);
+          // build json that has 2 keys, one for application, another for environment.
+          // if environment is not found, we will return empty object as value.
+          JsonObject obj = new JsonObject();
+          obj.add("app", gson.toJsonTree(app));
+          obj.add("env", gson.toJsonTree(env));
+          return Response.ok(gson.toJson(obj)).build();
+        }
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
       }
     }
   }
