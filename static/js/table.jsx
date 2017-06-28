@@ -39,15 +39,13 @@ class TableTitle extends React.Component {
     var visible = this.props.visible ? "bottom" : "right";
     return (
       <div className="table-title">
+        <button type="button" className="btn btn-link" aria-label="Expand/collapse" onClick={this.props.expandAction} >
+          <span className={"glyphicon glyphicon-triangle-" + visible} aria-hidden="true"></span>
+        </button>
         <h4 className="table-title">{this.props.title}</h4>
-        <div className="btn-group" role="group" aria-label="Settings">
-          <button type="button" className="btn btn-link" aria-label="Expand/collapse" onClick={this.props.expandAction} >
-            <span className={"glyphicon glyphicon-triangle-" + visible} aria-hidden="true"></span>
-          </button>
-          <button type="button" className="btn btn-link" aria-label="Configure" onClick={this.props.configureAction}>
-            <span className="glyphicon glyphicon-cog" aria-hidden="true"></span>
-          </button>
-        </div>
+        <button type="button" className="btn btn-link" aria-label="Configure" onClick={this.props.configureAction}>
+          <span className="glyphicon glyphicon-cog" aria-hidden="true"></span>
+        </button>
       </div>
     );
   }
