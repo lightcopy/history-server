@@ -27,6 +27,12 @@
     display: inline;
   }
 }
+
+// make columns of equal width
+table.equal-width {
+  table-layout: fixed;
+}
+
 // whether or not column is sortable
 th.sortable {
   cursor: pointer;

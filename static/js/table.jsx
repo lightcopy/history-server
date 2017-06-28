@@ -8,6 +8,7 @@ used to hide "next" button and add page size value as part of payload in request
 const spec = {
   info: {
     title: "Applications",
+    equalColumnWidth: false,
     sortCol: "starttime",
     ascending: false,
     paging: true,
@@ -171,10 +172,11 @@ class TableBody extends React.Component {
     // header columns as "tr" tag of "th" elements
     var headerCols = this.header(cols,
       this.props.sortAction, this.props.sortCol, this.props.sortAsc);
+    var equalWidth = this.props.equalColumnWidth ? "equal-width" : "";
     // table rows as "tr" tags
     var tableRows = this.rows(cols, this.props.data);
     return (
-      <table className={"table table-bordered table-striped " + visible}>
+      <table className={`table table-bordered table-striped ${equalWidth} ${visible}`}>
         <thead>{headerCols}</thead>
         <tbody>{tableRows}</tbody>
       </table>
@@ -324,6 +326,7 @@ class Table extends React.Component {
         <TableBody
           cols={this.props.spec.cols}
           displayCols={this.state.displayCols}
+          equalColumnWidth={this.props.spec.info.equalColumnWidth}
           data={this.props.data}
           visible={this.state.visible}
           sortAction={this.toggleSort}
