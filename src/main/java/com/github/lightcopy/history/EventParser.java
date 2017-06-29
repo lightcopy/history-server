@@ -36,8 +36,11 @@ import com.github.lightcopy.history.event.Event;
 import com.github.lightcopy.history.event.SparkListenerApplicationStart;
 import com.github.lightcopy.history.event.SparkListenerApplicationEnd;
 import com.github.lightcopy.history.event.SparkListenerEnvironmentUpdate;
+import com.github.lightcopy.history.event.SparkListenerSQLExecutionStart;
+import com.github.lightcopy.history.event.SparkListenerSQLExecutionEnd;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.SQLExecution;
 
 /**
  * Parser for Spark listener events.
@@ -98,6 +101,12 @@ public class EventParser {
         break;
       case "SparkListenerEnvironmentUpdate":
         processEvent(client, appId, gson.fromJson(json, SparkListenerEnvironmentUpdate.class));
+        break;
+      case "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerSQLExecutionStart.class));
+        break;
+      case "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerSQLExecutionEnd.class));
         break;
       default:
         LOG.warn("Unrecongnized event {} ", event);
@@ -177,6 +186,57 @@ public class EventParser {
           obj.setSparkProperties(event.sparkProperties);
           obj.setSystemProperties(event.systemProperties);
           obj.setClasspathEntries(event.classpathEntries);
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerSQLExecutionStart ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerSQLExecutionStart event) {
+    Mongo.findOneAndUpsert(
+      Mongo.sqlExecution(client),
+      Filters.and(
+        Filters.eq(SQLExecution.FIELD_APP_ID, appId),
+        Filters.eq(SQLExecution.FIELD_EXECUTION_ID, event.executionId)
+      ),
+      new Mongo.UpsertBlock<SQLExecution>() {
+        @Override
+        public SQLExecution update(SQLExecution obj) {
+          if (obj == null) {
+            obj = new SQLExecution();
+            obj.setAppId(appId);
+            obj.setExecutionId(event.executionId);
+          }
+          obj.setDescription(event.description);
+          obj.setDetails(event.details);
+          obj.setPhysicalPlan(event.physicalPlanDescription);
+          obj.setStartTime(event.time);
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerSQLExecutionEnd ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerSQLExecutionEnd event) {
+    Mongo.findOneAndUpsert(
+      Mongo.sqlExecution(client),
+      Filters.and(
+        Filters.eq(SQLExecution.FIELD_APP_ID, appId),
+        Filters.eq(SQLExecution.FIELD_EXECUTION_ID, event.executionId)
+      ),
+      new Mongo.UpsertBlock<SQLExecution>() {
+        @Override
+        public SQLExecution update(SQLExecution obj) {
+          if (obj == null) {
+            obj = new SQLExecution();
+            obj.setAppId(appId);
+            obj.setExecutionId(event.executionId);
+          }
+          obj.setEndTime(event.time);
           return obj;
         }
       }

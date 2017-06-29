@@ -20,6 +20,7 @@ import java.util.List;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.SQLExecution;
 
 /**
  * Interface for providing REST API calls implementation.
@@ -53,4 +54,26 @@ public interface ApiProvider {
    * @return valid environment or null, if not found
    */
   Environment environment(String appId);
+
+  /**
+   * Return available SQL executions.
+   * Parameters are guaranteed to be valid.
+   * @param appId application id
+   * @param page page number, 1-based
+   * @param pageSize size of records per page, > 0
+   * @param sortBy field name to sort by
+   * @param asc return is ascending order if true, descending otherwise
+   * @return list of SQLExecution instances.
+   */
+  List<SQLExecution> sqlExecutions(
+      String appId, int page, int pageSize, String sortBy, boolean asc);
+
+  /**
+   * Return SQL execution for provided appId and executionId.
+   * Result can be null, if execution is not found.
+   * @param appId
+   * @param executionId
+   * @return valid sql execution or null, if not found
+   */
+  SQLExecution sqlExecution(String appId, int executionId);
 }

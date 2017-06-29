@@ -35,6 +35,7 @@ import com.mongodb.client.model.Sorts;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.process.ExecutorProcess;
 import com.github.lightcopy.history.process.InterruptibleThread;
 import com.github.lightcopy.history.process.WatchProcess;
@@ -172,7 +173,8 @@ class EventLogManager implements ApiProvider {
   @Override
   public List<Application> applications(int page, int pageSize, String sortBy, boolean asc) {
     final List<Application> list = new ArrayList<Application>();
-    Mongo.page(Mongo.applicationCollection(mongo), page, pageSize, sortBy, asc).forEach(
+    // we do not apply any filter when querying applications
+    Mongo.page(Mongo.applicationCollection(mongo), null, page, pageSize, sortBy, asc).forEach(
       new Block<Application>() {
         @Override
         public void apply(Application app) {
@@ -196,6 +198,38 @@ class EventLogManager implements ApiProvider {
     // this method returns either environment that has appId or null if not found.
     return Mongo.environmentCollection(mongo)
       .find(Filters.eq(Environment.FIELD_APP_ID, appId))
+      .first();
+  }
+
+  @Override
+  public List<SQLExecution> sqlExecutions(
+      String appId, int page, int pageSize, String sortBy, boolean asc) {
+    final List<SQLExecution> list = new ArrayList<SQLExecution>();
+    // filter by appId and return sql executions for requested application
+    Mongo.page(
+      Mongo.sqlExecution(mongo),
+      Filters.eq(SQLExecution.FIELD_APP_ID, appId),
+      page, pageSize, sortBy, asc)
+    .forEach(
+      new Block<SQLExecution>() {
+        @Override
+        public void apply(SQLExecution sql) {
+          list.add(sql);
+        }
+      }
+    );
+    return list;
+  }
+
+  @Override
+  public SQLExecution sqlExecution(String appId, int executionId) {
+    return Mongo.sqlExecution(mongo)
+      .find(
+        Filters.and(
+          Filters.eq(SQLExecution.FIELD_APP_ID, appId),
+          Filters.eq(SQLExecution.FIELD_EXECUTION_ID, executionId)
+        )
+      )
       .first();
   }
 }

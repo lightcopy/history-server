@@ -208,4 +208,41 @@ class ModelSuite extends UnitTestSuite {
     res.getSystemProperties() should be (lst)
     res.getClasspathEntries() should be (lst)
   }
+
+  test("Empty SQLExecution to bson") {
+    val sql = new SQLExecution()
+
+    val doc = serialize(sql, sql)
+    val res = deserialize(sql, doc)
+
+    res.getAppId should be (sql.getAppId)
+    res.getExecutionId should be (sql.getExecutionId)
+    res.getDescription should be (sql.getDescription)
+    res.getDetails should be (sql.getDetails)
+    res.getPhysicalPlan should be (sql.getPhysicalPlan)
+    res.getStartTime should be (sql.getStartTime)
+    res.getEndTime should be (sql.getEndTime)
+  }
+
+  test("Complete SQLExecution to bson") {
+    val sql = new SQLExecution()
+    sql.setAppId("app-123")
+    sql.setExecutionId(3)
+    sql.setDescription("count at <console>:24")
+    sql.setDetails("org.apache.spark.sql.Dataset.count(Dataset.scala:2419)")
+    sql.setPhysicalPlan("== Parsed Logical Plan ==")
+    sql.setStartTime(1498724267295L)
+    sql.setEndTime(1498724277381L)
+
+    val doc = serialize(sql, sql)
+    val res = deserialize(sql, doc)
+
+    res.getAppId should be ("app-123")
+    res.getExecutionId should be (3)
+    res.getDescription should be ("count at <console>:24")
+    res.getDetails should be ("org.apache.spark.sql.Dataset.count(Dataset.scala:2419)")
+    res.getPhysicalPlan should be ("== Parsed Logical Plan ==")
+    res.getStartTime should be (1498724267295L)
+    res.getEndTime should be (1498724277381L)
+  }
 }

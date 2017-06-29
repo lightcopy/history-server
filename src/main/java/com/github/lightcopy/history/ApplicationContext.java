@@ -40,6 +40,7 @@ import com.google.gson.JsonObject;
 import com.github.lightcopy.history.conf.AppConf;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.SQLExecution;
 
 /**
  * Application context.
@@ -231,6 +232,43 @@ public class ApplicationContext extends ResourceConfig {
           JsonObject obj = new JsonObject();
           obj.add("app", gson.toJsonTree(app));
           obj.add("env", gson.toJsonTree(env));
+          return Response.ok(gson.toJson(obj)).build();
+        }
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/sql")
+    @Produces("application/json")
+    public Response listSQLExecutions(
+        @PathParam("appId") String appId,
+        @DefaultValue("1") @QueryParam("page") int page,
+        @DefaultValue("100") @QueryParam("pageSize") int pageSize,
+        @DefaultValue("") @QueryParam("sortBy") String sortBy,
+        @DefaultValue("true") @QueryParam("asc") boolean asc) {
+      try {
+        return Response.ok(
+          gson.toJson(getProvider().sqlExecutions(appId, page, pageSize, sortBy, asc))).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/sql/execution")
+    @Produces("application/json")
+    public Response sqlExecution(@PathParam("appId") String appId, @QueryParam("id") int id) {
+      try {
+        Application app = getProvider().application(appId);
+        if (app == null) {
+          return apiError404("Application " + appId + " is not found");
+        } else {
+          SQLExecution sql = getProvider().sqlExecution(appId, id);
+          JsonObject obj = new JsonObject();
+          obj.add("app", gson.toJsonTree(app));
+          obj.add("sql", gson.toJsonTree(sql));
           return Response.ok(gson.toJson(obj)).build();
         }
       } catch (Exception err) {

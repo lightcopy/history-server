@@ -35,6 +35,7 @@ import com.mongodb.client.result.UpdateResult;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.SQLExecution;
 
 /**
  * Class to keep constants for MongoDB, e.g. database names, collections, etc.
@@ -44,6 +45,7 @@ public class Mongo {
   public static final String DATABASE = "history_server";
   public static final String APPLICATION_COLLECTION = "applications";
   public static final String ENVIRONMENT_COLLECTION = "environment";
+  public static final String SQLEXECUTION_COLLECTION = "sqlexecution";
 
   /**
    * Get mongo collection for Application.
@@ -78,13 +80,29 @@ public class Mongo {
   }
 
   /**
+   * Get mongo collection for SQLExecution.
+   * @param client Mongo client
+   * @return collection for SQLExecution
+   */
+  public static MongoCollection<SQLExecution> sqlExecution(MongoClient client) {
+    MongoCollection<?> collection = client.getDatabase(DATABASE)
+      .getCollection(SQLEXECUTION_COLLECTION);
+    // extract codec registries to add new support
+    CodecRegistry defaults = collection.getCodecRegistry();
+    CodecRegistry support = CodecRegistries.fromCodecs(new SQLExecution());
+    return collection
+      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
+      .withDocumentClass(SQLExecution.class);
+  }
+
+  /**
    * Method to create unique ascending index for collection.
    * @param collection any Mongo collection
    * @param field field to index
    */
-  public static void createUniqueIndex(MongoCollection<?> collection, String field) {
+  public static void createUniqueIndex(MongoCollection<?> collection, String... fields) {
     IndexOptions indexOptions = new IndexOptions().unique(true);
-    collection.createIndex(Indexes.ascending(field), indexOptions);
+    collection.createIndex(Indexes.ascending(fields), indexOptions);
   }
 
   /**
@@ -94,6 +112,8 @@ public class Mongo {
   public static void buildIndexes(MongoClient client) {
     createUniqueIndex(applicationCollection(client), Application.FIELD_APP_ID);
     createUniqueIndex(environmentCollection(client), Environment.FIELD_APP_ID);
+    createUniqueIndex(sqlExecution(client),
+      SQLExecution.FIELD_APP_ID, SQLExecution.FIELD_EXECUTION_ID);
   }
 
   /**
@@ -104,6 +124,7 @@ public class Mongo {
   public static void removeData(MongoClient client, List<String> appIds) {
     applicationCollection(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
     environmentCollection(client).deleteMany(Filters.all(Environment.FIELD_APP_ID, appIds));
+    sqlExecution(client).deleteMany(Filters.all(SQLExecution.FIELD_APP_ID, appIds));
   }
 
   /**
@@ -153,6 +174,8 @@ public class Mongo {
 
   /**
    * Find documents on a specific page.
+   * @param collection mongo collection
+   * @param filter optional filter, can be null
    * @param page page number, 1-based
    * @param pageSize page size
    * @param sortBy field to sort by
@@ -160,14 +183,19 @@ public class Mongo {
    * @return iterable with documents
    */
   public static <T> FindIterable<T> page(
-      MongoCollection<T> collection, int page, int pageSize, String sortBy, boolean asc) {
+      MongoCollection<T> collection,
+      Bson filter,
+      int page,
+      int pageSize,
+      String sortBy,
+      boolean asc) {
     if (page <= 0 || page >= 100000) {
       throw new IllegalArgumentException("Invalid page " + page);
     }
     if (pageSize <= 0 || pageSize >= 100000) {
       throw new IllegalArgumentException("Invalid page size " + pageSize);
     }
-    FindIterable<T> iter = collection.find();
+    FindIterable<T> iter = (filter == null) ? collection.find() : collection.find(filter);
     // if sortBy field is empty - do not sort at all
     if (sortBy != null && !sortBy.isEmpty()) {
       Bson sortedBy = asc ? Sorts.ascending(sortBy) : Sorts.descending(sortBy);

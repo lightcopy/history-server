@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.SQLExecution;
 
 /** Simple development server for frontend */
 public class DevServer extends AbstractServer {
@@ -128,6 +129,29 @@ public class DevServer extends AbstractServer {
       env.setClasspathEntries(clsProps);
 
       return env;
+    }
+
+    @Override
+    public List<SQLExecution> sqlExecutions(
+        String appId, int page, int pageSize, String sortBy, boolean asc) {
+      List<SQLExecution> list = new ArrayList<SQLExecution>();
+      for (int i = 0; i < 5; i++) {
+        list.add(sqlExecution(appId, i));
+      }
+      return list;
+    }
+
+    @Override
+    public SQLExecution sqlExecution(String appId, int executionId) {
+      SQLExecution sql = new SQLExecution();
+      sql.setAppId(appId);
+      sql.setExecutionId(executionId);
+      sql.setDescription("count at <console>:24");
+      sql.setDetails("org.apache.spark.sql.Dataset.count(Dataset.scala:2419)");
+      sql.setPhysicalPlan("== Parsed Logical Plan ==");
+      sql.setStartTime(1498724267295L);
+      sql.setEndTime(1498724277381L);
+      return sql;
     }
   }
 

@@ -131,4 +131,70 @@ class EventSuite extends UnitTestSuite {
     val event = gson.fromJson(json, classOf[SparkListenerApplicationEnd])
     event.timestamp should be (1497733079367L)
   }
+
+  test("SparkListenerSQLExecutionStart") {
+    val json = """
+    {
+      "Event": "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart",
+      "executionId": 1,
+      "description": "count at <console>:24",
+      "details": "org.apache.spark.sql.Dataset.count(Dataset.scala:2419)",
+      "physicalPlanDescription": "== Parsed Logical Plan ==",
+      "sparkPlanInfo": {
+        "nodeName": "WholeStageCodegen",
+        "simpleString": "WholeStageCodegen",
+        "children": [
+          {
+            "nodeName": "HashAggregate",
+            "simpleString": "HashAggregate(keys=[], functions=[count(1)])",
+            "children": [],
+            "metadata": {},
+            "metrics": [
+              {
+                "name": "number of output rows",
+                "accumulatorId": 369,
+                "metricType": "sum"
+              },
+              {
+                "name": "peak memory total (min, med, max)",
+                "accumulatorId": 370,
+                "metricType": "size"
+              }
+            ]
+          }
+        ],
+        "metadata": {},
+        "metrics": [
+          {
+            "name": "duration total (min, med, max)",
+            "accumulatorId": 368,
+            "metricType": "timing"
+          }
+        ]
+      },
+      "time": 1498724267295
+    }
+    """
+
+    val event = gson.fromJson(json, classOf[SparkListenerSQLExecutionStart])
+    event.executionId should be (1)
+    event.description should be ("count at <console>:24")
+    event.details should be ("org.apache.spark.sql.Dataset.count(Dataset.scala:2419)")
+    event.physicalPlanDescription should be ("== Parsed Logical Plan ==")
+    event.time should be (1498724267295L)
+  }
+
+  test("SparkListenerSQLExecutionEnd") {
+    val json = """
+    {
+      "Event": "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd",
+      "executionId": 1,
+      "time": 1498350386321
+    }
+    """
+
+    val event = gson.fromJson(json, classOf[SparkListenerSQLExecutionEnd])
+    event.executionId should be (1)
+    event.time should be (1498350386321L)
+  }
 }
