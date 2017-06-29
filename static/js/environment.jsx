@@ -40,13 +40,7 @@ class Environment extends React.Component {
         {name: "value", desc: valueCol}
       ]
     };
-    var data = [];
-    for (var key in props) {
-      if (props.hasOwnProperty(key)) {
-        data.push({name: key, value: props[key]});
-      }
-    }
-    return <Table key={title} spec={spec} data={data} />;
+    return <Table key={title} spec={spec} data={props} />;
   }
 
   render() {

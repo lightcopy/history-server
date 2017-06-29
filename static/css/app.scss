@@ -33,6 +33,12 @@ table.equal-width {
   table-layout: fixed;
 }
 
+// class to wrap long text in table
+table.wrap-text {
+  table-layout: fixed;
+  word-wrap: break-word;
+}
+
 // whether or not column is sortable
 th.sortable {
   cursor: pointer;
