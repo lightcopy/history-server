@@ -228,7 +228,7 @@ class Table extends React.Component {
     // See `componentDidMount` method
     this.state = {};
     // optional method to trigger when state has changed
-    this.stateChanged = props.stateChanged;
+    this.updateData = props.updateData;
     // bind internal methods
     this.toggleVisible = this.toggleVisible.bind(this);
     this.toggleSort = this.toggleSort.bind(this);
@@ -303,8 +303,19 @@ class Table extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (this.stateChanged) {
-      this.stateChanged(prevState, this.state);
+    // whether or not we should update table data
+    var shouldUpdate =
+      prevState.currentPage != this.state.currentPage ||
+      prevState.sortCol != this.state.sortCol ||
+      prevState.ascending != this.state.ascending ||
+      prevState.pageSize != this.state.pageSize;
+    if (shouldUpdate) {
+      // in some cases `updateData` is not defined, therefore no call is made
+      if (this.updateData) {
+        this.updateData(this.state.currentPage, this.state.pageSize, this.state.sortCol,
+          this.state.ascending);
+      }
+      console.log(this.state);
     }
   }
 

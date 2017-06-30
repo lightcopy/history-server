@@ -128,10 +128,16 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
+    @Path("apps")
+    @Produces("text/html")
+    public Response getAppsIndex() {
+      return getIndex();
+    }
+
+    @GET
     @Path("apps/{default: .*}")
     @Produces("text/html")
     public Response getAppsRoute() {
-      // returns same index.html page
       return getIndex();
     }
 

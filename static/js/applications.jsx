@@ -3,7 +3,6 @@ import {Link} from "react-router";
 import Header from "./header";
 import Table from "./table";
 import Util from "./util";
-import {LOAD_SUCCESS} from "./loadstatus";
 
 class Applications extends React.Component {
   constructor(props) {
@@ -33,7 +32,6 @@ class Applications extends React.Component {
       ]
     };
     this.state = {data: []};
-    this.onStateChanged = this.onStateChanged.bind(this);
     this.updateData = this.updateData.bind(this);
   }
 
@@ -50,8 +48,8 @@ class Applications extends React.Component {
       // apply preprocessing on field values, json is array
       // only render app link if load status is LOAD_SUCCESS
       for (var i = 0; i < json.length; i++) {
-        if (json[i].loadStatus == LOAD_SUCCESS) {
-          json[i].appId = <Link to={`/apps/${json[i].appId}/environment`}>{json[i].appId}</Link>;
+        if (json[i].loadStatus == "LOAD_SUCCESS") {
+          json[i].appId = <Link to={`/apps/${json[i].appId}`}>{json[i].appId}</Link>;
         }
         json[i].starttime = Util.displayTime(json[i].starttime);
         json[i].endtime = Util.displayTime(json[i].endtime);
@@ -65,25 +63,12 @@ class Applications extends React.Component {
     })
   }
 
-  /** Table API, invoked when table state has changed */
-  onStateChanged(prevState, state) {
-    // whether or not we should request data
-    var shouldUpdate =
-      prevState.currentPage != state.currentPage ||
-      prevState.sortCol != state.sortCol ||
-      prevState.ascending != state.ascending;
-    if (shouldUpdate) {
-      this.updateData(state.currentPage, state.pageSize, state.sortCol, state.ascending);
-      console.log(state);
-    }
-  }
-
   render() {
     return (
       <div>
         <Header />
         <div className="container-fluid">
-          <Table spec={this.spec} data={this.state.data} stateChanged={this.onStateChanged} />
+          <Table spec={this.spec} data={this.state.data} updateData={this.updateData} />
         </div>
       </div>
     );
