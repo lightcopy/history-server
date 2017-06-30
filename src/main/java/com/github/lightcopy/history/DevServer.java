@@ -151,6 +151,8 @@ public class DevServer extends AbstractServer {
       sql.setPhysicalPlan("== Parsed Logical Plan ==");
       sql.setStartTime(1498724267295L);
       sql.setEndTime(1498724277381L);
+      sql.updateDuration();
+      sql.setStatus(SQLExecution.Status.COMPLETED);
       return sql;
     }
   }

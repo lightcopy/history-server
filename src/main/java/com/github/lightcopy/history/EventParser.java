@@ -213,6 +213,8 @@ public class EventParser {
           obj.setDetails(event.details);
           obj.setPhysicalPlan(event.physicalPlanDescription);
           obj.setStartTime(event.time);
+          obj.updateDuration();
+          obj.setStatus(SQLExecution.Status.RUNNING);
           return obj;
         }
       }
@@ -237,6 +239,8 @@ public class EventParser {
             obj.setExecutionId(event.executionId);
           }
           obj.setEndTime(event.time);
+          obj.updateDuration();
+          obj.setStatus(SQLExecution.Status.COMPLETED);
           return obj;
         }
       }

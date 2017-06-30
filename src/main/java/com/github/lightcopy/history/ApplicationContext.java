@@ -257,9 +257,9 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
-    @Path("api/apps/{appId}/sql/execution")
+    @Path("api/apps/{appId}/sql/query/{id}")
     @Produces("application/json")
-    public Response sqlExecution(@PathParam("appId") String appId, @QueryParam("id") int id) {
+    public Response sqlExecution(@PathParam("appId") String appId, @PathParam("id") int id) {
       try {
         Application app = getProvider().application(appId);
         if (app == null) {

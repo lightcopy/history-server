@@ -222,6 +222,8 @@ class ModelSuite extends UnitTestSuite {
     res.getPhysicalPlan should be (sql.getPhysicalPlan)
     res.getStartTime should be (sql.getStartTime)
     res.getEndTime should be (sql.getEndTime)
+    res.getDuration should be (sql.getDuration)
+    res.getStatus should be (sql.getStatus)
   }
 
   test("Complete SQLExecution to bson") {
@@ -233,6 +235,8 @@ class ModelSuite extends UnitTestSuite {
     sql.setPhysicalPlan("== Parsed Logical Plan ==")
     sql.setStartTime(1498724267295L)
     sql.setEndTime(1498724277381L)
+    sql.updateDuration()
+    sql.setStatus(SQLExecution.Status.COMPLETED)
 
     val doc = serialize(sql, sql)
     val res = deserialize(sql, doc)
@@ -244,5 +248,7 @@ class ModelSuite extends UnitTestSuite {
     res.getPhysicalPlan should be ("== Parsed Logical Plan ==")
     res.getStartTime should be (1498724267295L)
     res.getEndTime should be (1498724277381L)
+    res.getDuration should be (1498724277381L - 1498724267295L)
+    res.getStatus should be (SQLExecution.Status.COMPLETED)
   }
 }

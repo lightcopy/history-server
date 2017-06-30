@@ -24,8 +24,15 @@ import org.bson.codecs.EncoderContext;
 
 /**
  * Class to represent SQL information for jobs.
+ * Execution status does not failures, because query is only scheduled, if it is correct, and
+ * is always completed, even if underlying jobs failed.
  */
 public class SQLExecution extends AbstractCodec<SQLExecution> {
+  // Processing status for event log instance
+  public enum Status {
+    NONE, RUNNING, COMPLETED
+  }
+
   public static final String FIELD_APP_ID = "appId";
   public static final String FIELD_EXECUTION_ID = "executionId";
   public static final String FIELD_DESCRIPTION = "description";
@@ -33,6 +40,8 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
   public static final String FIELD_PHYSICAL_PLAN = "physicalPlan";
   public static final String FIELD_STARTTIME = "starttime";
   public static final String FIELD_ENDTIME = "endtime";
+  public static final String FIELD_DURATION = "duration";
+  public static final String FIELD_STATUS = "status";
 
   private String appId;
   private int executionId;
@@ -41,6 +50,8 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
   private String physicalPlan;
   private long starttime;
   private long endtime;
+  private long duration;
+  private Status status;
 
   public SQLExecution() {
     this.appId = null;
@@ -50,6 +61,8 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
     this.physicalPlan = null;
     this.starttime = -1L;
     this.endtime = -1L;
+    this.duration = -1L;
+    this.status = Status.NONE;
   }
 
   // == Getters ==
@@ -82,6 +95,14 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
     return endtime;
   }
 
+  public long getDuration() {
+    return duration;
+  }
+
+  public Status getStatus() {
+    return status;
+  }
+
   // == Setters ==
 
   public void setAppId(String value) {
@@ -110,6 +131,25 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
 
   public void setEndTime(long value) {
     this.endtime = value;
+  }
+
+  // duration is set based on start/end time
+  public void updateDuration() {
+    // if both starttime and endtime are valid, we compute duration, otherwise set to -1
+    if (starttime >= 0L && endtime >= starttime) {
+      setDuration(endtime - starttime);
+    } else {
+      setDuration(-1L);
+    }
+  }
+
+  // method to set duration during deserialization
+  private void setDuration(long value) {
+    this.duration = value;
+  }
+
+  public void setStatus(Status value) {
+    this.status = value;
   }
 
   // == Codec methods ==
@@ -141,6 +181,12 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
         case FIELD_ENDTIME:
           sql.setEndTime(reader.readInt64());
           break;
+        case FIELD_DURATION:
+          sql.setDuration(reader.readInt64());
+          break;
+        case FIELD_STATUS:
+          sql.setStatus(Status.valueOf(safeReadString(reader)));
+          break;
         default:
           reader.skipValue();
           break;
@@ -165,6 +211,8 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
     safeWriteString(writer, FIELD_PHYSICAL_PLAN, value.getPhysicalPlan());
     writer.writeInt64(FIELD_STARTTIME, value.getStartTime());
     writer.writeInt64(FIELD_ENDTIME, value.getEndTime());
+    writer.writeInt64(FIELD_DURATION, value.getDuration());
+    safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
     writer.writeEndDocument();
   }
 }
