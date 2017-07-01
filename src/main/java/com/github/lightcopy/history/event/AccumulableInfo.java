@@ -21,6 +21,6 @@ import com.google.gson.annotations.SerializedName;
 public class AccumulableInfo {
   @SerializedName("ID") public int id;
   @SerializedName("Name") public String name;
-  @SerializedName("Update") public String update;
-  @SerializedName("Value") public String value;
+  @SerializedName("Update") public Object update;
+  @SerializedName("Value") public Object value;
 }

@@ -32,6 +32,7 @@ public class Task extends AbstractCodec<Task> {
     UNKNOWN, RUNNING, GET_RESULT, FAILED, KILLED, SUCCESS
   }
 
+  public static final String FIELD_APP_ID = "appId";
   public static final String FIELD_TASK_ID = "taskId";
   public static final String FIELD_STAGE_ID = "stageId";
   public static final String FIELD_STAGE_ATTEMPT_ID = "stageAttemptId";
@@ -49,6 +50,7 @@ public class Task extends AbstractCodec<Task> {
   public static final String FIELD_ERR_DETAILS = "errorDetails";
   public static final String FIELD_TASK_METRICS = "metrics";
 
+  private String appId;
   // unique identifier for task within application
   private long taskId;
   private int stageId;
@@ -69,6 +71,7 @@ public class Task extends AbstractCodec<Task> {
   private Metrics metrics;
 
   public Task() {
+    this.appId = null;
     this.taskId = -1L;
     this.stageId = -1;
     this.stageAttemptId = -1;
@@ -88,6 +91,10 @@ public class Task extends AbstractCodec<Task> {
   }
 
   // == Getters ==
+
+  public String getAppId() {
+    return appId;
+  }
 
   public long getTaskId() {
     return taskId;
@@ -154,6 +161,10 @@ public class Task extends AbstractCodec<Task> {
   }
 
   // == Setters ==
+
+  public void setAppId(String value) {
+    this.appId = value;
+  }
 
   public void setTaskId(long value) {
     this.taskId = value;
@@ -281,6 +292,9 @@ public class Task extends AbstractCodec<Task> {
     reader.readStartDocument();
     while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
       switch (reader.readName()) {
+        case FIELD_APP_ID:
+          task.setAppId(safeReadString(reader));
+          break;
         case FIELD_TASK_ID:
           task.setTaskId(reader.readInt64());
           break;
@@ -346,6 +360,7 @@ public class Task extends AbstractCodec<Task> {
   @Override
   public void encode(BsonWriter writer, Task value, EncoderContext encoderContext) {
     writer.writeStartDocument();
+    safeWriteString(writer, FIELD_APP_ID, value.getAppId());
     writer.writeInt64(FIELD_TASK_ID, value.getTaskId());
     writer.writeInt32(FIELD_STAGE_ID, value.getStageId());
     writer.writeInt32(FIELD_STAGE_ATTEMPT_ID, value.getStageAttemptId());

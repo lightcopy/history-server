@@ -38,9 +38,12 @@ import com.github.lightcopy.history.event.SparkListenerApplicationEnd;
 import com.github.lightcopy.history.event.SparkListenerEnvironmentUpdate;
 import com.github.lightcopy.history.event.SparkListenerSQLExecutionStart;
 import com.github.lightcopy.history.event.SparkListenerSQLExecutionEnd;
+import com.github.lightcopy.history.event.SparkListenerTaskStart;
+import com.github.lightcopy.history.event.SparkListenerTaskEnd;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
+import com.github.lightcopy.history.model.Task;
 
 /**
  * Parser for Spark listener events.
@@ -107,6 +110,13 @@ public class EventParser {
         break;
       case "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd":
         processEvent(client, appId, gson.fromJson(json, SparkListenerSQLExecutionEnd.class));
+        break;
+      case "SparkListenerTaskStart":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerTaskStart.class));
+        break;
+      case "SparkListenerTaskEnd":
+        LOG.info(json);
+        processEvent(client, appId, gson.fromJson(json, SparkListenerTaskEnd.class));
         break;
       default:
         LOG.warn("Unrecongnized event {} ", event);
@@ -241,6 +251,64 @@ public class EventParser {
           obj.setEndTime(event.time);
           obj.updateDuration();
           obj.setStatus(SQLExecution.Status.COMPLETED);
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerTaskStart ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerTaskStart event) {
+    Mongo.findOneAndUpsert(
+      Mongo.tasks(client),
+      Filters.and(
+        Filters.eq(Task.FIELD_APP_ID, appId),
+        Filters.eq(Task.FIELD_TASK_ID, event.taskInfo.taskId)
+      ),
+      new Mongo.UpsertBlock<Task>() {
+        @Override
+        public Task update(Task obj) {
+          // we never receive task for the same appId-taskId combination
+          if (obj != null) {
+            // TODO: consider logging such events and continue
+            throw new IllegalStateException("Duplicate task (" + appId + ", taskId=" +
+              event.taskInfo.taskId + ")");
+          }
+          obj = new Task();
+          obj.setAppId(appId);
+          obj.setStageId(event.stageId);
+          obj.setStageAttemptId(event.stageAttemptId);
+          obj.update(event.taskInfo);
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerTaskEnd ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerTaskEnd event) {
+    Mongo.findOneAndUpsert(
+      Mongo.tasks(client),
+      Filters.and(
+        Filters.eq(Task.FIELD_APP_ID, appId),
+        Filters.eq(Task.FIELD_TASK_ID, event.taskInfo.taskId)
+      ),
+      new Mongo.UpsertBlock<Task>() {
+        @Override
+        public Task update(Task obj) {
+          // task end should always be received after task start
+          if (obj == null) {
+            // TODO: consider logging such events and continue
+            throw new IllegalStateException("Task end received before task start (" + appId +
+              ", taskId=" + event.taskInfo.taskId + ")");
+          }
+          obj.setStageId(event.stageId);
+          obj.setStageAttemptId(event.stageAttemptId);
+          obj.update(event.taskInfo);
+          obj.update(event.taskEndReason);
+          obj.update(event.taskMetrics);
           return obj;
         }
       }

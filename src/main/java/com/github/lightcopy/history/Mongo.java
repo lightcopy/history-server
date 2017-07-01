@@ -36,6 +36,7 @@ import com.mongodb.client.result.UpdateResult;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
+import com.github.lightcopy.history.model.Task;
 
 /**
  * Class to keep constants for MongoDB, e.g. database names, collections, etc.
@@ -46,6 +47,7 @@ public class Mongo {
   public static final String APPLICATION_COLLECTION = "applications";
   public static final String ENVIRONMENT_COLLECTION = "environment";
   public static final String SQLEXECUTION_COLLECTION = "sqlexecution";
+  public static final String TASK_COLLECTION = "tasks";
 
   /**
    * Get mongo collection for Application.
@@ -96,6 +98,22 @@ public class Mongo {
   }
 
   /**
+   * Get mongo collection for Task.
+   * @param client Mongo client
+   * @return collection for Task
+   */
+  public static MongoCollection<Task> tasks(MongoClient client) {
+    MongoCollection<?> collection = client.getDatabase(DATABASE)
+      .getCollection(TASK_COLLECTION);
+    // extract codec registries to add new support
+    CodecRegistry defaults = collection.getCodecRegistry();
+    CodecRegistry support = CodecRegistries.fromCodecs(new Task());
+    return collection
+      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
+      .withDocumentClass(Task.class);
+  }
+
+  /**
    * Method to create unique ascending index for collection.
    * @param collection any Mongo collection
    * @param field field to index
@@ -114,6 +132,11 @@ public class Mongo {
     createUniqueIndex(environmentCollection(client), Environment.FIELD_APP_ID);
     createUniqueIndex(sqlExecution(client),
       SQLExecution.FIELD_APP_ID, SQLExecution.FIELD_EXECUTION_ID);
+    // task table will contain several indexes, one to update tasks, another one to query by
+    // job and stages
+    createUniqueIndex(tasks(client), Task.FIELD_APP_ID, Task.FIELD_TASK_ID);
+    createUniqueIndex(tasks(client), Task.FIELD_APP_ID, Task.FIELD_STAGE_ID,
+      Task.FIELD_STAGE_ATTEMPT_ID, Task.FIELD_INDEX, Task.FIELD_ATTEMPT);
   }
 
   /**
@@ -125,6 +148,7 @@ public class Mongo {
     applicationCollection(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
     environmentCollection(client).deleteMany(Filters.all(Environment.FIELD_APP_ID, appIds));
     sqlExecution(client).deleteMany(Filters.all(SQLExecution.FIELD_APP_ID, appIds));
+    tasks(client).deleteMany(Filters.all(Task.FIELD_APP_ID, appIds));
   }
 
   /**

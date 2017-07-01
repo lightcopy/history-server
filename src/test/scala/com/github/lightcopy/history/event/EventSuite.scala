@@ -351,11 +351,6 @@ class EventSuite extends UnitTestSuite {
     taskInfo.failed should be (true)
     taskInfo.killed should be (false)
     taskInfo.accumulables.size should be (1)
-    // check accumulable
-    taskInfo.accumulables.get(0).id should be (4)
-    taskInfo.accumulables.get(0).name should be ("internal.metrics.executorRunTime")
-    taskInfo.accumulables.get(0).update should be ("299")
-    taskInfo.accumulables.get(0).value should be ("299")
 
     val taskEndReason = event.taskEndReason
     taskEndReason.reason should be ("ExceptionFailure")
@@ -497,11 +492,6 @@ class EventSuite extends UnitTestSuite {
     taskInfo.failed should be (false)
     taskInfo.killed should be (false)
     taskInfo.accumulables.size should be (1)
-    // check accumulable
-    taskInfo.accumulables.get(0).id should be (128)
-    taskInfo.accumulables.get(0).name should be ("internal.metrics.executorDeserializeTime")
-    taskInfo.accumulables.get(0).update should be ("18")
-    taskInfo.accumulables.get(0).value should be ("595")
 
     val taskEndReason = event.taskEndReason
     taskEndReason.reason should be ("Success")
@@ -637,5 +627,83 @@ class EventSuite extends UnitTestSuite {
     reason.reason = "Unknown"
     reason.getDescription should be ("Unknown reason")
     reason.getDetails should be (null)
+  }
+
+  test("AccumulableInfo - parse primitive values") {
+    val json = """
+    {
+      "ID": 4,
+      "Name": "internal.metrics.executorDeserializeTime",
+      "Update": 311,
+      "Value": 311,
+      "Internal": true,
+      "Count Failed Values": true
+    }
+    """
+    val event = gson.fromJson(json, classOf[AccumulableInfo])
+    event.id should be (4)
+    event.name should be ("internal.metrics.executorDeserializeTime")
+    event.update should be (311)
+    event.value should be (311)
+  }
+
+  test("AccumulableInfo - parse complex values") {
+    val json = """
+    {
+      "ID": 14,
+      "Name": "internal.metrics.updatedBlockStatuses",
+      "Update": [
+        {
+          "Block ID": "rdd_3_0",
+          "Status": {
+            "Storage Level": {
+              "Use Disk": false,
+              "Use Memory": true,
+              "Deserialized": true,
+              "Replication": 1
+            },
+            "Memory Size": 392,
+            "Disk Size": 0
+          }
+        }
+      ],
+      "Value": [
+        {
+          "Block ID": "rdd_3_0",
+          "Status": {
+            "Storage Level": {
+              "Use Disk": false,
+              "Use Memory": true,
+              "Deserialized": true,
+              "Replication": 1
+            },
+            "Memory Size": 392,
+            "Disk Size": 0
+          }
+        }
+      ],
+      "Internal": true,
+      "Count Failed Values": true
+    }
+    """
+    val event = gson.fromJson(json, classOf[AccumulableInfo])
+    event.id should be (14)
+    event.name should be ("internal.metrics.updatedBlockStatuses")
+    val exp = List(Map(
+      "Block ID" -> "rdd_3_0",
+      "Status" -> Map(
+        "Storage Level" -> Map(
+          "Use Disk" -> false,
+          "Use Memory" -> true,
+          "Deserialized" -> true,
+          "Replication" -> 1.0
+        ).asJava,
+        "Memory Size" -> 392.0,
+        "Disk Size" -> 0.0
+      ).asJava
+    ).asJava).asJava
+
+    event.update should be (exp)
+    event.value should be (exp)
   }
 }
