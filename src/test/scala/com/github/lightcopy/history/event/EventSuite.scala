@@ -112,7 +112,6 @@ class EventSuite extends UnitTestSuite {
       "User": "sadikovi"
     }
     """
-
     val event = gson.fromJson(json, classOf[SparkListenerApplicationStart])
     event.appName should be ("Spark shell")
     event.appId should be ("local-1497733035840")
@@ -127,7 +126,6 @@ class EventSuite extends UnitTestSuite {
       "Timestamp": 1497733079367
     }
     """
-
     val event = gson.fromJson(json, classOf[SparkListenerApplicationEnd])
     event.timestamp should be (1497733079367L)
   }
@@ -175,7 +173,6 @@ class EventSuite extends UnitTestSuite {
       "time": 1498724267295
     }
     """
-
     val event = gson.fromJson(json, classOf[SparkListenerSQLExecutionStart])
     event.executionId should be (1)
     event.description should be ("count at <console>:24")
@@ -192,9 +189,50 @@ class EventSuite extends UnitTestSuite {
       "time": 1498350386321
     }
     """
-
     val event = gson.fromJson(json, classOf[SparkListenerSQLExecutionEnd])
     event.executionId should be (1)
     event.time should be (1498350386321L)
+  }
+
+  test("SparkListenerTaskStart") {
+    val json = """
+    {
+      "Event": "SparkListenerTaskStart",
+      "Stage ID": 1,
+      "Stage Attempt ID": 0,
+      "Task Info": {
+        "Task ID": 14,
+        "Index": 10,
+        "Attempt": 0,
+        "Launch Time": 1498420024582,
+        "Executor ID": "0",
+        "Host": "192.168.2.5",
+        "Locality": "NODE_LOCAL",
+        "Speculative": false,
+        "Getting Result Time": 0,
+        "Finish Time": 0,
+        "Failed": false,
+        "Killed": false,
+        "Accumulables": []
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerTaskStart])
+    event.stageId should be (1)
+    event.stageAttemptId should be (0)
+    val taskInfo = event.taskInfo
+    taskInfo.taskId should be (14)
+    taskInfo.index should be (10)
+    taskInfo.attempt should be (0)
+    taskInfo.launchTime should be (1498420024582L)
+    taskInfo.executorId should be ("0")
+    taskInfo.host should be ("192.168.2.5")
+    taskInfo.locality should be ("NODE_LOCAL")
+    taskInfo.speculative should be (false)
+    taskInfo.gettingResultTime should be (0L)
+    taskInfo.finishTime should be (0L)
+    taskInfo.failed should be (false)
+    taskInfo.killed should be (false)
+    taskInfo.accumulables.size should be (0)
   }
 }

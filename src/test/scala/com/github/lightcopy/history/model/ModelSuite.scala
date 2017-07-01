@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.Path
 import org.bson.{BsonDocument, BsonDocumentWriter, BsonDocumentReader}
 import org.bson.codecs.{DecoderContext, EncoderContext}
 
+import com.github.lightcopy.history.event.TaskInfo
 import com.github.lightcopy.testutil.UnitTestSuite
 
 class ModelSuite extends UnitTestSuite {
@@ -250,5 +251,149 @@ class ModelSuite extends UnitTestSuite {
     res.getEndTime should be (1498724277381L)
     res.getDuration should be (1498724277381L - 1498724267295L)
     res.getStatus should be (SQLExecution.Status.COMPLETED)
+  }
+
+  test("Empty task to bson") {
+    val task = new Task()
+    val doc = serialize(task, task)
+    val res = deserialize(task, doc)
+
+    res.getTaskId should be (task.getTaskId)
+    res.getStageId should be (task.getStageId)
+    res.getStageAttemptId should be (task.getStageAttemptId)
+    res.getIndex should be (task.getIndex)
+    res.getAttempt should be (task.getAttempt)
+    res.getStartTime should be (task.getStartTime)
+    res.getEndTime should be (task.getEndTime)
+    res.getExecutorId should be (task.getExecutorId)
+    res.getHost should be (task.getHost)
+    res.getLocality should be (task.getLocality)
+    res.getSpeculative should be (task.getSpeculative)
+    res.getStatus should be (task.getStatus)
+    res.getDuration should be (task.getDuration)
+  }
+
+  test("Complete task to bson") {
+    val task = new Task()
+    task.setTaskId(100000L)
+    task.setStageId(2)
+    task.setStageAttemptId(1)
+    task.setIndex(123)
+    task.setAttempt(1)
+    task.setStartTime(7777777L)
+    task.setEndTime(99999999L)
+    task.setExecutorId("123")
+    task.setHost("host")
+    task.setLocality("NODE_LOCAL")
+    task.setSpeculative(true)
+    task.setStatus(Task.Status.SUCCESS)
+    task.setDuration(2222222L)
+
+    val doc = serialize(task, task)
+    val res = deserialize(task, doc)
+
+    res.getTaskId should be (100000L)
+    res.getStageId should be (2)
+    res.getStageAttemptId should be (1)
+    res.getIndex should be (123)
+    res.getAttempt should be (1)
+    res.getStartTime should be (7777777L)
+    res.getEndTime should be (99999999L)
+    res.getExecutorId should be ("123")
+    res.getHost should be ("host")
+    res.getLocality should be ("NODE_LOCAL")
+    res.getSpeculative should be (true)
+    res.getStatus should be (Task.Status.SUCCESS)
+    res.getDuration should be (2222222L)
+  }
+
+  test("Task from empty TaskInfo") {
+    val task = new Task()
+    task.update(new TaskInfo())
+    val doc = serialize(task, task)
+    val res = deserialize(task, doc)
+
+    res.getTaskId should be (0L)
+    res.getStageId should be (-1L)
+    res.getStageAttemptId should be (-1L)
+    res.getIndex should be (0)
+    res.getAttempt should be (0)
+    res.getStartTime should be (-1L)
+    res.getEndTime should be (-1L)
+    res.getExecutorId should be (null)
+    res.getHost should be (null)
+    res.getLocality should be (null)
+    res.getSpeculative should be (false)
+    res.getStatus should be (Task.Status.RUNNING)
+    res.getDuration should be (-1L)
+  }
+
+  test("Task from TaskInfo") {
+    val info = new TaskInfo()
+    info.taskId = 123L
+    info.index = 1
+    info.attempt = 2
+    info.launchTime = 188L
+    info.executorId = "102"
+    info.host = "host"
+    info.locality = "NODE_LOCAL"
+    info.speculative = true
+    info.gettingResultTime = 0L
+    info.finishTime = 190L
+    info.failed = false
+    info.killed = false
+    val task = new Task()
+    task.setStageId(10)
+    task.setStageAttemptId(1)
+
+    task.update(info)
+    val doc = serialize(task, task)
+    val res = deserialize(task, doc)
+
+    res.getTaskId should be (123L)
+    res.getStageId should be (10)
+    res.getStageAttemptId should be (1)
+    res.getIndex should be (1)
+    res.getAttempt should be (2)
+    res.getStartTime should be (188L)
+    res.getEndTime should be (190L)
+    res.getExecutorId should be ("102")
+    res.getHost should be ("host")
+    res.getLocality should be ("NODE_LOCAL")
+    res.getSpeculative should be (true)
+    res.getStatus should be (Task.Status.SUCCESS)
+    res.getDuration should be (2L)
+  }
+
+  test("Task status GET_RESULT") {
+    val info = new TaskInfo()
+    info.launchTime = 100L
+    info.gettingResultTime = 12L
+    val task = new Task()
+
+    task.update(info)
+    task.getStatus should be (Task.Status.GET_RESULT)
+  }
+
+  test("Task status FAILED") {
+    val info = new TaskInfo()
+    info.launchTime = 100L
+    info.finishTime = 200L
+    info.failed = true
+    val task = new Task()
+
+    task.update(info)
+    task.getStatus should be (Task.Status.FAILED)
+  }
+
+  test("Task status KILLED") {
+    val info = new TaskInfo()
+    info.launchTime = 100L
+    info.finishTime = 200L
+    info.killed = true
+    val task = new Task()
+
+    task.update(info)
+    task.getStatus should be (Task.Status.KILLED)
   }
 }
