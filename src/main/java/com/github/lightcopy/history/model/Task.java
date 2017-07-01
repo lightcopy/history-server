@@ -16,13 +16,14 @@
 
 package com.github.lightcopy.history.model;
 
-import com.github.lightcopy.history.event.TaskInfo;
-
 import org.bson.BsonReader;
 import org.bson.BsonType;
 import org.bson.BsonWriter;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
+
+import com.github.lightcopy.history.event.TaskEndReason;
+import com.github.lightcopy.history.event.TaskInfo;
 
 public class Task extends AbstractCodec<Task> {
   // task processing status
@@ -43,6 +44,8 @@ public class Task extends AbstractCodec<Task> {
   public static final String FIELD_SPECULATIVE = "speculative";
   public static final String FIELD_STATUS = "status";
   public static final String FIELD_DURATION = "duration";
+  public static final String FIELD_ERR_DESC = "errorDescription";
+  public static final String FIELD_ERR_DETAILS = "errorDetails";
 
   // unique identifier for task within application
   private long taskId;
@@ -59,6 +62,8 @@ public class Task extends AbstractCodec<Task> {
   private boolean speculative;
   private Status status;
   private long duration;
+  private String errorDescription;
+  private String errorDetails;
 
   public Task() {
     this.taskId = -1L;
@@ -74,6 +79,8 @@ public class Task extends AbstractCodec<Task> {
     this.speculative = false;
     this.status = Status.UNKNOWN;
     this.duration = -1L;
+    this.errorDescription = null;
+    this.errorDetails = null;
   }
 
   // == Getters ==
@@ -130,6 +137,14 @@ public class Task extends AbstractCodec<Task> {
     return duration;
   }
 
+  public String getErrorDescription() {
+    return errorDescription;
+  }
+
+  public String getErrorDetails() {
+    return errorDetails;
+  }
+
   // == Setters ==
 
   public void setTaskId(long value) {
@@ -184,6 +199,14 @@ public class Task extends AbstractCodec<Task> {
     this.duration = value;
   }
 
+  public void setErrorDescription(String value) {
+    this.errorDescription = value;
+  }
+
+  public void setErrorDetails(String value) {
+    this.errorDetails = value;
+  }
+
   /**
    * Update current task including status from task info.
    * @param info TaskInfo instance
@@ -218,6 +241,16 @@ public class Task extends AbstractCodec<Task> {
     if (starttime >= 0 && endtime >= starttime) {
       setDuration(endtime - starttime);
     }
+  }
+
+  /**
+   * Update current task with task end reason.
+   * @param reason TaskEndReason instance
+   */
+  public void update(TaskEndReason reason) {
+    // success reason will return empty string as description and null as details
+    setErrorDescription(reason.getDescription());
+    setErrorDetails(reason.getDetails());
   }
 
   // == Codec methods ==
@@ -267,6 +300,12 @@ public class Task extends AbstractCodec<Task> {
         case FIELD_DURATION:
           task.setDuration(reader.readInt64());
           break;
+        case FIELD_ERR_DESC:
+          task.setErrorDescription(safeReadString(reader));
+          break;
+        case FIELD_ERR_DETAILS:
+          task.setErrorDetails(safeReadString(reader));
+          break;
         default:
           reader.skipValue();
           break;
@@ -297,6 +336,8 @@ public class Task extends AbstractCodec<Task> {
     writer.writeBoolean(FIELD_SPECULATIVE, value.getSpeculative());
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
     writer.writeInt64(FIELD_DURATION, value.getDuration());
+    safeWriteString(writer, FIELD_ERR_DESC, value.getErrorDescription());
+    safeWriteString(writer, FIELD_ERR_DETAILS, value.getErrorDetails());
     writer.writeEndDocument();
   }
 }

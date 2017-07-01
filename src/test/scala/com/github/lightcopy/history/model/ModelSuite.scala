@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.Path
 import org.bson.{BsonDocument, BsonDocumentWriter, BsonDocumentReader}
 import org.bson.codecs.{DecoderContext, EncoderContext}
 
+import com.github.lightcopy.history.event.TaskEndReason
 import com.github.lightcopy.history.event.TaskInfo
 import com.github.lightcopy.testutil.UnitTestSuite
 
@@ -271,6 +272,8 @@ class ModelSuite extends UnitTestSuite {
     res.getSpeculative should be (task.getSpeculative)
     res.getStatus should be (task.getStatus)
     res.getDuration should be (task.getDuration)
+    res.getErrorDescription should be (task.getErrorDescription)
+    res.getErrorDetails should be (task.getErrorDetails)
   }
 
   test("Complete task to bson") {
@@ -288,6 +291,8 @@ class ModelSuite extends UnitTestSuite {
     task.setSpeculative(true)
     task.setStatus(Task.Status.SUCCESS)
     task.setDuration(2222222L)
+    task.setErrorDescription("Error")
+    task.setErrorDetails("Details")
 
     val doc = serialize(task, task)
     val res = deserialize(task, doc)
@@ -305,6 +310,8 @@ class ModelSuite extends UnitTestSuite {
     res.getSpeculative should be (true)
     res.getStatus should be (Task.Status.SUCCESS)
     res.getDuration should be (2222222L)
+    res.getErrorDescription should be ("Error")
+    res.getErrorDetails should be ("Details")
   }
 
   test("Task from empty TaskInfo") {
@@ -363,6 +370,22 @@ class ModelSuite extends UnitTestSuite {
     res.getSpeculative should be (true)
     res.getStatus should be (Task.Status.SUCCESS)
     res.getDuration should be (2L)
+  }
+
+  test("Task update for TaskEndReason") {
+    val reason = new TaskEndReason()
+    val task = new Task()
+
+    reason.reason = "Success"
+    task.update(reason)
+    task.getErrorDescription should be ("")
+    task.getErrorDetails should be (null)
+
+    reason.reason = "TaskKilled"
+    reason.killReason = "Test"
+    task.update(reason)
+    task.getErrorDescription should be ("TaskKilled (Test)")
+    task.getErrorDetails should be (null)
   }
 
   test("Task status GET_RESULT") {
