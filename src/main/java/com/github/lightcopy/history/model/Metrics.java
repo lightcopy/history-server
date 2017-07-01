@@ -260,6 +260,23 @@ public class Metrics extends AbstractCodec<Metrics> {
     outputMetrics.put(OUTPUT_RECORDS_WRITTEN, taskMetrics.outputMetrics.recordsWritten);
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof Metrics)) return false;
+    Metrics that = (Metrics) obj;
+    return
+      this.resultSize == that.resultSize &&
+      this.jvmGcTime == that.jvmGcTime &&
+      this.resultSerializationTime == that.resultSerializationTime &&
+      this.memoryBytesSpilled == that.memoryBytesSpilled &&
+      this.diskBytesSpilled == that.diskBytesSpilled &&
+      this.executorMetrics.equals(that.executorMetrics) &&
+      this.shuffleReadMetrics.equals(that.shuffleReadMetrics) &&
+      this.shuffleWriteMetrics.equals(that.shuffleWriteMetrics) &&
+      this.inputMetrics.equals(that.inputMetrics) &&
+      this.outputMetrics.equals(that.outputMetrics);
+  }
+
   // == Codec methods ==
 
   @Override

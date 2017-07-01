@@ -24,6 +24,7 @@ import org.bson.codecs.{DecoderContext, EncoderContext}
 
 import com.github.lightcopy.history.event.TaskEndReason
 import com.github.lightcopy.history.event.TaskInfo
+import com.github.lightcopy.history.event.TaskMetrics
 import com.github.lightcopy.testutil.UnitTestSuite
 
 class ModelSuite extends UnitTestSuite {
@@ -274,6 +275,7 @@ class ModelSuite extends UnitTestSuite {
     res.getDuration should be (task.getDuration)
     res.getErrorDescription should be (task.getErrorDescription)
     res.getErrorDetails should be (task.getErrorDetails)
+    res.getMetrics() should be (task.getMetrics())
   }
 
   test("Complete task to bson") {
@@ -293,6 +295,9 @@ class ModelSuite extends UnitTestSuite {
     task.setDuration(2222222L)
     task.setErrorDescription("Error")
     task.setErrorDetails("Details")
+    val metrics = new Metrics()
+    metrics.setResultSize(123L)
+    task.setMetrics(metrics)
 
     val doc = serialize(task, task)
     val res = deserialize(task, doc)
@@ -312,6 +317,7 @@ class ModelSuite extends UnitTestSuite {
     res.getDuration should be (2222222L)
     res.getErrorDescription should be ("Error")
     res.getErrorDetails should be ("Details")
+    res.getMetrics should be (metrics)
   }
 
   test("Task from empty TaskInfo") {
@@ -418,5 +424,77 @@ class ModelSuite extends UnitTestSuite {
 
     task.update(info)
     task.getStatus should be (Task.Status.KILLED)
+  }
+
+  test("Empty Metrics to bson") {
+    val metrics = new Metrics()
+    val doc = serialize(metrics, metrics)
+    val res = deserialize(metrics, doc)
+    res should be (metrics)
+  }
+
+  test("Complete metrics to bson") {
+    import com.github.lightcopy.history.model.Metrics._
+
+    val taskMetrics = new TaskMetrics()
+    taskMetrics.executorDeserializeTime = 1L
+    taskMetrics.executorDeserializeCpuTime = 2L
+    taskMetrics.executorRunTime = 3L
+    taskMetrics.executorCpuTime = 4L
+    taskMetrics.resultSize = 5L
+    taskMetrics.jvmGcTime = 6L
+    taskMetrics.resultSerializationTime = 7L
+    taskMetrics.memoryBytesSpilled = 10L
+    taskMetrics.diskBytesSpilled = 11L
+
+    taskMetrics.shuffleReadMetrics = new TaskMetrics.ShuffleReadMetrics()
+    taskMetrics.shuffleReadMetrics.remoteBlocksFetched = 12L
+    taskMetrics.shuffleReadMetrics.localBlocksFetched = 13L
+    taskMetrics.shuffleReadMetrics.fetchWaitTime = 14L
+    taskMetrics.shuffleReadMetrics.remoteBytesRead = 15L
+    taskMetrics.shuffleReadMetrics.localBytesRead = 16L
+    taskMetrics.shuffleReadMetrics.totalRecordsRead = 17L
+
+    taskMetrics.shuffleWriteMetrics = new TaskMetrics.ShuffleWriteMetrics()
+    taskMetrics.shuffleWriteMetrics.shuffleBytesWritten = 18L
+    taskMetrics.shuffleWriteMetrics.shuffleWriteTime = 19L
+    taskMetrics.shuffleWriteMetrics.shuffleRecordsWritten = 20L
+
+    taskMetrics.inputMetrics = new TaskMetrics.InputMetrics()
+    taskMetrics.inputMetrics.bytesRead = 21L
+    taskMetrics.inputMetrics.recordsRead = 22L
+
+    taskMetrics.outputMetrics = new TaskMetrics.OutputMetrics()
+    taskMetrics.outputMetrics.bytesWritten = 23L
+    taskMetrics.outputMetrics.recordsWritten = 24L
+
+    val metrics = new Metrics()
+    metrics.set(taskMetrics)
+    val doc = serialize(metrics, metrics)
+    val res = deserialize(metrics, doc)
+
+    res.getResultSize should be (5L)
+    res.getJvmGcTime should be (6L)
+    res.getResultSerializationTime should be (7L)
+    res.getMemoryBytesSpilled should be (10L)
+    res.getDiskBytesSpilled should be (11L)
+
+    res.getExecutorMetrics.get(EXECUTOR_DESERIALIZE_TIME) should be (1L)
+    res.getExecutorMetrics.get(EXECUTOR_DESERIALIZE_CPU_TIME) should be (2L)
+    res.getExecutorMetrics.get(EXECUTOR_RUN_TIME) should be (3L)
+    res.getExecutorMetrics.get(EXECUTOR_CPU_TIME) should be (4L)
+    res.getShuffleReadMetrics.get(SHUFFLE_REMOTE_BLOCKS_FETCHED) should be (12L)
+    res.getShuffleReadMetrics.get(SHUFFLE_LOCAL_BLOCKS_FETCHED) should be (13L)
+    res.getShuffleReadMetrics.get(SHUFFLE_FETCH_WAIT_TIME) should be (14L)
+    res.getShuffleReadMetrics.get(SHUFFLE_REMOTE_BYTES_READ) should be (15L)
+    res.getShuffleReadMetrics.get(SHUFFLE_LOCAL_BYTES_READ) should be (16L)
+    res.getShuffleReadMetrics.get(SHUFFLE_TOTAL_RECORDS_READ) should be (17L)
+    res.getShuffleWriteMetrics.get(SHUFFLE_BYTES_WRITTEN) should be (18L)
+    res.getShuffleWriteMetrics.get(SHUFFLE_WRITE_TIME) should be (19L)
+    res.getShuffleWriteMetrics.get(SHUFFLE_RECORDS_WRITTEN) should be (20L)
+    res.getInputMetrics.get(INPUT_BYTES_READ) should be (21L)
+    res.getInputMetrics.get(INPUT_RECORDS_READ) should be (22L)
+    res.getOutputMetrics.get(OUTPUT_BYTES_WRITTEN) should be (23L)
+    res.getOutputMetrics.get(OUTPUT_RECORDS_WRITTEN) should be (24L)
   }
 }
