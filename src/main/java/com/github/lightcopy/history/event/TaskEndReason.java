@@ -78,7 +78,7 @@ public class TaskEndReason {
         msg = "Resubmitted (resubmitted due to lost executor)";
         break;
       default:
-        msg = "UnknownReason";
+        msg = "Unknown reason";
         break;
     }
     return msg;

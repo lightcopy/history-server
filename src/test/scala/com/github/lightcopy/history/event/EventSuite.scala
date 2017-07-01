@@ -245,8 +245,8 @@ class EventSuite extends UnitTestSuite {
       "Task Type": "ResultTask",
       "Task End Reason": {
         "Reason": "ExceptionFailure",
-        "Class Name": "java.lang.RuntimeException",
-        "Description": "Test failure",
+        "Class Name": "java.lang.Exception",
+        "Description": "Test",
         "Stack Trace": [
           {
             "Declaring Class": "scala.sys.package$",
@@ -255,7 +255,7 @@ class EventSuite extends UnitTestSuite {
             "Line Number": 27
           }
         ],
-        "Full Stack Trace": "java.lang.RuntimeException: Test failure\n\tat scala.sys.package$.error(package.scala:27)",
+        "Full Stack Trace": "java.lang.Exception: Test\n\tat package$.error(package.scala:27)",
         "Accumulator Updates": [
           {
             "ID": 4,
@@ -359,10 +359,10 @@ class EventSuite extends UnitTestSuite {
 
     val taskEndReason = event.taskEndReason
     taskEndReason.reason should be ("ExceptionFailure")
-    taskEndReason.className should be ("java.lang.RuntimeException")
-    taskEndReason.description should be ("Test failure")
-    taskEndReason.fullStackTrace should be ("java.lang.RuntimeException: Test failure\n\tat " +
-      "scala.sys.package$.error(package.scala:27)")
+    taskEndReason.className should be ("java.lang.Exception")
+    taskEndReason.description should be ("Test")
+    taskEndReason.fullStackTrace should be (
+      "java.lang.Exception: Test\n\tat package$.error(package.scala:27)")
 
     val taskMetrics = event.taskMetrics
     taskMetrics.executorDeserializeTime should be (0L)
@@ -543,5 +543,99 @@ class EventSuite extends UnitTestSuite {
     taskMetrics.updatedBlocks.get(0).status.storageLevel.useMemory should be (true)
     taskMetrics.updatedBlocks.get(0).status.storageLevel.deserialized should be (true)
     taskMetrics.updatedBlocks.get(0).status.storageLevel.replication should be (1)
+  }
+
+  test("TaskEndReason - Success") {
+    val reason = new TaskEndReason()
+    reason.reason = "Success"
+    reason.getDescription should be ("")
+    reason.getDetails should be (null)
+  }
+
+  test("TaskEndReason - FetchFailed") {
+    val reason = new TaskEndReason()
+    reason.reason = "FetchFailed"
+    reason.blockManagerAddress = null
+    reason.shuffleId = 1
+    reason.mapId = 2
+    reason.reduceId = 3
+    reason.message = "Message"
+    reason.getDescription should be (
+      "FetchFailed(null, shuffleId=1, mapId=2, reduceId=3, message=\nMessage\n)")
+    reason.getDetails should be (null)
+
+    reason.blockManagerAddress = new BlockManagerId()
+    reason.blockManagerAddress.executorId = "0"
+    reason.blockManagerAddress.host = "1.2.3.4"
+    reason.blockManagerAddress.port = 45320
+    reason.getDescription should be ("FetchFailed(BlockManagerId(0, 1.2.3.4, 45320), " +
+      "shuffleId=1, mapId=2, reduceId=3, message=\nMessage\n)")
+    reason.getDetails should be (null)
+  }
+
+  test("TaskEndReason - ExceptionFailure") {
+    val reason = new TaskEndReason()
+    reason.reason = "ExceptionFailure"
+    reason.className = "java.lang.RuntimeException"
+    reason.description = "Test"
+    reason.fullStackTrace = "FST"
+    reason.getDescription should be ("java.lang.RuntimeException: Test")
+    reason.getDetails should be ("FST")
+  }
+
+  test("TaskEndReason - TaskCommitDenied") {
+    val reason = new TaskEndReason()
+    reason.reason = "TaskCommitDenied"
+    reason.jobId = 10
+    reason.partitionId = 12
+    reason.attemptNumber = 3
+    reason.getDescription should be (
+      "TaskCommitDenied (Driver denied task commit) for job: 10, partition: 12, attemptNumber: 3")
+    reason.getDetails should be (null)
+  }
+
+  test("TaskEndReason - TaskKilled") {
+    val reason = new TaskEndReason()
+    reason.reason = "TaskKilled"
+    reason.killReason = "Test"
+    reason.getDescription should be ("TaskKilled (Test)")
+    reason.getDetails should be (null)
+  }
+
+  test("TaskEndReason - ExecutorLostFailure") {
+    val reason = new TaskEndReason()
+    reason.reason = "ExecutorLostFailure"
+    reason.executorId = "1"
+    reason.causedByApp = true
+    reason.lossReason = "Test"
+    reason.getDescription should be (
+      "ExecutorLostFailure (executor 1 exited caused by one of the running tasks) Reason: Test")
+    reason.getDetails should be (null)
+
+    reason.causedByApp = false
+    reason.getDescription should be (
+      "ExecutorLostFailure (executor 1 exited unrelated to the running tasks) Reason: Test")
+    reason.getDetails should be (null)
+  }
+
+  test("TaskEndReason - TaskResultLost") {
+    val reason = new TaskEndReason()
+    reason.reason = "TaskResultLost"
+    reason.getDescription should be ("TaskResultLost (result lost from block manager)")
+    reason.getDetails should be (null)
+  }
+
+  test("TaskEndReason - Resubmitted") {
+    val reason = new TaskEndReason()
+    reason.reason = "Resubmitted"
+    reason.getDescription should be ("Resubmitted (resubmitted due to lost executor)")
+    reason.getDetails should be (null)
+  }
+
+  test("TaskEndReason - Unknown") {
+    val reason = new TaskEndReason()
+    reason.reason = "Unknown"
+    reason.getDescription should be ("Unknown reason")
+    reason.getDetails should be (null)
   }
 }
