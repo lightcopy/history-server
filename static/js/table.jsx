@@ -174,7 +174,7 @@ class TableBody extends React.Component {
     // table rows as "tr" tags
     var tableRows = this.rows(cols, this.props.data);
     return (
-      <table className={`table table-bordered table-striped wrap-text ${equalWidth} ${visible}`}>
+      <table className={`table table-bordered table-striped ${equalWidth} ${visible}`}>
         <thead>{headerCols}</thead>
         <tbody>{tableRows}</tbody>
       </table>
