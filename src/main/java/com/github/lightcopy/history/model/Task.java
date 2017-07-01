@@ -24,6 +24,7 @@ import org.bson.codecs.EncoderContext;
 
 import com.github.lightcopy.history.event.TaskEndReason;
 import com.github.lightcopy.history.event.TaskInfo;
+import com.github.lightcopy.history.event.TaskMetrics;
 
 public class Task extends AbstractCodec<Task> {
   // task processing status
@@ -46,6 +47,7 @@ public class Task extends AbstractCodec<Task> {
   public static final String FIELD_DURATION = "duration";
   public static final String FIELD_ERR_DESC = "errorDescription";
   public static final String FIELD_ERR_DETAILS = "errorDetails";
+  public static final String FIELD_TASK_METRICS = "metrics";
 
   // unique identifier for task within application
   private long taskId;
@@ -64,6 +66,7 @@ public class Task extends AbstractCodec<Task> {
   private long duration;
   private String errorDescription;
   private String errorDetails;
+  private Metrics metrics;
 
   public Task() {
     this.taskId = -1L;
@@ -81,6 +84,7 @@ public class Task extends AbstractCodec<Task> {
     this.duration = -1L;
     this.errorDescription = null;
     this.errorDetails = null;
+    this.metrics = new Metrics();
   }
 
   // == Getters ==
@@ -145,6 +149,10 @@ public class Task extends AbstractCodec<Task> {
     return errorDetails;
   }
 
+  public Metrics getMetrics() {
+    return metrics;
+  }
+
   // == Setters ==
 
   public void setTaskId(long value) {
@@ -207,6 +215,10 @@ public class Task extends AbstractCodec<Task> {
     this.errorDetails = value;
   }
 
+  public void setMetrics(Metrics value) {
+    this.metrics = value;
+  }
+
   /**
    * Update current task including status from task info.
    * @param info TaskInfo instance
@@ -251,6 +263,14 @@ public class Task extends AbstractCodec<Task> {
     // success reason will return empty string as description and null as details
     setErrorDescription(reason.getDescription());
     setErrorDetails(reason.getDetails());
+  }
+
+  /**
+   * Update current task with metrics.
+   * @param taskMetrics TaskMetrics instance
+   */
+  public void update(TaskMetrics taskMetrics) {
+    this.metrics.set(taskMetrics);
   }
 
   // == Codec methods ==
@@ -306,6 +326,9 @@ public class Task extends AbstractCodec<Task> {
         case FIELD_ERR_DETAILS:
           task.setErrorDetails(safeReadString(reader));
           break;
+        case FIELD_TASK_METRICS:
+          task.setMetrics(task.getMetrics().decode(reader, decoderContext));
+          break;
         default:
           reader.skipValue();
           break;
@@ -338,6 +361,8 @@ public class Task extends AbstractCodec<Task> {
     writer.writeInt64(FIELD_DURATION, value.getDuration());
     safeWriteString(writer, FIELD_ERR_DESC, value.getErrorDescription());
     safeWriteString(writer, FIELD_ERR_DETAILS, value.getErrorDetails());
+    writer.writeName(FIELD_TASK_METRICS);
+    value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
     writer.writeEndDocument();
   }
 }

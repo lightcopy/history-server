@@ -41,6 +41,20 @@ public abstract class AbstractCodec<T> implements Codec<T> {
   }
 
   /**
+   * Method to write String safely bypassing null values.
+   * Writes value only.
+   * @param writer bson writer
+   * @param value string to write or null
+   */
+  public static void safeWriteString(BsonWriter writer, String value) {
+    if (value == null) {
+      writer.writeNull();
+    } else {
+      writer.writeString(value);
+    }
+  }
+
+  /**
    * Read string safely either returning null or valid value.
    * @param reader bson reader
    * @return string or null
@@ -63,6 +77,35 @@ public abstract class AbstractCodec<T> implements Codec<T> {
   public static interface WriteItem<T> {
     void write(BsonWriter writer, T value);
   }
+
+  /** Internal class to provide both implementations for basic types */
+  private static abstract class ReadWriteItem<T> implements ReadItem<T>, WriteItem<T> { }
+
+  /** Encoder for String type */
+  public static final ReadWriteItem<String> STRING_ITEM = new ReadWriteItem<String>() {
+    @Override
+    public String read(BsonReader reader) {
+      return safeReadString(reader);
+    }
+
+    @Override
+    public void write(BsonWriter writer, String value) {
+      safeWriteString(writer, value);
+    }
+  };
+
+  /** Encoder for Long type */
+  public static final ReadWriteItem<Long> LONG_ITEM = new ReadWriteItem<Long>() {
+    @Override
+    public Long read(BsonReader reader) {
+      return reader.readInt64();
+    }
+
+    @Override
+    public void write(BsonWriter writer, Long value) {
+      writer.writeInt64(value);
+    }
+  };
 
   /**
    * Read list from bson document.
@@ -103,14 +146,14 @@ public abstract class AbstractCodec<T> implements Codec<T> {
    * Read map from bson document.
    * We use array of tuples (key: "key", value: "value") to work around "." in key names.
    * @param reader bson reader
-   * @return HashMap<string, string> instance
+   * @return HashMap<String, T> instance
    */
-  public HashMap<String, String> readMap(BsonReader reader) {
-    HashMap<String, String> map = new HashMap<String, String>();
+  public <T> HashMap<String, T> readMap(BsonReader reader, ReadItem<T> block) {
+    HashMap<String, T> map = new HashMap<String, T>();
     reader.readStartArray();
     while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
       String key = null;
-      String value = null;
+      T value = null;
       reader.readStartDocument();
       while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
         switch (reader.readName()) {
@@ -118,7 +161,7 @@ public abstract class AbstractCodec<T> implements Codec<T> {
             key = safeReadString(reader);
             break;
           case "value":
-            value = safeReadString(reader);
+            value = block.read(reader);
             break;
           default:
             break;
@@ -138,13 +181,15 @@ public abstract class AbstractCodec<T> implements Codec<T> {
    * @param key document field name
    * @param value map value for that key
    */
-  public void writeMap(BsonWriter writer, String key, HashMap<String, String> value) {
+  public <T> void writeMap(
+      BsonWriter writer, String key, HashMap<String, T> value, WriteItem<T> block) {
     writer.writeStartArray(key);
     if (value != null) {
-      for (Map.Entry<String, String> entry : value.entrySet()) {
+      for (Map.Entry<String, T> entry : value.entrySet()) {
         writer.writeStartDocument();
         safeWriteString(writer, "key", entry.getKey());
-        safeWriteString(writer, "value", entry.getValue());
+        writer.writeName("value");
+        block.write(writer, entry.getValue());
         writer.writeEndDocument();
       }
     }
