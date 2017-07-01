@@ -31,12 +31,7 @@
 // make columns of equal width
 table.equal-width {
   table-layout: fixed;
-}
-
-// class to wrap long text in table
-table.wrap-text {
-  table-layout: fixed;
-  word-wrap: break-word;
+  word-break: break-word;
 }
 
 // whether or not column is sortable
