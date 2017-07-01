@@ -235,4 +235,313 @@ class EventSuite extends UnitTestSuite {
     taskInfo.killed should be (false)
     taskInfo.accumulables.size should be (0)
   }
+
+  test("SparkListenerTaskEnd with FAILED status") {
+    val json = """
+    {
+      "Event": "SparkListenerTaskEnd",
+      "Stage ID": 1,
+      "Stage Attempt ID": 1,
+      "Task Type": "ResultTask",
+      "Task End Reason": {
+        "Reason": "ExceptionFailure",
+        "Class Name": "java.lang.RuntimeException",
+        "Description": "Test failure",
+        "Stack Trace": [
+          {
+            "Declaring Class": "scala.sys.package$",
+            "Method Name": "error",
+            "File Name": "package.scala",
+            "Line Number": 27
+          }
+        ],
+        "Full Stack Trace": "java.lang.RuntimeException: Test failure\n\tat scala.sys.package$.error(package.scala:27)",
+        "Accumulator Updates": [
+          {
+            "ID": 4,
+            "Name": "internal.metrics.executorRunTime",
+            "Update": 299,
+            "Internal": true,
+            "Count Failed Values": true
+          },
+          {
+            "ID": 6,
+            "Name": "internal.metrics.resultSize",
+            "Update": 0,
+            "Internal": true,
+            "Count Failed Values": true
+          }
+        ]
+      },
+      "Task Info": {
+        "Task ID": 2,
+        "Index": 2,
+        "Attempt": 0,
+        "Launch Time": 1498724175390,
+        "Executor ID": "driver",
+        "Host": "localhost",
+        "Locality": "PROCESS_LOCAL",
+        "Speculative": false,
+        "Getting Result Time": 0,
+        "Finish Time": 1498724175778,
+        "Failed": true,
+        "Killed": false,
+        "Accumulables": [
+          {
+            "ID": 4,
+            "Name": "internal.metrics.executorRunTime",
+            "Update": 299,
+            "Value": 299,
+            "Internal": true,
+            "Count Failed Values": true
+          }
+        ]
+      },
+      "Task Metrics": {
+        "Executor Deserialize Time": 0,
+        "Executor Deserialize CPU Time": 0,
+        "Executor Run Time": 299,
+        "Executor CPU Time": 0,
+        "Result Size": 0,
+        "JVM GC Time": 0,
+        "Result Serialization Time": 0,
+        "Memory Bytes Spilled": 0,
+        "Disk Bytes Spilled": 0,
+        "Shuffle Read Metrics": {
+          "Remote Blocks Fetched": 0,
+          "Local Blocks Fetched": 0,
+          "Fetch Wait Time": 0,
+          "Remote Bytes Read": 0,
+          "Local Bytes Read": 0,
+          "Total Records Read": 0
+        },
+        "Shuffle Write Metrics": {
+          "Shuffle Bytes Written": 0,
+          "Shuffle Write Time": 0,
+          "Shuffle Records Written": 0
+        },
+        "Input Metrics": {
+          "Bytes Read": 0,
+          "Records Read": 0
+        },
+        "Output Metrics": {
+          "Bytes Written": 0,
+          "Records Written": 0
+        },
+        "Updated Blocks": []
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerTaskEnd])
+    event.stageId should be (1)
+    event.stageAttemptId should be (1)
+    event.taskType should be ("ResultTask")
+
+    val taskInfo = event.taskInfo
+    taskInfo.taskId should be (2)
+    taskInfo.index should be (2)
+    taskInfo.attempt should be (0)
+    taskInfo.launchTime should be (1498724175390L)
+    taskInfo.executorId should be ("driver")
+    taskInfo.host should be ("localhost")
+    taskInfo.locality should be ("PROCESS_LOCAL")
+    taskInfo.speculative should be (false)
+    taskInfo.gettingResultTime should be (0L)
+    taskInfo.finishTime should be (1498724175778L)
+    taskInfo.failed should be (true)
+    taskInfo.killed should be (false)
+    taskInfo.accumulables.size should be (1)
+    // check accumulable
+    taskInfo.accumulables.get(0).id should be (4)
+    taskInfo.accumulables.get(0).name should be ("internal.metrics.executorRunTime")
+    taskInfo.accumulables.get(0).update should be ("299")
+    taskInfo.accumulables.get(0).value should be ("299")
+
+    val taskEndReason = event.taskEndReason
+    taskEndReason.reason should be ("ExceptionFailure")
+    taskEndReason.className should be ("java.lang.RuntimeException")
+    taskEndReason.description should be ("Test failure")
+    taskEndReason.fullStackTrace should be ("java.lang.RuntimeException: Test failure\n\tat " +
+      "scala.sys.package$.error(package.scala:27)")
+
+    val taskMetrics = event.taskMetrics
+    taskMetrics.executorDeserializeTime should be (0L)
+    taskMetrics.executorDeserializeCpuTime should be (0L)
+    taskMetrics.executorRunTime should be (299L)
+    taskMetrics.executorCpuTime should be (0L)
+    taskMetrics.resultSize should be (0L)
+    taskMetrics.jvmGcTime should be (0L)
+    taskMetrics.resultSerializationTime should be (0L)
+    taskMetrics.memoryBytesSpilled should be (0L)
+    taskMetrics.diskBytesSpilled should be (0L)
+
+    taskMetrics.shuffleReadMetrics.remoteBlocksFetched should be (0L)
+    taskMetrics.shuffleReadMetrics.localBlocksFetched should be (0L)
+    taskMetrics.shuffleReadMetrics.fetchWaitTime should be (0L)
+    taskMetrics.shuffleReadMetrics.remoteBytesRead should be (0L)
+    taskMetrics.shuffleReadMetrics.localBytesRead should be (0L)
+    taskMetrics.shuffleReadMetrics.totalRecordsRead should be (0L)
+
+    taskMetrics.shuffleWriteMetrics.shuffleBytesWritten should be (0L)
+    taskMetrics.shuffleWriteMetrics.shuffleWriteTime should be (0L)
+    taskMetrics.shuffleWriteMetrics.shuffleRecordsWritten should be (0L)
+
+    taskMetrics.inputMetrics.bytesRead should be (0L)
+    taskMetrics.inputMetrics.recordsRead should be (0L)
+
+    taskMetrics.outputMetrics.bytesWritten should be (0L)
+    taskMetrics.outputMetrics.recordsWritten should be (0L)
+
+    taskMetrics.updatedBlocks.size should be (0)
+  }
+
+  test("SparkListenerTaskEnd with SUCCESS status") {
+    val json = """
+    {
+      "Event": "SparkListenerTaskEnd",
+      "Stage ID": 1,
+      "Stage Attempt ID": 0,
+      "Task Type": "ResultTask",
+      "Task End Reason": {
+        "Reason": "Success"
+      },
+      "Task Info": {
+        "Task ID": 9,
+        "Index": 5,
+        "Attempt": 0,
+        "Launch Time": 1498420024463,
+        "Executor ID": "0",
+        "Host": "192.168.2.5",
+        "Locality": "NODE_LOCAL",
+        "Speculative": false,
+        "Getting Result Time": 0,
+        "Finish Time": 1498420024588,
+        "Failed": false,
+        "Killed": false,
+        "Accumulables": [
+          {
+            "ID": 128,
+            "Name": "internal.metrics.executorDeserializeTime",
+            "Update": 18,
+            "Value": 595,
+            "Internal": true,
+            "Count Failed Values": true
+          }
+        ]
+      },
+      "Task Metrics": {
+        "Executor Deserialize Time": 18,
+        "Executor Deserialize CPU Time": 12326000,
+        "Executor Run Time": 71,
+        "Executor CPU Time": 12000000,
+        "Result Size": 2574,
+        "JVM GC Time": 0,
+        "Result Serialization Time": 0,
+        "Memory Bytes Spilled": 0,
+        "Disk Bytes Spilled": 0,
+        "Shuffle Read Metrics": {
+          "Remote Blocks Fetched": 0,
+          "Local Blocks Fetched": 2,
+          "Fetch Wait Time": 0,
+          "Remote Bytes Read": 0,
+          "Local Bytes Read": 118,
+          "Total Records Read": 2
+        },
+        "Shuffle Write Metrics": {
+          "Shuffle Bytes Written": 0,
+          "Shuffle Write Time": 0,
+          "Shuffle Records Written": 0
+        },
+        "Input Metrics": {
+          "Bytes Read": 0,
+          "Records Read": 0
+        },
+        "Output Metrics": {
+          "Bytes Written": 0,
+          "Records Written": 0
+        },
+        "Updated Blocks": [
+          {
+            "Block ID": "rdd_5_5",
+            "Status": {
+              "Storage Level": {
+                "Use Disk": false,
+                "Use Memory": true,
+                "Deserialized": true,
+                "Replication": 1
+              },
+              "Memory Size": 272,
+              "Disk Size": 0
+            }
+          }
+        ]
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerTaskEnd])
+    event.stageId should be (1)
+    event.stageAttemptId should be (0)
+    event.taskType should be ("ResultTask")
+
+    val taskInfo = event.taskInfo
+    taskInfo.taskId should be (9)
+    taskInfo.index should be (5)
+    taskInfo.attempt should be (0)
+    taskInfo.launchTime should be (1498420024463L)
+    taskInfo.executorId should be ("0")
+    taskInfo.host should be ("192.168.2.5")
+    taskInfo.locality should be ("NODE_LOCAL")
+    taskInfo.speculative should be (false)
+    taskInfo.gettingResultTime should be (0L)
+    taskInfo.finishTime should be (1498420024588L)
+    taskInfo.failed should be (false)
+    taskInfo.killed should be (false)
+    taskInfo.accumulables.size should be (1)
+    // check accumulable
+    taskInfo.accumulables.get(0).id should be (128)
+    taskInfo.accumulables.get(0).name should be ("internal.metrics.executorDeserializeTime")
+    taskInfo.accumulables.get(0).update should be ("18")
+    taskInfo.accumulables.get(0).value should be ("595")
+
+    val taskEndReason = event.taskEndReason
+    taskEndReason.reason should be ("Success")
+
+    val taskMetrics = event.taskMetrics
+    taskMetrics.executorDeserializeTime should be (18L)
+    taskMetrics.executorDeserializeCpuTime should be (12326000L)
+    taskMetrics.executorRunTime should be (71L)
+    taskMetrics.executorCpuTime should be (12000000L)
+    taskMetrics.resultSize should be (2574L)
+    taskMetrics.jvmGcTime should be (0L)
+    taskMetrics.resultSerializationTime should be (0L)
+    taskMetrics.memoryBytesSpilled should be (0L)
+    taskMetrics.diskBytesSpilled should be (0L)
+
+    taskMetrics.shuffleReadMetrics.remoteBlocksFetched should be (0L)
+    taskMetrics.shuffleReadMetrics.localBlocksFetched should be (2L)
+    taskMetrics.shuffleReadMetrics.fetchWaitTime should be (0L)
+    taskMetrics.shuffleReadMetrics.remoteBytesRead should be (0L)
+    taskMetrics.shuffleReadMetrics.localBytesRead should be (118L)
+    taskMetrics.shuffleReadMetrics.totalRecordsRead should be (2L)
+
+    taskMetrics.shuffleWriteMetrics.shuffleBytesWritten should be (0L)
+    taskMetrics.shuffleWriteMetrics.shuffleWriteTime should be (0L)
+    taskMetrics.shuffleWriteMetrics.shuffleRecordsWritten should be (0L)
+
+    taskMetrics.inputMetrics.bytesRead should be (0L)
+    taskMetrics.inputMetrics.recordsRead should be (0L)
+
+    taskMetrics.outputMetrics.bytesWritten should be (0L)
+    taskMetrics.outputMetrics.recordsWritten should be (0L)
+
+    taskMetrics.updatedBlocks.size should be (1)
+    taskMetrics.updatedBlocks.get(0).blockId should be ("rdd_5_5")
+    taskMetrics.updatedBlocks.get(0).status.memorySize should be (272L)
+    taskMetrics.updatedBlocks.get(0).status.diskSize should be (0L)
+    // storage level
+    taskMetrics.updatedBlocks.get(0).status.storageLevel.useDisk should be (false)
+    taskMetrics.updatedBlocks.get(0).status.storageLevel.useMemory should be (true)
+    taskMetrics.updatedBlocks.get(0).status.storageLevel.deserialized should be (true)
+    taskMetrics.updatedBlocks.get(0).status.storageLevel.replication should be (1)
+  }
 }

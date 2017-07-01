@@ -18,8 +18,9 @@ package com.github.lightcopy.history.event;
 
 import com.google.gson.annotations.SerializedName;
 
-public class SparkListenerTaskStart {
-  @SerializedName("Stage ID") public int stageId;
-  @SerializedName("Stage Attempt ID") public int stageAttemptId;
-  @SerializedName("Task Info") public TaskInfo taskInfo;
+public class StorageLevel {
+  @SerializedName("Use Disk") public boolean useDisk;
+  @SerializedName("Use Memory") public boolean useMemory;
+  @SerializedName("Deserialized") public boolean deserialized;
+  @SerializedName("Replication") public int replication;
 }
