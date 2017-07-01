@@ -1,7 +1,6 @@
 import React from "react";
 import Header from "./header";
 import Table from "./table";
-import Util from "./util";
 
 class Environment extends React.Component {
   constructor(props) {
@@ -14,13 +13,11 @@ class Environment extends React.Component {
   }
 
   updateData(appId) {
-    var url = Util.urlGet(`/api/apps/${appId}/environment`, {});
-    fetch(url)
+    fetch(`/api/apps/${appId}/environment`)
     .then(response => response.json())
     .then(json => {
-      if (!json.app) throw new Error(`No application ${appId} found`);
-      if (!json.env) throw new Error(`No environment found for ${appId}`);
-      this.setState({app: json.app, env: json.env});
+      if (json.error) throw new Error(`${json.msg}`);
+      this.setState({env: json});
     })
     .catch(error => {
       console.error(error);
@@ -44,11 +41,8 @@ class Environment extends React.Component {
   }
 
   render() {
-    var ok = this.state.app && this.state.env;
-    var appId = ok ? this.state.app.appId : null;
-    var appName = ok ? this.state.app.appName : null;
     var body = null;
-    if (ok) {
+    if (this.state.env) {
       body = [
         this.table(this.state.env.jvmInformation, "Runtime Information", "Name", "Value"),
         this.table(this.state.env.sparkProperties, "Spark Properties", "Name", "Value"),
@@ -60,10 +54,7 @@ class Environment extends React.Component {
     }
     return (
       <div>
-        <Header
-          appId={appId}
-          appName={appName}
-          active="environment" />
+        <Header appId={this.props.params.appId} active="environment" />
         <div className="container-fluid">
           <h2>Environment</h2>
           {body}

@@ -65,6 +65,7 @@ public class ApplicationContext extends ResourceConfig {
   /** API methdo to return error message with provided code */
   private static Response apiError(Response.Status status, String msg) {
     JsonObject obj = new JsonObject();
+    obj.addProperty("error", true);
     obj.addProperty("code", status.getStatusCode());
     obj.addProperty("msg", msg);
     return Response.accepted(gson.toJson(obj)).status(status).build();
@@ -224,22 +225,26 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
+    @Path("api/apps/{appId}")
+    @Produces("application/json")
+    public Response getApplication(@PathParam("appId") String appId) {
+      try {
+        Application app = getProvider().application(appId);
+        if (app == null) return apiError404("No application " + appId + " found");
+        return Response.ok(gson.toJson(app)).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
     @Path("api/apps/{appId}/environment")
     @Produces("application/json")
     public Response getAppEnvironment(@PathParam("appId") String appId) {
       try {
-        Application app = getProvider().application(appId);
-        if (app == null) {
-          return apiError404("Application " + appId + " is not found");
-        } else {
-          Environment env = getProvider().environment(appId);
-          // build json that has 2 keys, one for application, another for environment.
-          // if environment is not found, we will return empty object as value.
-          JsonObject obj = new JsonObject();
-          obj.add("app", gson.toJsonTree(app));
-          obj.add("env", gson.toJsonTree(env));
-          return Response.ok(gson.toJson(obj)).build();
-        }
+        Environment env = getProvider().environment(appId);
+        if (env == null) return apiError404("No environment found for application " + appId);
+        return Response.ok(gson.toJson(env)).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }
@@ -267,16 +272,11 @@ public class ApplicationContext extends ResourceConfig {
     @Produces("application/json")
     public Response sqlExecution(@PathParam("appId") String appId, @PathParam("id") int id) {
       try {
-        Application app = getProvider().application(appId);
-        if (app == null) {
-          return apiError404("Application " + appId + " is not found");
-        } else {
-          SQLExecution sql = getProvider().sqlExecution(appId, id);
-          JsonObject obj = new JsonObject();
-          obj.add("app", gson.toJsonTree(app));
-          obj.add("sql", gson.toJsonTree(sql));
-          return Response.ok(gson.toJson(obj)).build();
+        SQLExecution sql = getProvider().sqlExecution(appId, id);
+        if (sql == null) {
+          return apiError404("No SQL query " + id + " found for application " + appId);
         }
+        return Response.ok(gson.toJson(sql)).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }

@@ -64,3 +64,33 @@ th.sortable {
   word-wrap: break-word;
   white-space: pre-wrap;
 }
+
+// == utility classes ==
+
+$small-margin: 10px;
+$medium-margin: 30px;
+$large-margin: 50px;
+
+.margin-bottom-small {
+  margin-bottom: $small-margin;
+}
+
+.margin-bottom-medium {
+  margin-bottom: $medium-margin;
+}
+
+.margin-bottom-large {
+  margin-bottom: $large-margin;
+}
+
+.margin-top-small {
+  margin-top: $small-margin;
+}
+
+.margin-top-medium {
+  margin-top: $medium-margin;
+}
+
+.margin-top-large {
+  margin-top: $large-margin;
+}

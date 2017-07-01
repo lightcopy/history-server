@@ -17,7 +17,6 @@ class Tab extends React.Component {
  * Props:
  * `active` - active tab name
  * `appId` - application id
- * `appName` - application name to display
  */
 class Header extends React.Component {
   constructor(props) {
@@ -31,6 +30,7 @@ class Header extends React.Component {
       {name: "sql", desc: "SQL"}
     ]
     this.tabs = this.tabs.bind(this);
+    this.state = {};
   }
 
   tabs(active, appId) {
@@ -51,18 +51,32 @@ class Header extends React.Component {
     return elems;
   }
 
+  componentDidMount() {
+    if (this.props.appId) {
+      fetch(`/api/apps/${this.props.appId}`)
+      .then(response => response.json())
+      .then(json => {
+        if (json.error) throw new Error(`${json.msg}`);
+        this.setState({app: json});
+      })
+      .catch(error => {
+        console.error(error);
+      })
+    }
+  }
+
   render() {
     // show tabs only if appId is defined
     var controls = null;
-    if (this.props.appId) {
+    if (this.state.app) {
       controls = (
         <div className="collapse navbar-collapse">
           <ul className="nav navbar-nav">
-            {this.tabs(this.props.active, this.props.appId)}
+            {this.tabs(this.props.active, this.state.app.appId)}
           </ul>
           <ul className="nav navbar-nav navbar-right">
             <li>
-              <p className="navbar-text truncate">{this.props.appName}</p>
+              <strong className="navbar-text truncate">{this.state.app.appName}</strong>
             </li>
           </ul>
         </div>

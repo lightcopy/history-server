@@ -86,10 +86,7 @@ class SQLExecution extends React.Component {
   render() {
     return (
       <div>
-        <Header
-          appId={this.props.params.appId}
-          appName="Sample"
-          active="sql" />
+        <Header appId={this.props.params.appId} active="sql" />
         <div className="container-fluid">
           <h2>SQL</h2>
           <Table spec={this.spec} data={this.state.data} updateData={this.updateData} />
@@ -102,64 +99,64 @@ class SQLExecution extends React.Component {
 class SQLExecutionQuery extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {query: {}};
+    this.state = {};
   }
 
   componentDidMount() {
     var appId = this.props.params.appId;
     var executionId = this.props.params.id;
-    var url = Util.urlGet(`/api/apps/${appId}/sql/${executionId}`, {});
-    fetch(url)
+    fetch(`/api/apps/${appId}/sql/${executionId}`)
     .then(response => response.json())
     .then(json => {
-      this.setState({query: json.sql});
+      if (json.error) throw new Error(`${json.msg}`);
+      this.setState({query: json});
     })
     .catch(error => {
       console.error(error);
+      this.setState({err: `${error}`});
     })
   }
 
   render() {
-    var queryDetails = null;
+    var body = null;
     if (this.state.query) {
-      queryDetails = (
+      body = (
         <div>
           <ul className="list-unstyled">
-            <li>
+            <li className="margin-bottom-small">
               <strong>Description: </strong>
-              <span>{this.state.query.description}</span>
+              <code>{this.state.query.description}</code>
             </li>
-            <li>
+            <li className="margin-bottom-small">
               <strong>Submitted: </strong>
               <span>{Util.displayTime(this.state.query.starttime)}</span>
             </li>
-            <li>
+            <li className="margin-bottom-small">
               <strong>Completed: </strong>
               <span>{Util.displayTime(this.state.query.endtime)}</span>
             </li>
-            <li>
+            <li className="margin-bottom-small">
               <strong>Duration: </strong>
               <span>{Util.displayTimeDiff(this.state.query.duration)}</span>
             </li>
-            <li>
+            <li className="margin-bottom-small">
               <strong>Status: </strong>
               <span>{this.state.query.status}</span>
             </li>
           </ul>
-          <h4>Query plan</h4>
+          <h4 className="margin-top-large">Query plan</h4>
           <pre>{this.state.query.physicalPlan}</pre>
         </div>
       );
+    } else {
+      body = <p>{this.state.err}</p>;
     }
     return (
       <div>
-        <Header
-          appId={this.props.params.appId}
-          appName="Sample"
-          active="sql" />
+        <Header appId={this.props.params.appId} active="sql" />
         <div className="container-fluid">
-          <h3>Details for Query {this.props.params.id}</h3>
-          {queryDetails}
+          <h2>Details for Query {this.props.params.id}</h2>
+          {body}
         </div>
       </div>
     );
