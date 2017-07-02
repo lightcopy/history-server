@@ -708,6 +708,14 @@ class ModelSuite extends UnitTestSuite {
     obj.getMetrics(2, 0) should be (metrics)
   }
 
+  test("StageAggregateTracker - increment for stages, test id") {
+    val obj = AggregateSummary.stages()
+    obj.incActiveTasks(10, 0)
+    obj.incActiveTasks(0, 10)
+    obj.getActiveTasks(10, 0) should be (1)
+    obj.getActiveTasks(0, 10) should be (1)
+  }
+
   test("StageAggregateTracker - equals") {
     val obj1 = AggregateSummary.stages()
     val obj2 = AggregateSummary.stages()
