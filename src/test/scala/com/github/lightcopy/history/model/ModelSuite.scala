@@ -675,7 +675,7 @@ class ModelSuite extends UnitTestSuite {
   }
 
   test("StageAggregateTracker - getters on empty obj") {
-    val obj = new StageAggregateTracker()
+    val obj = AggregateSummary.stages()
     obj.getActiveTasks(1, 1) should be (0)
     obj.getCompletedTasks(2, 1) should be (0)
     obj.getFailedTasks(3, 1) should be (0)
@@ -683,7 +683,7 @@ class ModelSuite extends UnitTestSuite {
   }
 
   test("StageAggregateTracker - increment for stages") {
-    val obj = new StageAggregateTracker()
+    val obj = AggregateSummary.stages()
 
     obj.incActiveTasks(1, 0)
     obj.incCompletedTasks(1, 0)
@@ -709,8 +709,8 @@ class ModelSuite extends UnitTestSuite {
   }
 
   test("StageAggregateTracker - equals") {
-    val obj1 = new StageAggregateTracker()
-    val obj2 = new StageAggregateTracker()
+    val obj1 = AggregateSummary.stages()
+    val obj2 = AggregateSummary.stages()
     obj1 should be (obj2)
 
     obj1.incActiveTasks(1, 0)

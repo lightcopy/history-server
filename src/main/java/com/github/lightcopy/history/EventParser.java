@@ -43,12 +43,12 @@ import com.github.lightcopy.history.event.SparkListenerStageSubmitted;
 import com.github.lightcopy.history.event.SparkListenerTaskStart;
 import com.github.lightcopy.history.event.SparkListenerTaskEnd;
 
+import com.github.lightcopy.history.model.AggregateSummary;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Metrics;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
-import com.github.lightcopy.history.model.StageAggregateTracker;
 import com.github.lightcopy.history.model.Task;
 
 /**
@@ -61,20 +61,29 @@ public class EventParser {
   private static final Logger LOG = LoggerFactory.getLogger(EventParser.class);
   private static Gson gson = new Gson();
 
-  private StageAggregateTracker stageAgg;
+  // whether or not current event parser finished parsing log
+  private volatile boolean finished;
+  private FileSystem fs;
+  private MongoClient client;
+  private Application app;
+  private AggregateSummary.StageAggregateTracker stageAgg;
 
-  public EventParser() {
-    this.stageAgg = new StageAggregateTracker();
+  public EventParser(FileSystem fs, MongoClient client, Application app) {
+    this.finished = false;
+    this.fs = fs;
+    this.client = client;
+    this.app = app;
+    // aggregated metrics
+    this.stageAgg = AggregateSummary.stages();
   }
 
   /**
    * Parse application logs from file.
-   * @param fs file system
-   * @param client Mongo client
-   * @param app application to parse (has partial data related to fs file)
    */
-  public void parseApplicationLog(FileSystem fs, MongoClient client, Application app)
-      throws EventProcessException {
+  public void parseApplicationLog() throws EventProcessException {
+    if (finished) {
+      throw new IllegalStateException("Event parser already finished parsing log");
+    }
     FSDataInputStream in = null;
     try {
       in = fs.open(new Path(app.getPath()));
@@ -98,6 +107,8 @@ public class EventParser {
           // no-op
         }
       }
+      // always mark event parser as finished
+      finished = true;
     }
   }
 

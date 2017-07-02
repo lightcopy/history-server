@@ -85,8 +85,8 @@ public class ExecutorProcess extends InterruptibleThread {
 
           LOG.info("{} - processing {}", id, app);
           try {
-            EventParser parser = new EventParser();
-            parser.parseApplicationLog(fs, mongo, app);
+            EventParser parser = new EventParser(fs, mongo, app);
+            parser.parseApplicationLog();
             currentStatus = Application.LoadStatus.LOAD_SUCCESS;
           } catch (EventProcessException err) {
             LOG.error("Failed to process application log " + app, err);
