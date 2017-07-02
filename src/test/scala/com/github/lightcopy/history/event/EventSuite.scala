@@ -706,4 +706,122 @@ class EventSuite extends UnitTestSuite {
     event.update should be (exp)
     event.value should be (exp)
   }
+
+  test("SparkListenerStageSubmitted") {
+    val json = """
+    {
+      "Event": "SparkListenerStageSubmitted",
+      "Stage Info": {
+        "Stage ID": 1,
+        "Stage Attempt ID": 2,
+        "Stage Name": "count at <console>:26",
+        "Number of Tasks": 8,
+        "RDD Info": [
+          {
+            "RDD ID": 8,
+            "Name": "MapPartitionsRDD",
+            "Scope": "{\"id\":\"15\",\"name\":\"Exchange\"}",
+            "Callsite": "count at <console>:26",
+            "Parent IDs": [
+              7
+            ],
+            "Storage Level": {
+              "Use Disk": false,
+              "Use Memory": false,
+              "Deserialized": false,
+              "Replication": 1
+            },
+            "Number of Partitions": 8,
+            "Number of Cached Partitions": 0,
+            "Memory Size": 0,
+            "Disk Size": 0
+          }
+        ],
+        "Parent IDs": [],
+        "Details": "org.apache.spark.sql.Dataset.count(Dataset.scala:2404)",
+        "Accumulables": []
+      },
+      "Properties": {
+        "spark.rdd.scope.noOverride": "true",
+        "spark.rdd.scope": "{\"id\":\"21\",\"name\":\"collect\"}",
+        "spark.sql.execution.id": "1"
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerStageSubmitted])
+    event.stageInfo.stageId should be (1)
+    event.stageInfo.stageAttemptId should be (2)
+    event.stageInfo.stageName should be ("count at <console>:26")
+    event.stageInfo.numTasks should be (8)
+    event.stageInfo.parentIds.size should be (0)
+    event.stageInfo.details should be ("org.apache.spark.sql.Dataset.count(Dataset.scala:2404)")
+    event.stageInfo.submissionTime should be (0)
+    event.stageInfo.completionTime should be (0)
+    event.stageInfo.failureReason should be (null)
+    event.properties should be (Map(
+      "spark.rdd.scope.noOverride" -> "true",
+      "spark.rdd.scope" -> "{\"id\":\"21\",\"name\":\"collect\"}",
+      "spark.sql.execution.id" -> "1"
+    ).asJava)
+  }
+
+  test("SparkListenerStageCompleted") {
+    val json = """
+    {
+      "Event": "SparkListenerStageCompleted",
+      "Stage Info": {
+        "Stage ID": 1,
+        "Stage Attempt ID": 2,
+        "Stage Name": "collect at <console>:26",
+        "Number of Tasks": 4,
+        "RDD Info": [
+          {
+            "RDD ID": 10,
+            "Name": "MapPartitionsRDD",
+            "Scope": "{\"id\":\"8\",\"name\":\"mapPartitions\"}",
+            "Callsite": "rdd at <console>:23",
+            "Parent IDs": [
+              9
+            ],
+            "Storage Level": {
+              "Use Disk": false,
+              "Use Memory": false,
+              "Deserialized": false,
+              "Replication": 1
+            },
+            "Number of Partitions": 4,
+            "Number of Cached Partitions": 0,
+            "Memory Size": 0,
+            "Disk Size": 0
+          }
+        ],
+        "Parent IDs": [],
+        "Details": "org.apache.spark.rdd.RDD.collect(RDD.scala:935)",
+        "Submission Time": 1498724228488,
+        "Completion Time": 1498724228533,
+        "Failure Reason": "Job aborted due to stage failure: Task 1 in stage 1.0 failed 1 times",
+        "Accumulables": [
+          {
+            "ID": 126,
+            "Name": "internal.metrics.executorRunTime",
+            "Value": 10,
+            "Internal": true,
+            "Count Failed Values": true
+          }
+        ]
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerStageCompleted])
+    event.stageInfo.stageId should be (1)
+    event.stageInfo.stageAttemptId should be (2)
+    event.stageInfo.stageName should be ("collect at <console>:26")
+    event.stageInfo.numTasks should be (4)
+    event.stageInfo.parentIds.size should be (0)
+    event.stageInfo.details should be ("org.apache.spark.rdd.RDD.collect(RDD.scala:935)")
+    event.stageInfo.submissionTime should be (1498724228488L)
+    event.stageInfo.completionTime should be (1498724228533L)
+    event.stageInfo.failureReason should be (
+      "Job aborted due to stage failure: Task 1 in stage 1.0 failed 1 times")
+  }
 }

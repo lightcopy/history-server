@@ -260,6 +260,50 @@ public class Metrics extends AbstractCodec<Metrics> {
     outputMetrics.put(OUTPUT_RECORDS_WRITTEN, taskMetrics.outputMetrics.recordsWritten);
   }
 
+  /**
+   * Merge other metrics values into this metrics instance.
+   * Other instance is not updated.
+   * @param other metrics update to merge
+   */
+  public void merge(Metrics other) {
+    resultSize += other.getResultSize();
+    jvmGcTime += other.getJvmGcTime();
+    resultSerializationTime += other.getResultSerializationTime();
+    memoryBytesSpilled += other.getMemoryBytesSpilled();
+    diskBytesSpilled += other.getDiskBytesSpilled();
+    // merge executor metrics
+    merge(executorMetrics, other.getExecutorMetrics(), EXECUTOR_DESERIALIZE_TIME);
+    merge(executorMetrics, other.getExecutorMetrics(), EXECUTOR_DESERIALIZE_CPU_TIME);
+    merge(executorMetrics, other.getExecutorMetrics(), EXECUTOR_RUN_TIME);
+    merge(executorMetrics, other.getExecutorMetrics(), EXECUTOR_CPU_TIME);
+    // merge shuffle read metrics
+    merge(shuffleReadMetrics, other.getShuffleReadMetrics(), SHUFFLE_REMOTE_BLOCKS_FETCHED);
+    merge(shuffleReadMetrics, other.getShuffleReadMetrics(), SHUFFLE_LOCAL_BLOCKS_FETCHED);
+    merge(shuffleReadMetrics, other.getShuffleReadMetrics(), SHUFFLE_FETCH_WAIT_TIME);
+    merge(shuffleReadMetrics, other.getShuffleReadMetrics(), SHUFFLE_REMOTE_BYTES_READ);
+    merge(shuffleReadMetrics, other.getShuffleReadMetrics(), SHUFFLE_LOCAL_BYTES_READ);
+    merge(shuffleReadMetrics, other.getShuffleReadMetrics(), SHUFFLE_TOTAL_RECORDS_READ);
+    // merge shuffle write metrics
+    merge(shuffleWriteMetrics, other.getShuffleWriteMetrics(), SHUFFLE_BYTES_WRITTEN);
+    merge(shuffleWriteMetrics, other.getShuffleWriteMetrics(), SHUFFLE_WRITE_TIME);
+    merge(shuffleWriteMetrics, other.getShuffleWriteMetrics(), SHUFFLE_RECORDS_WRITTEN);
+    // output input metrics
+    merge(inputMetrics, other.getInputMetrics(), INPUT_BYTES_READ);
+    merge(inputMetrics, other.getInputMetrics(), INPUT_RECORDS_READ);
+    // merge output metrics
+    merge(outputMetrics, other.getOutputMetrics(), OUTPUT_BYTES_WRITTEN);
+    merge(outputMetrics, other.getOutputMetrics(), OUTPUT_RECORDS_WRITTEN);
+  }
+
+  /** Merge value from source map into destination map for provided key */
+  private static void merge(HashMap<String, Long> dst, HashMap<String, Long> src, String key) {
+    Long update = src.get(key);
+    update = (update == null) ? 0L : update;
+    Long value = dst.get(key);
+    value = (value == null) ? update : (value + update);
+    dst.put(key, value);
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (obj == null || !(obj instanceof Metrics)) return false;
@@ -275,6 +319,22 @@ public class Metrics extends AbstractCodec<Metrics> {
       this.shuffleWriteMetrics.equals(that.shuffleWriteMetrics) &&
       this.inputMetrics.equals(that.inputMetrics) &&
       this.outputMetrics.equals(that.outputMetrics);
+  }
+
+  @Override
+  public String toString() {
+    return "Metrics(" +
+      "resultSize=" + resultSize +
+      ", jvmGcTime=" + jvmGcTime +
+      ", resultSerializationTime=" + resultSerializationTime +
+      ", memoryBytesSpilled=" + memoryBytesSpilled +
+      ", diskBytesSpilled=" + diskBytesSpilled +
+      ", executorMetrics=" + executorMetrics +
+      ", shuffleReadMetrics=" + shuffleReadMetrics +
+      ", shuffleWriteMetrics=" + shuffleWriteMetrics +
+      ", inputMetrics=" + inputMetrics +
+      ", outputMetrics=" + outputMetrics +
+      ")";
   }
 
   // == Codec methods ==

@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.Path
 import org.bson.{BsonDocument, BsonDocumentWriter, BsonDocumentReader}
 import org.bson.codecs.{DecoderContext, EncoderContext}
 
+import com.github.lightcopy.history.event.StageInfo
 import com.github.lightcopy.history.event.TaskEndReason
 import com.github.lightcopy.history.event.TaskInfo
 import com.github.lightcopy.history.event.TaskMetrics
@@ -496,5 +497,179 @@ class ModelSuite extends UnitTestSuite {
     res.getInputMetrics.get(INPUT_RECORDS_READ) should be (22L)
     res.getOutputMetrics.get(OUTPUT_BYTES_WRITTEN) should be (23L)
     res.getOutputMetrics.get(OUTPUT_RECORDS_WRITTEN) should be (24L)
+  }
+
+  test("Merge empty metrics") {
+    val metrics = new Metrics()
+    // merge empty metrics, this should not change any values
+    metrics.merge(new Metrics())
+    metrics.merge(new Metrics())
+    metrics should be (new Metrics())
+  }
+
+  test("Merge empty metrics with non-empty update") {
+    import com.github.lightcopy.history.model.Metrics._
+
+    val metrics = new Metrics()
+    val update = new Metrics()
+
+    update.setResultSize(100L)
+    update.setJvmGcTime(200L)
+    update.setResultSerializationTime(300L)
+    update.setMemoryBytesSpilled(400L)
+    update.setDiskBytesSpilled(500L)
+
+    update.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_TIME, 600L)
+    update.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_CPU_TIME, 700L)
+    update.getExecutorMetrics.put(EXECUTOR_RUN_TIME, 800L)
+    update.getExecutorMetrics.put(EXECUTOR_CPU_TIME, 900L)
+
+    update.getShuffleReadMetrics.put(SHUFFLE_REMOTE_BLOCKS_FETCHED, 1000L)
+    update.getShuffleReadMetrics.put(SHUFFLE_LOCAL_BLOCKS_FETCHED, 2000L)
+    update.getShuffleReadMetrics.put(SHUFFLE_FETCH_WAIT_TIME, 3000L)
+    update.getShuffleReadMetrics.put(SHUFFLE_REMOTE_BYTES_READ, 4000L)
+    update.getShuffleReadMetrics.put(SHUFFLE_LOCAL_BYTES_READ, 5000L)
+    update.getShuffleReadMetrics.put(SHUFFLE_TOTAL_RECORDS_READ, 6000L)
+
+    update.getShuffleWriteMetrics.put(SHUFFLE_BYTES_WRITTEN, 18L)
+    update.getShuffleWriteMetrics.put(SHUFFLE_WRITE_TIME, 19L)
+    update.getShuffleWriteMetrics.put(SHUFFLE_RECORDS_WRITTEN, 20L)
+
+    update.getInputMetrics.put(INPUT_BYTES_READ, 21L)
+    update.getInputMetrics.put(INPUT_RECORDS_READ, 22L)
+
+    update.getOutputMetrics.put(OUTPUT_BYTES_WRITTEN, 23L)
+    update.getOutputMetrics.put(OUTPUT_RECORDS_WRITTEN, 24L)
+
+    metrics.merge(update)
+    metrics should be (update)
+  }
+
+  test("Merge non-empty metrics with non-empty update") {
+    import com.github.lightcopy.history.model.Metrics._
+
+    val metrics = new Metrics()
+    metrics.setResultSize(1L)
+    metrics.setJvmGcTime(2L)
+    metrics.setResultSerializationTime(3L)
+    metrics.setMemoryBytesSpilled(4L)
+    metrics.setDiskBytesSpilled(5L)
+    metrics.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_TIME, 6L)
+    metrics.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_CPU_TIME, 7L)
+    metrics.getExecutorMetrics.put(EXECUTOR_RUN_TIME, 8L)
+    metrics.getExecutorMetrics.put(EXECUTOR_CPU_TIME, 9L)
+
+    val update = new Metrics()
+    update.setResultSize(10L)
+    update.setJvmGcTime(20L)
+    update.setResultSerializationTime(30L)
+    update.setMemoryBytesSpilled(40L)
+    update.setDiskBytesSpilled(50L)
+    update.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_TIME, 60L)
+    update.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_CPU_TIME, 70L)
+    update.getExecutorMetrics.put(EXECUTOR_RUN_TIME, 80L)
+    update.getExecutorMetrics.put(EXECUTOR_CPU_TIME, 90L)
+
+    val exp = new Metrics()
+    exp.setResultSize(11L)
+    exp.setJvmGcTime(22L)
+    exp.setResultSerializationTime(33L)
+    exp.setMemoryBytesSpilled(44L)
+    exp.setDiskBytesSpilled(55L)
+    exp.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_TIME, 66L)
+    exp.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_CPU_TIME, 77L)
+    exp.getExecutorMetrics.put(EXECUTOR_RUN_TIME, 88L)
+    exp.getExecutorMetrics.put(EXECUTOR_CPU_TIME, 99L)
+
+    metrics.merge(update)
+    metrics should be (exp)
+  }
+
+  test("Empty Stage into bson") {
+    val stage = new Stage()
+    val doc = serialize(stage, stage)
+    val res = deserialize(stage, doc)
+    res.getAppId should be (stage.getAppId)
+    res.getJobId should be (stage.getJobId)
+    res.getUniqueStageId should be (stage.getUniqueStageId)
+    res.getStageId should be (stage.getStageId)
+    res.getStageAttemptId should be (stage.getStageAttemptId)
+    res.getStageName should be (stage.getStageName)
+    res.getActiveTasks should be (stage.getActiveTasks)
+    res.getCompletedTasks should be (stage.getCompletedTasks)
+    res.getFailedTasks should be (stage.getFailedTasks)
+    res.getTotalTasks should be (stage.getTotalTasks)
+    res.getDetails should be (stage.getDetails)
+    res.getStartTime should be (stage.getStartTime)
+    res.getEndTime should be (stage.getEndTime)
+    res.getDuration should be (stage.getDuration)
+    res.getStatus should be (stage.getStatus)
+    res.getFailureReason should be (stage.getFailureReason)
+    res.getMetrics should be (stage.getMetrics)
+  }
+
+  test("Complete Stage into bson") {
+    val stage = new Stage()
+    stage.setAppId("app")
+    stage.setJobId(1)
+    stage.setUniqueStageId(100L)
+    stage.setStageId(1)
+    stage.setStageAttemptId(2)
+    stage.setStageName("stage")
+    stage.setActiveTasks(10)
+    stage.setCompletedTasks(12)
+    stage.setFailedTasks(4)
+    stage.setTotalTasks(26)
+    stage.setDetails("details")
+    stage.setStartTime(12L)
+    stage.setEndTime(23L)
+    stage.setDuration(4L)
+    stage.setStatus(Stage.Status.FAILED)
+    stage.setFailureReason("reason")
+    stage.setMetrics(new Metrics())
+
+    val doc = serialize(stage, stage)
+    val res = deserialize(stage, doc)
+    res.getAppId should be ("app")
+    res.getJobId should be (1)
+    res.getUniqueStageId should be (100L)
+    res.getStageId should be (1)
+    res.getStageAttemptId should be (2)
+    res.getStageName should be ("stage")
+    res.getActiveTasks should be (10)
+    res.getCompletedTasks should be (12)
+    res.getFailedTasks should be (4)
+    res.getTotalTasks should be (26)
+    res.getDetails should be ("details")
+    res.getStartTime should be (12L)
+    res.getEndTime should be (23L)
+    res.getDuration should be (4L)
+    res.getStatus should be (Stage.Status.FAILED)
+    res.getFailureReason should be ("reason")
+    res.getMetrics should be (new Metrics())
+  }
+
+  test("Stage from StageInfo") {
+    val stage = new Stage()
+    val info = new StageInfo()
+    info.stageId = 1
+    info.stageAttemptId = 2
+    info.stageName = "stage"
+    info.numTasks = 123
+    info.details = "details"
+    info.submissionTime = 100L
+    info.completionTime = 202L
+    info.failureReason = "reason"
+
+    stage.update(info)
+    stage.getStageId should be (1)
+    stage.getStageAttemptId should be (2)
+    stage.getStageName should be ("stage")
+    stage.getTotalTasks should be (123)
+    stage.getDetails should be ("details")
+    stage.getStartTime should be (100L)
+    stage.getEndTime should be (202L)
+    stage.getDuration should be (102L)
+    stage.getFailureReason should be ("reason")
   }
 }
