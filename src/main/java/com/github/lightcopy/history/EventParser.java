@@ -38,25 +38,33 @@ import com.github.lightcopy.history.event.SparkListenerApplicationEnd;
 import com.github.lightcopy.history.event.SparkListenerEnvironmentUpdate;
 import com.github.lightcopy.history.event.SparkListenerSQLExecutionStart;
 import com.github.lightcopy.history.event.SparkListenerSQLExecutionEnd;
+import com.github.lightcopy.history.event.SparkListenerStageCompleted;
+import com.github.lightcopy.history.event.SparkListenerStageSubmitted;
 import com.github.lightcopy.history.event.SparkListenerTaskStart;
 import com.github.lightcopy.history.event.SparkListenerTaskEnd;
+
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.Metrics;
 import com.github.lightcopy.history.model.SQLExecution;
+import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.StageAggregateTracker;
 import com.github.lightcopy.history.model.Task;
 
 /**
  * Parser for Spark listener events.
  * Performs aggregation for metrics and keeps aggregation state, and is initialized per
  * application log.
+ * Class is not thread-safe and should be created per processing thread.
  */
 public class EventParser {
   private static final Logger LOG = LoggerFactory.getLogger(EventParser.class);
+  private static Gson gson = new Gson();
 
-  private Gson gson;
+  private StageAggregateTracker stageAgg;
 
   public EventParser() {
-    this.gson = new Gson();
+    this.stageAgg = new StageAggregateTracker();
   }
 
   /**
@@ -115,8 +123,13 @@ public class EventParser {
         processEvent(client, appId, gson.fromJson(json, SparkListenerTaskStart.class));
         break;
       case "SparkListenerTaskEnd":
-        LOG.info(json);
         processEvent(client, appId, gson.fromJson(json, SparkListenerTaskEnd.class));
+        break;
+      case "SparkListenerStageSubmitted":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerStageSubmitted.class));
+        break;
+      case "SparkListenerStageCompleted":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerStageCompleted.class));
         break;
       default:
         LOG.warn("Unrecongnized event {} ", event);
@@ -284,11 +297,16 @@ public class EventParser {
         }
       }
     );
+    // increment number of active tasks per stage
+    stageAgg.incActiveTasks(event.stageId, event.stageAttemptId);
   }
 
   // == SparkListenerTaskEnd ==
   private void processEvent(
       MongoClient client, final String appId, final SparkListenerTaskEnd event) {
+    // If stage attempt id is -1, it means the DAGScheduler had no idea which attempt this task
+    // completion event is for. For now we allow processing of task, it will be assigned to stage -1
+    // which does not exist and we never query by negative attempt
     Mongo.findOneAndUpsert(
       Mongo.tasks(client),
       Filters.and(
@@ -309,6 +327,127 @@ public class EventParser {
           obj.update(event.taskInfo);
           obj.update(event.taskEndReason);
           obj.update(event.taskMetrics);
+          return obj;
+        }
+      }
+    );
+
+    // update stage info with current metrics and stats snapshot
+    stageAgg.decActiveTasks(event.stageId, event.stageAttemptId);
+    if (event.taskEndReason.isSuccess()) {
+      stageAgg.incCompletedTasks(event.stageId, event.stageAttemptId);
+    } else {
+      stageAgg.incFailedTasks(event.stageId, event.stageAttemptId);
+    }
+    Metrics update = new Metrics();
+    update.set(event.taskMetrics);
+    stageAgg.updateMetrics(event.stageId, event.stageAttemptId, update);
+    // we also update stage with partial counts and metrics for cases when stage never completes
+    // if stage complete event is received stage will updated with final metrics anyway.
+    final int activeTasks = stageAgg.getActiveTasks(event.stageId, event.stageAttemptId);
+    final int completedTasks = stageAgg.getCompletedTasks(event.stageId, event.stageAttemptId);
+    final int failedTasks = stageAgg.getFailedTasks(event.stageId, event.stageAttemptId);
+    final Metrics metrics = stageAgg.getMetrics(event.stageId, event.stageAttemptId);
+
+    Mongo.findOneAndUpsert(
+      Mongo.stages(client),
+      Filters.and(
+        Filters.eq(Stage.FIELD_APP_ID, appId),
+        Filters.eq(Stage.FIELD_STAGE_ID, event.stageId),
+        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, event.stageAttemptId)
+      ),
+      new Mongo.UpsertBlock<Stage>() {
+        @Override
+        public Stage update(Stage obj) {
+          // we only update information for running stage, since sometimes tasks can finish after
+          // stages are complete (see comment above)
+          if (obj != null && obj.getStatus() == Stage.Status.ACTIVE) {
+            obj.setActiveTasks(activeTasks);
+            obj.setCompletedTasks(completedTasks);
+            obj.setFailedTasks(failedTasks);
+            obj.setMetrics(metrics);
+          }
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerStageSubmitted ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerStageSubmitted event) {
+    Mongo.findOneAndUpsert(
+      Mongo.stages(client),
+      Filters.and(
+        Filters.eq(Stage.FIELD_APP_ID, appId),
+        Filters.eq(Stage.FIELD_STAGE_ID, event.stageInfo.stageId),
+        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, event.stageInfo.stageAttemptId)
+      ),
+      new Mongo.UpsertBlock<Stage>() {
+        @Override
+        public Stage update(Stage obj) {
+          if (obj == null) {
+            obj = new Stage();
+            obj.setAppId(appId);
+          }
+          obj.update(event.stageInfo);
+          obj.setStatus(Stage.Status.ACTIVE);
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerStageCompleted ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerStageCompleted event) {
+    // extract metrics for stage and evict key
+    final int activeTasks = stageAgg.getActiveTasks(event.stageInfo.stageId,
+      event.stageInfo.stageAttemptId);
+    final int completedTasks = stageAgg.getCompletedTasks(event.stageInfo.stageId,
+      event.stageInfo.stageAttemptId);
+    final int failedTasks = stageAgg.getFailedTasks(event.stageInfo.stageId,
+      event.stageInfo.stageAttemptId);
+    final Metrics metrics = stageAgg.getMetrics(event.stageInfo.stageId,
+      event.stageInfo.stageAttemptId);
+    stageAgg.evict(event.stageInfo.stageId, event.stageInfo.stageAttemptId);
+
+    Mongo.findOneAndUpsert(
+      Mongo.stages(client),
+      Filters.and(
+        Filters.eq(Stage.FIELD_APP_ID, appId),
+        Filters.eq(Stage.FIELD_STAGE_ID, event.stageInfo.stageId),
+        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, event.stageInfo.stageAttemptId)
+      ),
+      new Mongo.UpsertBlock<Stage>() {
+        @Override
+        public Stage update(Stage obj) {
+          if (obj == null) {
+            throw new IllegalStateException(
+              "Stage is not found for SparkListenerStageCompleted: stageId=" +
+              event.stageInfo.stageId + ", stageAttemptId=" + event.stageInfo.stageAttemptId);
+          }
+          boolean active = obj.getStatus() == Stage.Status.ACTIVE;
+          boolean pending = obj.getStatus() == Stage.Status.PENDING;
+          obj.setAppId(appId);
+          obj.update(event.stageInfo);
+          if (active) {
+            if (event.stageInfo.failureReason == null) {
+              obj.setStatus(Stage.Status.COMPLETED);
+            } else {
+              obj.setStatus(Stage.Status.FAILED);
+            }
+            obj.setActiveTasks(activeTasks);
+            obj.setCompletedTasks(completedTasks);
+            obj.setFailedTasks(failedTasks);
+            obj.setMetrics(metrics);
+          } else if (pending) {
+            // we do not update metrics for skipped stage
+            obj.setStatus(Stage.Status.SKIPPED);
+          } else {
+            LOG.warn("Stage {} ({}) has invalid stage", obj.getStageId(), obj.getStageAttemptId());
+            obj.setStatus(Stage.Status.UNKNOWN);
+          }
           return obj;
         }
       }

@@ -21,6 +21,8 @@ import java.util.List;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
+import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.Task;
 
 /**
  * Interface for providing REST API calls implementation.
@@ -76,4 +78,51 @@ public interface ApiProvider {
    * @return valid sql execution or null, if not found
    */
   SQLExecution sqlExecution(String appId, int executionId);
+
+  /**
+   * Return list of stages for appid.
+   * @param appId application id
+   * @param page page number, 1-based
+   * @param pageSize size of records per page, > 0
+   * @param sortBy field name to sort by
+   * @param asc return is ascending order if true, descending otherwise
+   * @return list of Stage instances.
+   */
+  List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc);
+
+  /**
+   * Return list of stages for appid and jobId.
+   * @param appId application id
+   * @param jobId job id
+   * @param page page number, 1-based
+   * @param pageSize size of records per page, > 0
+   * @param sortBy field name to sort by
+   * @param asc return is ascending order if true, descending otherwise
+   * @return list of Stage instances.
+   */
+  List<Stage> stages(String appId, int jobId, int page, int pageSize, String sortBy, boolean asc);
+
+  /**
+   * Return Stage instance for appId, stageId and attempt number.
+   * Result can be null, if stage is not found.
+   * @param appId application id
+   * @param stageId
+   * @param stageAttemptId
+   * @return valid stage or null, if not found
+   */
+  Stage stage(String appId, int stageId, int stageAttemptId);
+
+  /**
+   * Return list of tasks for a particular stage attempt.
+   * @param appId application id
+   * @param stageId stage id
+   * @param stageAttemptId attempt number
+   * @param page page number, 1-based
+   * @param pageSize size of records per page, > 0
+   * @param sortBy field name to sort by
+   * @param asc return is ascending order if true, descending otherwise
+   * @return list of Task instances.
+   */
+  List<Task> tasks(String appId, int stageId, int stageAttemptId, int page, int pageSize,
+    String sortBy, boolean asc);
 }

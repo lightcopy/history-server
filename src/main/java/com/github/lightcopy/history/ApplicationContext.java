@@ -41,6 +41,7 @@ import com.github.lightcopy.history.conf.AppConf;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
+import com.github.lightcopy.history.model.Stage;
 
 /**
  * Application context.
@@ -277,6 +278,79 @@ public class ApplicationContext extends ResourceConfig {
           return apiError404("No SQL query " + id + " found for application " + appId);
         }
         return Response.ok(gson.toJson(sql)).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/stages")
+    @Produces("application/json")
+    public Response listStages(
+        @PathParam("appId") String appId,
+        @DefaultValue("1") @QueryParam("page") int page,
+        @DefaultValue("100") @QueryParam("pageSize") int pageSize,
+        @DefaultValue("") @QueryParam("sortBy") String sortBy,
+        @DefaultValue("true") @QueryParam("asc") boolean asc) {
+      try {
+        return Response.ok(
+          gson.toJson(getProvider().stages(appId, page, pageSize, sortBy, asc))).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/jobs/{jobId}/stages")
+    @Produces("application/json")
+    public Response listStagesForJob(
+        @PathParam("appId") String appId,
+        @PathParam("jobId") int jobId,
+        @DefaultValue("1") @QueryParam("page") int page,
+        @DefaultValue("100") @QueryParam("pageSize") int pageSize,
+        @DefaultValue("") @QueryParam("sortBy") String sortBy,
+        @DefaultValue("true") @QueryParam("asc") boolean asc) {
+      try {
+        return Response.ok(
+          gson.toJson(getProvider().stages(appId, jobId, page, pageSize, sortBy, asc))).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/stages/{stageId}/attempt/{attemptId}")
+    @Produces("application/json")
+    public Response stage(
+        @PathParam("appId") String appId,
+        @PathParam("stageId") int stageId,
+        @PathParam("attemptId") int attemptId) {
+      try {
+        Stage stage = getProvider().stage(appId, stageId, attemptId);
+        if (stage == null) {
+          return apiError404("No stage " + stageId + " (attempt" + attemptId +
+            ") found for application " + appId);
+        }
+        return Response.ok(gson.toJson(stage)).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/stages/{stageId}/attempt/{attemptId}/tasks")
+    @Produces("application/json")
+    public Response listTasksForStage(
+        @PathParam("appId") String appId,
+        @PathParam("stageId") int stageId,
+        @PathParam("attemptId") int attemptId,
+        @DefaultValue("1") @QueryParam("page") int page,
+        @DefaultValue("100") @QueryParam("pageSize") int pageSize,
+        @DefaultValue("") @QueryParam("sortBy") String sortBy,
+        @DefaultValue("true") @QueryParam("asc") boolean asc) {
+      try {
+        return Response.ok(gson.toJson(
+          getProvider().tasks(appId, stageId, attemptId, page, pageSize, sortBy, asc))).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }

@@ -23,6 +23,8 @@ import java.util.List;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
+import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.Task;
 
 /** Simple development server for frontend */
 public class DevServer extends AbstractServer {
@@ -154,6 +156,28 @@ public class DevServer extends AbstractServer {
       sql.updateDuration();
       sql.setStatus(SQLExecution.Status.COMPLETED);
       return sql;
+    }
+
+    @Override
+    public List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc) {
+      return new ArrayList<Stage>();
+    }
+
+    @Override
+    public List<Stage> stages(
+        String appId, int jobId, int page, int pageSize, String sortBy, boolean asc) {
+      return new ArrayList<Stage>();
+    }
+
+    @Override
+    public Stage stage(String appId, int stageId, int stageAttemptId) {
+      return null;
+    }
+
+    @Override
+    public List<Task> tasks(String appId, int stageId, int stageAttemptId, int page, int pageSize,
+        String sortBy, boolean asc) {
+      return new ArrayList<Task>();
     }
   }
 

@@ -205,6 +205,9 @@ public class Mongo {
    * Client must ensure that filter returns only one record, otherwise upsert might update the
    * wrong document.
    *
+   * If block.update() method returns null, upsert is ignored, and old document or null remains
+   * unmodified.
+   *
    * @param collection Mongo collection
    * @param filter filter to fetch one item
    * @param block block with upsert logic
@@ -213,10 +216,12 @@ public class Mongo {
       MongoCollection<T> collection, Bson filter, UpsertBlock<T> block) {
     T item = collection.find(filter).first();
     T update = block.update(item);
-    UpdateOptions options = new UpdateOptions().upsert(true);
-    UpdateResult res = collection.replaceOne(filter, update, options);
-    if (!res.wasAcknowledged()) {
-      throw new RuntimeException("Failed to upsert item " + update + ", original " + item);
+    if (update != null) {
+      UpdateOptions options = new UpdateOptions().upsert(true);
+      UpdateResult res = collection.replaceOne(filter, update, options);
+      if (!res.wasAcknowledged()) {
+        throw new RuntimeException("Failed to upsert item " + update + ", original " + item);
+      }
     }
   }
 

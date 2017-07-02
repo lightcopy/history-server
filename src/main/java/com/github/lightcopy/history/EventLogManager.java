@@ -36,6 +36,8 @@ import com.mongodb.client.model.Sorts;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
+import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.Task;
 import com.github.lightcopy.history.process.ExecutorProcess;
 import com.github.lightcopy.history.process.InterruptibleThread;
 import com.github.lightcopy.history.process.WatchProcess;
@@ -231,5 +233,81 @@ class EventLogManager implements ApiProvider {
         )
       )
       .first();
+  }
+
+  @Override
+  public List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc) {
+    final List<Stage> list = new ArrayList<Stage>();
+    Mongo.page(
+      Mongo.stages(mongo),
+      Filters.eq(Stage.FIELD_APP_ID, appId),
+      page, pageSize, sortBy, asc)
+    .forEach(
+      new Block<Stage>() {
+        @Override
+        public void apply(Stage stage) {
+          list.add(stage);
+        }
+      }
+    );
+    return list;
+  }
+
+  @Override
+  public List<Stage> stages(
+      String appId, int jobId, int page, int pageSize, String sortBy, boolean asc) {
+    final List<Stage> list = new ArrayList<Stage>();
+    Mongo.page(
+      Mongo.stages(mongo),
+      Filters.and(
+        Filters.eq(Stage.FIELD_APP_ID, appId),
+        Filters.eq(Stage.FIELD_JOB_ID, jobId)
+      ),
+      page, pageSize, sortBy, asc)
+    .forEach(
+      new Block<Stage>() {
+        @Override
+        public void apply(Stage stage) {
+          list.add(stage);
+        }
+      }
+    );
+    return list;
+  }
+
+  @Override
+  public Stage stage(String appId, int stageId, int stageAttemptId) {
+    return Mongo.stages(mongo)
+      .find(
+        Filters.and(
+          Filters.eq(Stage.FIELD_APP_ID, appId),
+          Filters.eq(Stage.FIELD_STAGE_ID, stageId),
+          Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, stageAttemptId)
+        )
+      )
+      .first();
+  }
+
+  @Override
+  public List<Task> tasks(String appId, int stageId, int stageAttemptId, int page, int pageSize,
+      String sortBy, boolean asc) {
+    final List<Task> list = new ArrayList<Task>();
+    Mongo.page(
+      Mongo.tasks(mongo),
+      Filters.and(
+        Filters.eq(Task.FIELD_APP_ID, appId),
+        Filters.eq(Task.FIELD_STAGE_ID, stageId),
+        Filters.eq(Task.FIELD_STAGE_ATTEMPT_ID, stageAttemptId)
+      ),
+      page, pageSize, sortBy, asc)
+    .forEach(
+      new Block<Task>() {
+        @Override
+        public void apply(Task task) {
+          list.add(task);
+        }
+      }
+    );
+    return list;
   }
 }

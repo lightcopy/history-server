@@ -42,6 +42,11 @@ public class TaskEndReason {
   // fields for TaskKilled
   @SerializedName("Kill Reason") public String killReason;
 
+  /** Whether or not task reason is Success */
+  public boolean isSuccess() {
+    return reason != null && reason.equals("Success");
+  }
+
   public String getDescription() {
     // we mark reason that cannot be processed as "<unknown>"; this potentially indicates
     // bug in parsing and/or conversion, and should be fixed
