@@ -80,7 +80,7 @@ class EventLogManager implements ApiProvider {
     // current approach is removing data for all non successfull application logs in all operational
     // tables; we do not allow details for failed or in loading progress application logs in ui.
     final List<String> appsToRemove = new ArrayList<String>();
-    Mongo.applicationCollection(mongo).find().forEach(new Block<Application>() {
+    Mongo.applications(mongo).find().forEach(new Block<Application>() {
       @Override
       public void apply(Application app) {
         // we put log in map if status is either success or failure. Failed logs will be
@@ -174,7 +174,7 @@ class EventLogManager implements ApiProvider {
   public List<Application> applications(int page, int pageSize, String sortBy, boolean asc) {
     final List<Application> list = new ArrayList<Application>();
     // we do not apply any filter when querying applications
-    Mongo.page(Mongo.applicationCollection(mongo), null, page, pageSize, sortBy, asc).forEach(
+    Mongo.page(Mongo.applications(mongo), null, page, pageSize, sortBy, asc).forEach(
       new Block<Application>() {
         @Override
         public void apply(Application app) {
@@ -188,7 +188,7 @@ class EventLogManager implements ApiProvider {
   @Override
   public Application application(String appId) {
     // this method returns either first application that has appId or null if not found.
-    return Mongo.applicationCollection(mongo)
+    return Mongo.applications(mongo)
       .find(Filters.eq(Application.FIELD_APP_ID, appId))
       .first();
   }
@@ -196,7 +196,7 @@ class EventLogManager implements ApiProvider {
   @Override
   public Environment environment(String appId) {
     // this method returns either environment that has appId or null if not found.
-    return Mongo.environmentCollection(mongo)
+    return Mongo.environment(mongo)
       .find(Filters.eq(Environment.FIELD_APP_ID, appId))
       .first();
   }

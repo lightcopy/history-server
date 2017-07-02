@@ -81,7 +81,7 @@ public class ExecutorProcess extends InterruptibleThread {
           // process
           Mongo.removeData(mongo, app.getAppId());
           // initial insert of the processing application log
-          Mongo.applicationCollection(mongo).insertOne(app);
+          Mongo.applications(mongo).insertOne(app);
 
           LOG.info("{} - processing {}", id, app);
           try {
@@ -118,7 +118,7 @@ public class ExecutorProcess extends InterruptibleThread {
       final Application.LoadStatus currentStatus) {
     // upsert application log status
     Mongo.findOneAndUpsert(
-      Mongo.applicationCollection(mongo),
+      Mongo.applications(mongo),
       Filters.eq(Application.FIELD_APP_ID, app.getAppId()),
       new Mongo.UpsertBlock<Application>() {
         @Override

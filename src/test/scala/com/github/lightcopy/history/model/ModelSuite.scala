@@ -662,6 +662,7 @@ class ModelSuite extends UnitTestSuite {
     info.failureReason = "reason"
 
     stage.update(info)
+    stage.getUniqueStageId should be (1L << 32 | 2L)
     stage.getStageId should be (1)
     stage.getStageAttemptId should be (2)
     stage.getStageName should be ("stage")

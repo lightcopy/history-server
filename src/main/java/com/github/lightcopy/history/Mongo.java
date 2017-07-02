@@ -54,7 +54,7 @@ public class Mongo {
    * @param client Mongo client
    * @return collection for Application
    */
-  public static MongoCollection<Application> applicationCollection(MongoClient client) {
+  public static MongoCollection<Application> applications(MongoClient client) {
     MongoCollection<?> collection = client.getDatabase(DATABASE)
       .getCollection(APPLICATION_COLLECTION);
     // extract codec registries to add new support
@@ -70,7 +70,7 @@ public class Mongo {
    * @param client Mongo client
    * @return collection for Environment
    */
-  public static MongoCollection<Environment> environmentCollection(MongoClient client) {
+  public static MongoCollection<Environment> environment(MongoClient client) {
     MongoCollection<?> collection = client.getDatabase(DATABASE)
       .getCollection(ENVIRONMENT_COLLECTION);
     // extract codec registries to add new support
@@ -128,8 +128,8 @@ public class Mongo {
    * @param client Mongo client
    */
   public static void buildIndexes(MongoClient client) {
-    createUniqueIndex(applicationCollection(client), Application.FIELD_APP_ID);
-    createUniqueIndex(environmentCollection(client), Environment.FIELD_APP_ID);
+    createUniqueIndex(applications(client), Application.FIELD_APP_ID);
+    createUniqueIndex(environment(client), Environment.FIELD_APP_ID);
     createUniqueIndex(sqlExecution(client),
       SQLExecution.FIELD_APP_ID, SQLExecution.FIELD_EXECUTION_ID);
     // task table will contain several indexes, one to update tasks, another one to query by
@@ -145,8 +145,8 @@ public class Mongo {
    * @param appIds list of application ids to remove
    */
   public static void removeData(MongoClient client, List<String> appIds) {
-    applicationCollection(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
-    environmentCollection(client).deleteMany(Filters.all(Environment.FIELD_APP_ID, appIds));
+    applications(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
+    environment(client).deleteMany(Filters.all(Environment.FIELD_APP_ID, appIds));
     sqlExecution(client).deleteMany(Filters.all(SQLExecution.FIELD_APP_ID, appIds));
     tasks(client).deleteMany(Filters.all(Task.FIELD_APP_ID, appIds));
   }

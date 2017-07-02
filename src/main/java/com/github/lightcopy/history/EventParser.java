@@ -135,7 +135,7 @@ public class EventParser {
     }
 
     Mongo.findOneAndUpsert(
-      Mongo.applicationCollection(client),
+      Mongo.applications(client),
       Filters.eq(Application.FIELD_APP_ID, appId),
       new Mongo.UpsertBlock<Application>() {
         @Override
@@ -160,7 +160,7 @@ public class EventParser {
   private void processEvent(
       MongoClient client, final String appId, final SparkListenerApplicationEnd event) {
     Mongo.findOneAndUpsert(
-      Mongo.applicationCollection(client),
+      Mongo.applications(client),
       Filters.eq(Application.FIELD_APP_ID, appId),
       new Mongo.UpsertBlock<Application>() {
         @Override
@@ -182,7 +182,7 @@ public class EventParser {
   private void processEvent(
       MongoClient client, final String appId, final SparkListenerEnvironmentUpdate event) {
     Mongo.findOneAndUpsert(
-      Mongo.environmentCollection(client),
+      Mongo.environment(client),
       Filters.eq(Environment.FIELD_APP_ID, appId),
       new Mongo.UpsertBlock<Environment>() {
         @Override
