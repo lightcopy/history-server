@@ -824,4 +824,100 @@ class EventSuite extends UnitTestSuite {
     event.stageInfo.failureReason should be (
       "Job aborted due to stage failure: Task 1 in stage 1.0 failed 1 times")
   }
+
+  test("SparkListenerJobStart") {
+    val json = """
+    {
+      "Event": "SparkListenerJobStart",
+      "Job ID": 2,
+      "Submission Time": 1499039418340,
+      "Stage Infos": [
+        {
+          "Stage ID": 1,
+          "Stage Attempt ID": 2,
+          "Stage Name": "collect at <console>:25",
+          "Number of Tasks": 8,
+          "RDD Info": [],
+          "Parent IDs": [],
+          "Details": "org.apache.spark.rdd.RDD.collect(RDD.scala:934)",
+          "Accumulables": []
+        }
+      ],
+      "Stage IDs": [
+        0
+      ],
+      "Properties": {
+        "spark.rdd.scope.noOverride": "true",
+        "spark.rdd.scope": "{\"id\":\"2\",\"name\":\"collect\"}"
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerJobStart])
+    event.jobId should be (2)
+    event.submissionTime should be (1499039418340L)
+    event.stageInfos.size should be (1)
+    event.stageInfos.get(0).stageId should be (1)
+    event.stageInfos.get(0).stageAttemptId should be (2)
+  }
+
+  test("SparkListenerJobEnd - success") {
+    val json = """
+    {
+      "Event": "SparkListenerJobEnd",
+      "Job ID": 2,
+      "Completion Time": 1499038179014,
+      "Job Result": {
+        "Result": "JobSucceeded"
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerJobEnd])
+    event.jobId should be (2)
+    event.completionTime should be (1499038179014L)
+    event.jobResult.result should be ("JobSucceeded")
+    event.jobResult.isSuccess should be (true)
+    event.jobResult.getDescription should be ("")
+    event.jobResult.getDetails should be (null)
+  }
+
+  test("SparkListenerJobEnd - failure") {
+    val json = """
+    {
+      "Event": "SparkListenerJobEnd",
+      "Job ID": 2,
+      "Completion Time": 1499039443514,
+      "Job Result": {
+        "Result": "JobFailed",
+        "Exception": {
+          "Message": "Job aborted due to stage failure: Task 3 in stage 0.0 failed 1 times\n",
+          "Stack Trace": [
+            {
+              "Declaring Class": "org.apache.spark.scheduler.DAGScheduler",
+              "Method Name": "org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages",
+              "File Name": "DAGScheduler.scala",
+              "Line Number": 1435
+            },
+            {
+              "Declaring Class": "org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1",
+              "Method Name": "apply",
+              "File Name": "DAGScheduler.scala",
+              "Line Number": 1423
+            }
+          ]
+        }
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerJobEnd])
+    event.jobId should be (2)
+    event.completionTime should be (1499039443514L)
+    event.jobResult.result should be ("JobFailed")
+    event.jobResult.isSuccess should be (false)
+    event.jobResult.exception.message should be (
+      "Job aborted due to stage failure: Task 3 in stage 0.0 failed 1 times\n")
+    event.jobResult.getDescription should be (
+      "Job aborted due to stage failure: Task 3 in stage 0.0 failed 1 times")
+    event.jobResult.getDetails should be (
+      "Job aborted due to stage failure: Task 3 in stage 0.0 failed 1 times\n")
+  }
 }
