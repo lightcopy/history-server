@@ -16,6 +16,7 @@
 
 package com.github.lightcopy.history.event;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -26,4 +27,58 @@ public class SparkListenerJobStart {
   @SerializedName("Submission Time") public long submissionTime;
   @SerializedName("Stage Infos") public List<StageInfo> stageInfos;
   @SerializedName("Properties") public Map<String, String> properties;
+
+  /** Get job name as the last stage name */
+  public String getJobName() {
+    // search for the stage with the largest id and use name as job name
+    int stageId = -1;
+    String name = "Job " + jobId + " (unknown)";
+    for (StageInfo info : stageInfos) {
+      if (info != null && stageId <= info.stageId && info.stageName != null) {
+        stageId = info.stageId;
+        name = info.stageName;
+      }
+    }
+    return name;
+  }
+
+  /** Return list of stages to submit as pending, can be a subset of all stage infos */
+  public List<StageInfo> stagesToSubmit() {
+    // Compute (a potential underestimate of) the number of tasks that will be run by this job.
+    // This may be an underestimate because the job start event references all of the result
+    // stages' transitive stage dependencies, but some of these stages might be skipped if their
+    // output is available from earlier runs.
+    List<StageInfo> submitStages = new ArrayList<StageInfo>();
+    for (StageInfo info : stageInfos) {
+      if (info != null && info.completionTime <= 0) {
+        submitStages.add(info);
+      }
+    }
+    return submitStages;
+  }
+
+  /** Get total tasks based on stage infos */
+  public int getTotalTasks() {
+    // similar to `stagesToSubmit` method
+    // we count only stages that should be submitted by this job
+    int numTasks = 0;
+    for (StageInfo info : stagesToSubmit()) {
+      numTasks += info.numTasks;
+    }
+    return numTasks;
+  }
+
+  /** Get query execution id or -1 if there is no link to sql execution */
+  public int getExecutionId() {
+    if (properties != null) {
+      String query = properties.get("spark.sql.execution.id");
+      if (query != null && !query.isEmpty()) {
+        // do not fall back to the -1, if query fails to parse
+        // this might indicate potential incompatibility between Spark versions
+        return Integer.parseInt(query);
+      }
+    }
+    // could not find query for the job
+    return -1;
+  }
 }

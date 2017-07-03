@@ -98,7 +98,8 @@ public class EventParser {
         }
       }
     } catch (Exception err) {
-      throw new EventProcessException(err.getMessage(), err);
+      String msg = "Failed to process events for " + app.getAppId() + "; err: " + err.getMessage();
+      throw new EventProcessException(msg, err);
     } finally {
       if (in != null) {
         try {

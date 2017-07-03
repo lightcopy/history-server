@@ -46,8 +46,9 @@ public class Stage extends AbstractCodec<Stage> {
   public static final String FIELD_ENDTIME = "endtime";
   public static final String FIELD_DURATION = "duration";
   public static final String FIELD_STATUS = "status";
-  public static final String FIELD_FAILURE_REASON = "failureReason";
   public static final String FIELD_METRICS = "metrics";
+  public static final String FIELD_ERROR_DESCRIPTION = "errorDescription";
+  public static final String FIELD_ERROR_DETAILS = "errorDetails";
 
   private String appId;
   private int jobId;
@@ -67,8 +68,10 @@ public class Stage extends AbstractCodec<Stage> {
   private long endtime;
   private long duration;
   private Status status;
-  private String failureReason;
   private Metrics metrics;
+
+  private String errorDescription;
+  private String errorDetails;
 
   public Stage() {
     this.appId = null;
@@ -86,8 +89,9 @@ public class Stage extends AbstractCodec<Stage> {
     this.endtime = -1L;
     this.duration = -1L;
     this.status = Status.UNKNOWN;
-    this.failureReason = null;
     this.metrics = new Metrics();
+    this.errorDescription = null;
+    this.errorDetails = null;
   }
 
   // == Getters ==
@@ -152,12 +156,16 @@ public class Stage extends AbstractCodec<Stage> {
     return status;
   }
 
-  public String getFailureReason() {
-    return failureReason;
-  }
-
   public Metrics getMetrics() {
     return metrics;
+  }
+
+  public String getErrorDescription() {
+    return errorDescription;
+  }
+
+  public String getErrorDetails() {
+    return errorDetails;
   }
 
   // == Setters ==
@@ -222,12 +230,16 @@ public class Stage extends AbstractCodec<Stage> {
     this.status = value;
   }
 
-  public void setFailureReason(String value) {
-    this.failureReason = value;
-  }
-
   public void setMetrics(Metrics value) {
     this.metrics = value;
+  }
+
+  public void setErrorDescription(String value) {
+    this.errorDescription = value;
+  }
+
+  public void setErrorDetails(String value) {
+    this.errorDetails = value;
   }
 
   /**
@@ -246,7 +258,8 @@ public class Stage extends AbstractCodec<Stage> {
     setDetails(info.details);
     setStartTime((info.submissionTime <= 0) ? -1L : info.submissionTime);
     setEndTime((info.completionTime <= 0) ? -1L : info.completionTime);
-    setFailureReason(info.failureReason);
+    setErrorDescription(info.getErrorDescription());
+    setErrorDetails(info.getErrorDetails());
     if (starttime >= 0 && endtime >= starttime) {
       setDuration(endtime - starttime);
     }
@@ -314,11 +327,14 @@ public class Stage extends AbstractCodec<Stage> {
         case FIELD_STATUS:
           stage.setStatus(Status.valueOf(safeReadString(reader)));
           break;
-        case FIELD_FAILURE_REASON:
-          stage.setFailureReason(safeReadString(reader));
-          break;
         case FIELD_METRICS:
           stage.setMetrics(stage.getMetrics().decode(reader, decoderContext));
+          break;
+        case FIELD_ERROR_DESCRIPTION:
+          stage.setErrorDescription(safeReadString(reader));
+          break;
+        case FIELD_ERROR_DETAILS:
+          stage.setErrorDetails(safeReadString(reader));
           break;
         default:
           reader.skipValue();
@@ -352,9 +368,10 @@ public class Stage extends AbstractCodec<Stage> {
     writer.writeInt64(FIELD_ENDTIME, value.getEndTime());
     writer.writeInt64(FIELD_DURATION, value.getDuration());
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
-    safeWriteString(writer, FIELD_FAILURE_REASON, value.getFailureReason());
     writer.writeName(FIELD_METRICS);
     value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
+    safeWriteString(writer, FIELD_ERROR_DESCRIPTION, value.getErrorDescription());
+    safeWriteString(writer, FIELD_ERROR_DETAILS, value.getErrorDetails());
     writer.writeEndDocument();
   }
 }

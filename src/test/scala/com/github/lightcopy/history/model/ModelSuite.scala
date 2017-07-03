@@ -604,8 +604,9 @@ class ModelSuite extends UnitTestSuite {
     res.getEndTime should be (stage.getEndTime)
     res.getDuration should be (stage.getDuration)
     res.getStatus should be (stage.getStatus)
-    res.getFailureReason should be (stage.getFailureReason)
     res.getMetrics should be (stage.getMetrics)
+    res.getErrorDescription should be (stage.getErrorDescription)
+    res.getErrorDetails should be (stage.getErrorDetails)
   }
 
   test("Complete Stage into bson") {
@@ -625,8 +626,9 @@ class ModelSuite extends UnitTestSuite {
     stage.setEndTime(23L)
     stage.setDuration(4L)
     stage.setStatus(Stage.Status.FAILED)
-    stage.setFailureReason("reason")
     stage.setMetrics(new Metrics())
+    stage.setErrorDescription("reason")
+    stage.setErrorDetails("details")
 
     val doc = serialize(stage, stage)
     val res = deserialize(stage, doc)
@@ -645,8 +647,9 @@ class ModelSuite extends UnitTestSuite {
     res.getEndTime should be (23L)
     res.getDuration should be (4L)
     res.getStatus should be (Stage.Status.FAILED)
-    res.getFailureReason should be ("reason")
     res.getMetrics should be (new Metrics())
+    res.getErrorDescription should be ("reason")
+    res.getErrorDetails should be ("details")
   }
 
   test("Stage from StageInfo") {
@@ -659,7 +662,7 @@ class ModelSuite extends UnitTestSuite {
     info.details = "details"
     info.submissionTime = 100L
     info.completionTime = 202L
-    info.failureReason = "reason"
+    info.failureReason = "reason\ndetails"
 
     stage.update(info)
     stage.getUniqueStageId should be (1L << 32 | 2L)
@@ -671,7 +674,8 @@ class ModelSuite extends UnitTestSuite {
     stage.getStartTime should be (100L)
     stage.getEndTime should be (202L)
     stage.getDuration should be (102L)
-    stage.getFailureReason should be ("reason")
+    stage.getErrorDescription should be ("reason")
+    stage.getErrorDetails should be ("reason\ndetails")
   }
 
   test("StageAggregateTracker - getters on empty obj") {
@@ -730,5 +734,62 @@ class ModelSuite extends UnitTestSuite {
     obj2.incFailedTasks(1, 0)
 
     obj1 should be (obj2)
+  }
+
+  test("Empty Job to bson") {
+    val job = new Job()
+    val doc = serialize(job, job)
+    val res = deserialize(job, doc)
+
+    res.getAppId should be (job.getAppId)
+    res.getJobId should be (job.getJobId)
+    res.getJobName should be (job.getJobName)
+    res.getStartTime should be (job.getStartTime)
+    res.getEndTime should be (job.getEndTime)
+    res.getDuration should be (job.getDuration)
+    res.getStatus should be (job.getStatus)
+    res.getErrorDescription should be (job.getErrorDescription)
+    res.getErrorDetails should be (job.getErrorDetails)
+    res.getActiveTasks should be (job.getActiveTasks)
+    res.getCompletedTasks should be (job.getCompletedTasks)
+    res.getFailedTasks should be (job.getFailedTasks)
+    res.getTotalTasks should be (job.getTotalTasks)
+    res.getMetrics should be (job.getMetrics)
+  }
+
+  test("Complete Job to bson") {
+    val job = new Job()
+    job.setAppId("app-123")
+    job.setJobId(2)
+    job.setJobName("name")
+    job.setStartTime(123L)
+    job.setEndTime(234L)
+    job.setDuration(111L)
+    job.setStatus(Job.Status.SUCCEEDED)
+    job.setErrorDescription("")
+    job.setErrorDetails(null)
+    job.setActiveTasks(10)
+    job.setCompletedTasks(20)
+    job.setFailedTasks(30)
+    job.setTotalTasks(60)
+    job.setMetrics(new Metrics())
+
+    val doc = serialize(job, job)
+    val res = deserialize(job, doc)
+
+    res.getAppId should be ("app-123")
+    res.getJobId should be (2)
+    res.getJobName should be ("name")
+    res.getStartTime should be (123L)
+    res.getEndTime should be (234L)
+    res.getDuration should be (111L)
+    res.getStatus should be (Job.Status.SUCCEEDED)
+    res.getErrorDescription should be ("")
+    res.getErrorDetails should be (null)
+    res.getActiveTasks should be (10)
+    res.getCompletedTasks should be (20)
+    res.getFailedTasks should be (30)
+    res.getTotalTasks should be (60)
+    res.getMetrics should be (new Metrics())
   }
 }

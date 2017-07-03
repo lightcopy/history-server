@@ -30,4 +30,22 @@ public class StageInfo {
   @SerializedName("Submission Time") public long submissionTime;
   @SerializedName("Completion Time") public long completionTime;
   @SerializedName("Failure Reason") public String failureReason;
+
+  public String getErrorDescription() {
+    // return first line as description, if available
+    if (failureReason != null) {
+      int maxChars = 200;
+      int index = failureReason.indexOf('\n');
+      if (index > maxChars) {
+        return failureReason.substring(0, maxChars).trim() + "...";
+      } else {
+        return failureReason.substring(0, index).trim();
+      }
+    }
+    return "";
+  }
+
+  public String getErrorDetails() {
+    return failureReason;
+  }
 }
