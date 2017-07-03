@@ -34,6 +34,14 @@ public class AggregateSummary {
     return new StageAggregateTracker();
   }
 
+  /**
+   * Track aggregate summary for jobs within application.
+   * @return JobAggregateTracker instance
+   */
+  public static JobAggregateTracker jobs() {
+    return new JobAggregateTracker();
+  }
+
   static class AggregateTracker {
     // Map of Aggregate to keep track of aggregates, such as active/completed/failed tasks and
     // metrics; completed or failed jobs/stages are evicted from map, since no update is expected
@@ -125,7 +133,7 @@ public class AggregateSummary {
    * Provides API to update data for stage id and attempt number.
    */
   public static class StageAggregateTracker extends AggregateTracker {
-    public StageAggregateTracker() {
+    StageAggregateTracker() {
       super();
     }
 
@@ -172,6 +180,56 @@ public class AggregateSummary {
 
     public Metrics getMetrics(int stageId, int stageAttemptId) {
       return getMetrics(id(stageId, stageAttemptId));
+    }
+  }
+
+  /**
+   * Aggregate tracker for jobs.
+   * Provides API to update data for job id.
+   */
+  public static class JobAggregateTracker extends AggregateTracker {
+    JobAggregateTracker() {
+      super();
+    }
+
+    public void incActiveTasks(int jobId) {
+      super.incActiveTasks(jobId);
+    }
+
+    public void decActiveTasks(int jobId) {
+      super.decActiveTasks(jobId);
+    }
+
+    public void incCompletedTasks(int jobId) {
+      super.incCompletedTasks(jobId);
+    }
+
+    public void incFailedTasks(int jobId) {
+      super.incFailedTasks(jobId);
+    }
+
+    public void updateMetrics(int jobId, Metrics update) {
+      super.updateMetrics(jobId, update);
+    }
+
+    public void evict(int jobId) {
+      super.evict(jobId);
+    }
+
+    public int getActiveTasks(int jobId) {
+      return super.getActiveTasks(jobId);
+    }
+
+    public int getCompletedTasks(int jobId) {
+      return super.getCompletedTasks(jobId);
+    }
+
+    public int getFailedTasks(int jobId) {
+      return super.getFailedTasks(jobId);
+    }
+
+    public Metrics getMetrics(int jobId) {
+      return super.getMetrics(jobId);
     }
   }
 

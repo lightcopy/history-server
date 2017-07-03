@@ -792,4 +792,54 @@ class ModelSuite extends UnitTestSuite {
     res.getTotalTasks should be (60)
     res.getMetrics should be (new Metrics())
   }
+
+  test("JobAggregateTracker - getters on empty obj") {
+    val obj = AggregateSummary.jobs()
+    obj.getActiveTasks(1) should be (0)
+    obj.getCompletedTasks(2) should be (0)
+    obj.getFailedTasks(3) should be (0)
+    obj.getMetrics(4) should be (new Metrics())
+  }
+
+  test("JobAggregateTracker - increment for jobs") {
+    val obj = AggregateSummary.jobs()
+
+    obj.incActiveTasks(1)
+    obj.incCompletedTasks(1)
+    obj.decActiveTasks(1)
+
+    obj.incActiveTasks(2)
+    obj.incFailedTasks(2)
+    obj.decActiveTasks(2)
+
+    val metrics = new Metrics()
+    metrics.setResultSize(123L)
+    obj.updateMetrics(2, metrics)
+
+    obj.getActiveTasks(1) should be (0)
+    obj.getCompletedTasks(1) should be (1)
+    obj.getFailedTasks(1) should be (0)
+    obj.getMetrics(1) should be (new Metrics())
+
+    obj.getActiveTasks(2) should be (0)
+    obj.getCompletedTasks(2) should be (0)
+    obj.getFailedTasks(2) should be (1)
+    obj.getMetrics(2) should be (metrics)
+  }
+
+  test("JobAggregateTracker - equals") {
+    val obj1 = AggregateSummary.jobs()
+    val obj2 = AggregateSummary.jobs()
+    obj1 should be (obj2)
+
+    obj1.incActiveTasks(1)
+    obj1.incCompletedTasks(1)
+    obj1.incFailedTasks(1)
+
+    obj2.incActiveTasks(1)
+    obj2.incCompletedTasks(1)
+    obj2.incFailedTasks(1)
+
+    obj1 should be (obj2)
+  }
 }
