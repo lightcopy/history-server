@@ -228,6 +228,7 @@ class ModelSuite extends UnitTestSuite {
     res.getEndTime should be (sql.getEndTime)
     res.getDuration should be (sql.getDuration)
     res.getStatus should be (sql.getStatus)
+    res.getJobIds should be (sql.getJobIds)
   }
 
   test("Complete SQLExecution to bson") {
@@ -241,6 +242,8 @@ class ModelSuite extends UnitTestSuite {
     sql.setEndTime(1498724277381L)
     sql.updateDuration()
     sql.setStatus(SQLExecution.Status.COMPLETED)
+    sql.addJobId(1)
+    sql.addJobId(2)
 
     val doc = serialize(sql, sql)
     val res = deserialize(sql, doc)
@@ -254,6 +257,7 @@ class ModelSuite extends UnitTestSuite {
     res.getEndTime should be (1498724277381L)
     res.getDuration should be (1498724277381L - 1498724267295L)
     res.getStatus should be (SQLExecution.Status.COMPLETED)
+    res.getJobIds should be (al(Seq(1, 2)))
   }
 
   test("Empty task to bson") {
@@ -793,53 +797,24 @@ class ModelSuite extends UnitTestSuite {
     res.getMetrics should be (new Metrics())
   }
 
-  test("JobAggregateTracker - getters on empty obj") {
-    val obj = AggregateSummary.jobs()
-    obj.getActiveTasks(1) should be (0)
-    obj.getCompletedTasks(2) should be (0)
-    obj.getFailedTasks(3) should be (0)
-    obj.getMetrics(4) should be (new Metrics())
-  }
+  test("Job update duration") {
+    val job = new Job()
 
-  test("JobAggregateTracker - increment for jobs") {
-    val obj = AggregateSummary.jobs()
+    job.updateDuration()
+    job.getDuration should be (-1L)
 
-    obj.incActiveTasks(1)
-    obj.incCompletedTasks(1)
-    obj.decActiveTasks(1)
+    job.setStartTime(123L)
+    job.updateDuration()
+    job.getDuration should be (-1L)
 
-    obj.incActiveTasks(2)
-    obj.incFailedTasks(2)
-    obj.decActiveTasks(2)
+    job.setStartTime(-1L)
+    job.setEndTime(123L)
+    job.updateDuration()
+    job.getDuration should be (-1L)
 
-    val metrics = new Metrics()
-    metrics.setResultSize(123L)
-    obj.updateMetrics(2, metrics)
-
-    obj.getActiveTasks(1) should be (0)
-    obj.getCompletedTasks(1) should be (1)
-    obj.getFailedTasks(1) should be (0)
-    obj.getMetrics(1) should be (new Metrics())
-
-    obj.getActiveTasks(2) should be (0)
-    obj.getCompletedTasks(2) should be (0)
-    obj.getFailedTasks(2) should be (1)
-    obj.getMetrics(2) should be (metrics)
-  }
-
-  test("JobAggregateTracker - equals") {
-    val obj1 = AggregateSummary.jobs()
-    val obj2 = AggregateSummary.jobs()
-    obj1 should be (obj2)
-
-    obj1.incActiveTasks(1)
-    obj1.incCompletedTasks(1)
-    obj1.incFailedTasks(1)
-
-    obj2.incActiveTasks(1)
-    obj2.incCompletedTasks(1)
-    obj2.incFailedTasks(1)
-
-    obj1 should be (obj2)
+    job.setStartTime(100L)
+    job.setEndTime(300L)
+    job.updateDuration()
+    job.getDuration should be (200L)
   }
 }

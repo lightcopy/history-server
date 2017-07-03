@@ -19,6 +19,7 @@ package com.github.lightcopy.history;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -29,12 +30,15 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 
+import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.client.model.Filters;
 
 import com.github.lightcopy.history.event.Event;
 import com.github.lightcopy.history.event.SparkListenerApplicationStart;
 import com.github.lightcopy.history.event.SparkListenerApplicationEnd;
+import com.github.lightcopy.history.event.SparkListenerJobStart;
+import com.github.lightcopy.history.event.SparkListenerJobEnd;
 import com.github.lightcopy.history.event.SparkListenerEnvironmentUpdate;
 import com.github.lightcopy.history.event.SparkListenerSQLExecutionStart;
 import com.github.lightcopy.history.event.SparkListenerSQLExecutionEnd;
@@ -42,10 +46,12 @@ import com.github.lightcopy.history.event.SparkListenerStageCompleted;
 import com.github.lightcopy.history.event.SparkListenerStageSubmitted;
 import com.github.lightcopy.history.event.SparkListenerTaskStart;
 import com.github.lightcopy.history.event.SparkListenerTaskEnd;
+import com.github.lightcopy.history.event.StageInfo;
 
 import com.github.lightcopy.history.model.AggregateSummary;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.Metrics;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
@@ -142,6 +148,12 @@ public class EventParser {
         break;
       case "SparkListenerStageCompleted":
         processEvent(client, appId, gson.fromJson(json, SparkListenerStageCompleted.class));
+        break;
+      case "SparkListenerJobStart":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerJobStart.class));
+        break;
+      case "SparkListenerJobEnd":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerJobEnd.class));
         break;
       default:
         LOG.warn("Unrecongnized event {} ", event);
@@ -464,5 +476,162 @@ public class EventParser {
         }
       }
     );
+  }
+
+  // == SparkListenerJobStart ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerJobStart event) {
+    Mongo.findOneAndUpsert(
+      Mongo.jobs(client),
+      Filters.and(
+        Filters.eq(Job.FIELD_APP_ID, appId),
+        Filters.eq(Job.FIELD_JOB_ID, event.jobId)
+      ),
+      new Mongo.UpsertBlock<Job>() {
+        @Override
+        public Job update(Job obj) {
+          if (obj != null) {
+            // we submit unique jobs, if job already exists, throw exception
+            throw new IllegalStateException(
+              "Job " + event.jobId + " is already set in application " + appId);
+          }
+          obj.setAppId(appId);
+          obj.setJobId(event.jobId);
+          obj.setJobName(event.getJobName());
+          obj.setStartTime(event.submissionTime);
+          obj.setStatus(Job.Status.RUNNING);
+
+          // update stage information
+          obj.setTotalTasks(event.getTotalTasks());
+          return obj;
+        }
+      }
+    );
+
+    // launch all stages that we used to get total tasks count
+    for (final StageInfo info : event.stagesToSubmit()) {
+      Mongo.findOneAndUpsert(
+        Mongo.stages(client),
+        Filters.and(
+          Filters.eq(Stage.FIELD_APP_ID, appId),
+          Filters.eq(Stage.FIELD_STAGE_ID, info.stageId),
+          Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, info.stageAttemptId)
+        ),
+        new Mongo.UpsertBlock<Stage>() {
+          @Override
+          public Stage update(Stage obj) {
+            if (obj == null) {
+              obj = new Stage();
+              obj.setAppId(appId);
+            }
+            // update stage only if it is unknown, meaning that we have not submitted it yet
+            if (obj.getStatus() == Stage.Status.UNKNOWN) {
+              obj.update(info);
+              obj.setStatus(Stage.Status.PENDING);
+            } else {
+              LOG.warn("Stage {} ({}) was already submitted for application {}, status={}",
+                obj.getStageId(), obj.getStageAttemptId(), appId, obj.getStatus());
+            }
+            return obj;
+          }
+        }
+      );
+    }
+
+    // update sql execution - add job id to the query
+    int queryId = event.getExecutionId();
+    if (queryId >= 0) {
+      Mongo.findOneAndUpsert(
+        Mongo.sqlExecution(client),
+        Filters.and(
+          Filters.eq(SQLExecution.FIELD_APP_ID, appId),
+          Filters.eq(SQLExecution.FIELD_EXECUTION_ID, queryId)
+        ),
+        new Mongo.UpsertBlock<SQLExecution>() {
+          @Override
+          public SQLExecution update(SQLExecution query) {
+            if (query != null) {
+              query.addJobId(event.jobId);
+            }
+            return query;
+          }
+        }
+      );
+    }
+  }
+
+  // == SparkListenerJobEnd ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerJobEnd event) {
+    Mongo.findOneAndUpsert(
+      Mongo.jobs(client),
+      Filters.and(
+        Filters.eq(Job.FIELD_APP_ID, appId),
+        Filters.eq(Job.FIELD_JOB_ID, event.jobId)
+      ),
+      new Mongo.UpsertBlock<Job>() {
+        @Override
+        public Job update(Job obj) {
+          if (obj == null) {
+            LOG.warn("Job is null for application {} and jobId {}", appId, event.jobId);
+            obj = new Job();
+          }
+          obj.setAppId(appId);
+          obj.setJobId(event.jobId);
+          obj.setEndTime(event.completionTime);
+          obj.updateDuration();
+          if (event.jobResult.isSuccess()) {
+            obj.setStatus(Job.Status.SUCCEEDED);
+            obj.setErrorDescription("");
+            obj.setErrorDetails(null);
+          } else {
+            obj.setStatus(Job.Status.FAILED);
+            obj.setErrorDescription(event.jobResult.getDescription());
+            obj.setErrorDetails(event.jobResult.getDetails());
+          }
+          return obj;
+        }
+      }
+    );
+
+    // mark all pending stages for the job as skipped
+    // first, we find all stages that belong to the job
+    // TODO: optimize this block of code to do atomic update for stage
+    final ArrayList<Stage> stagesToUpdate = new ArrayList<Stage>();
+    Mongo.stages(client).find(
+      Filters.and(
+        Filters.eq(Stage.FIELD_APP_ID, appId),
+        Filters.eq(Stage.FIELD_JOB_ID, event.jobId)
+      )
+    ).forEach(new Block<Stage>() {
+      @Override
+      public void apply(Stage stage) {
+        stagesToUpdate.add(stage);
+      }
+    });
+
+    // mark all pending stages as skipped
+    for (final Stage stage : stagesToUpdate) {
+      if (stage.getStatus() == Stage.Status.PENDING) {
+        Mongo.findOneAndUpsert(
+          Mongo.stages(client),
+          Filters.and(
+            Filters.eq(Stage.FIELD_APP_ID, appId),
+            Filters.eq(Stage.FIELD_STAGE_ID, stage.getStageId()),
+            Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, stage.getStageAttemptId())
+          ),
+          new Mongo.UpsertBlock<Stage>() {
+            @Override
+            public Stage update(Stage obj) {
+              if (obj != null && obj.getStatus() == Stage.Status.PENDING) {
+                // do not update metrics for skipped stage
+                obj.setStatus(Stage.Status.SKIPPED);
+              }
+              return obj;
+            }
+          }
+        );
+      }
+    }
   }
 }

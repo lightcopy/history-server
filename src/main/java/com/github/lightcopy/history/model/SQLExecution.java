@@ -16,6 +16,8 @@
 
 package com.github.lightcopy.history.model;
 
+import java.util.ArrayList;
+
 import org.bson.BsonReader;
 import org.bson.BsonType;
 import org.bson.BsonWriter;
@@ -42,6 +44,7 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
   public static final String FIELD_ENDTIME = "endtime";
   public static final String FIELD_DURATION = "duration";
   public static final String FIELD_STATUS = "status";
+  public static final String FIELD_JOB_IDS = "jobIds";
 
   private String appId;
   private int executionId;
@@ -52,6 +55,7 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
   private long endtime;
   private long duration;
   private Status status;
+  private ArrayList<Integer> jobIds;
 
   public SQLExecution() {
     this.appId = null;
@@ -63,6 +67,7 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
     this.endtime = -1L;
     this.duration = -1L;
     this.status = Status.NONE;
+    this.jobIds = new ArrayList<Integer>();
   }
 
   // == Getters ==
@@ -101,6 +106,10 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
 
   public Status getStatus() {
     return status;
+  }
+
+  public ArrayList<Integer> getJobIds() {
+    return jobIds;
   }
 
   // == Setters ==
@@ -152,6 +161,15 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
     this.status = value;
   }
 
+  public void setJobIds(ArrayList<Integer> value) {
+    this.jobIds = value;
+  }
+
+  /** Add job id to the query */
+  public void addJobId(int jobId) {
+    this.jobIds.add(jobId);
+  }
+
   // == Codec methods ==
 
   @Override
@@ -187,6 +205,9 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
         case FIELD_STATUS:
           sql.setStatus(Status.valueOf(safeReadString(reader)));
           break;
+        case FIELD_JOB_IDS:
+          sql.setJobIds(readList(reader, INT_ITEM));
+          break;
         default:
           reader.skipValue();
           break;
@@ -213,6 +234,7 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
     writer.writeInt64(FIELD_ENDTIME, value.getEndTime());
     writer.writeInt64(FIELD_DURATION, value.getDuration());
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
+    writeList(writer, FIELD_JOB_IDS, value.getJobIds(), INT_ITEM);
     writer.writeEndDocument();
   }
 }

@@ -161,6 +161,16 @@ public class Job extends AbstractCodec<Job> {
     this.duration = value;
   }
 
+  // duration is set based on start/end time
+  public void updateDuration() {
+    // if both starttime and endtime are valid, we compute duration, otherwise set to -1
+    if (starttime >= 0L && endtime >= starttime) {
+      setDuration(endtime - starttime);
+    } else {
+      setDuration(-1L);
+    }
+  }
+
   public void setStatus(Status status) {
     this.status = status;
   }

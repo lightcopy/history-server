@@ -35,6 +35,7 @@ import com.mongodb.client.result.UpdateResult;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 import com.github.lightcopy.history.model.Task;
@@ -47,9 +48,10 @@ public class Mongo {
   public static final String DATABASE = "history_server";
   public static final String APPLICATION_COLLECTION = "applications";
   public static final String ENVIRONMENT_COLLECTION = "environment";
+  public static final String JOB_COLLECTION = "jobs";
   public static final String SQLEXECUTION_COLLECTION = "sqlexecution";
-  public static final String TASK_COLLECTION = "tasks";
   public static final String STAGE_COLLECTION = "stages";
+  public static final String TASK_COLLECTION = "tasks";
 
   /**
    * Get mongo collection for Application.
@@ -132,6 +134,22 @@ public class Mongo {
   }
 
   /**
+   * Get mongo collection for Job.
+   * @param client Mongo client
+   * @return collection for Job
+   */
+  public static MongoCollection<Job> jobs(MongoClient client) {
+    MongoCollection<?> collection = client.getDatabase(DATABASE)
+      .getCollection(JOB_COLLECTION);
+    // extract codec registries to add new support
+    CodecRegistry defaults = collection.getCodecRegistry();
+    CodecRegistry support = CodecRegistries.fromCodecs(new Job());
+    return collection
+      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
+      .withDocumentClass(Job.class);
+  }
+
+  /**
    * Method to create unique ascending index for collection.
    * @param collection any Mongo collection
    * @param field field to index
@@ -160,6 +178,8 @@ public class Mongo {
     createUniqueIndex(stages(client), Stage.FIELD_APP_ID, Stage.FIELD_UNIQUE_STAGE_ID);
     createUniqueIndex(stages(client), Stage.FIELD_APP_ID, Stage.FIELD_JOB_ID,
       Stage.FIELD_STAGE_ID, Stage.FIELD_STAGE_ATTEMPT_ID);
+    // jobs have only one index appId - jobId
+    createUniqueIndex(jobs(client), Job.FIELD_APP_ID, Job.FIELD_JOB_ID);
   }
 
   /**
@@ -173,6 +193,7 @@ public class Mongo {
     sqlExecution(client).deleteMany(Filters.all(SQLExecution.FIELD_APP_ID, appIds));
     tasks(client).deleteMany(Filters.all(Task.FIELD_APP_ID, appIds));
     stages(client).deleteMany(Filters.all(Stage.FIELD_APP_ID, appIds));
+    jobs(client).deleteMany(Filters.all(Job.FIELD_APP_ID, appIds));
   }
 
   /**

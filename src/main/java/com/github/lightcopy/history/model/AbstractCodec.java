@@ -107,6 +107,19 @@ public abstract class AbstractCodec<T> implements Codec<T> {
     }
   };
 
+  /** Encoder for Integer type */
+  public static final ReadWriteItem<Integer> INT_ITEM = new ReadWriteItem<Integer>() {
+    @Override
+    public Integer read(BsonReader reader) {
+      return reader.readInt32();
+    }
+
+    @Override
+    public void write(BsonWriter writer, Integer value) {
+      writer.writeInt32(value);
+    }
+  };
+
   /**
    * Read list from bson document.
    * Requires deserialization block to parse T items.
