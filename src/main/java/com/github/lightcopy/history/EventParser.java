@@ -37,6 +37,8 @@ import com.mongodb.client.model.Filters;
 import com.github.lightcopy.history.event.Event;
 import com.github.lightcopy.history.event.SparkListenerApplicationStart;
 import com.github.lightcopy.history.event.SparkListenerApplicationEnd;
+import com.github.lightcopy.history.event.SparkListenerBlockManagerAdded;
+import com.github.lightcopy.history.event.SparkListenerBlockManagerRemoved;
 import com.github.lightcopy.history.event.SparkListenerJobStart;
 import com.github.lightcopy.history.event.SparkListenerJobEnd;
 import com.github.lightcopy.history.event.SparkListenerEnvironmentUpdate;
@@ -51,6 +53,7 @@ import com.github.lightcopy.history.event.StageInfo;
 import com.github.lightcopy.history.model.AggregateSummary;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.Metrics;
 import com.github.lightcopy.history.model.SQLExecution;
@@ -154,6 +157,12 @@ public class EventParser {
         break;
       case "SparkListenerJobEnd":
         processEvent(client, appId, gson.fromJson(json, SparkListenerJobEnd.class));
+        break;
+      case "SparkListenerBlockManagerAdded":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerBlockManagerAdded.class));
+        break;
+      case "SparkListenerBlockManagerRemoved":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerBlockManagerRemoved.class));
         break;
       default:
         LOG.warn("Unrecongnized event {} ", event);
@@ -633,5 +642,62 @@ public class EventParser {
         );
       }
     }
+  }
+
+  // == SparkListenerBlockManagerAdded ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerBlockManagerAdded event) {
+    Mongo.findOneAndUpsert(
+      Mongo.executors(client),
+      Filters.and(
+        Filters.eq(Executor.FIELD_APP_ID, appId),
+        Filters.eq(Executor.FIELD_EXECUTOR_ID, event.blockManagerId.executorId)
+      ),
+      new Mongo.UpsertBlock<Executor>() {
+        @Override
+        public Executor update(Executor obj) {
+          if (obj == null) {
+            obj = new Executor();
+          }
+          obj.setAppId(appId);
+          obj.setExecutorId(event.blockManagerId.executorId);
+          obj.setHost(event.blockManagerId.host);
+          obj.setPort(event.blockManagerId.port);
+          obj.setMaxMemory(event.maximumMemory);
+          obj.setStartTime(event.timestamp);
+          obj.setStatus(Executor.Status.ACTIVE);
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerBlockManagerRemoved ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerBlockManagerRemoved event) {
+    Mongo.findOneAndUpsert(
+      Mongo.executors(client),
+      Filters.and(
+        Filters.eq(Executor.FIELD_APP_ID, appId),
+        Filters.eq(Executor.FIELD_EXECUTOR_ID, event.blockManagerId.executorId)
+      ),
+      new Mongo.UpsertBlock<Executor>() {
+        @Override
+        public Executor update(Executor obj) {
+          if (obj == null) {
+            // having this is strange, since we would receive blockAdded event first
+            obj = new Executor();
+            obj.setAppId(appId);
+            obj.setExecutorId(event.blockManagerId.executorId);
+            obj.setHost(event.blockManagerId.host);
+            obj.setPort(event.blockManagerId.port);
+          }
+          obj.setStatus(Executor.Status.REMOVED);
+          obj.setEndTime(event.timestamp);
+          obj.updateDuration();
+          return obj;
+        }
+      }
+    );
   }
 }

@@ -31,6 +31,7 @@ public class Executor extends AbstractCodec<Executor> {
   public static final String FIELD_EXECUTOR_ID = "executorId";
   public static final String FIELD_HOST = "host";
   public static final String FIELD_PORT = "port";
+  public static final String FIELD_MAX_MEMORY = "maxMemory";
   public static final String FIELD_STARTTIME = "starttime";
   public static final String FIELD_ENDTIME = "endtime";
   public static final String FIELD_DURATION = "duration";
@@ -40,6 +41,7 @@ public class Executor extends AbstractCodec<Executor> {
   private String executorId;
   private String host;
   private int port;
+  private long maxMemory;
   private long starttime;
   private long endtime;
   private long duration;
@@ -50,6 +52,7 @@ public class Executor extends AbstractCodec<Executor> {
     this.executorId = null;
     this.host = null;
     this.port = -1;
+    this.maxMemory = -1L;
     this.starttime = -1L;
     this.endtime = -1L;
     this.duration = -1L;
@@ -72,6 +75,10 @@ public class Executor extends AbstractCodec<Executor> {
 
   public int getPort() {
     return port;
+  }
+
+  public long getMaxMemory() {
+    return maxMemory;
   }
 
   public long getStartTime() {
@@ -106,6 +113,10 @@ public class Executor extends AbstractCodec<Executor> {
 
   public void setPort(int value) {
     this.port = value;
+  }
+
+  public void setMaxMemory(long value) {
+    this.maxMemory = value;
   }
 
   public void setStartTime(long value) {
@@ -155,6 +166,9 @@ public class Executor extends AbstractCodec<Executor> {
         case FIELD_PORT:
           exc.setPort(reader.readInt32());
           break;
+        case FIELD_MAX_MEMORY:
+          exc.setMaxMemory(reader.readInt64());
+          break;
         case FIELD_STARTTIME:
           exc.setStartTime(reader.readInt64());
           break;
@@ -188,6 +202,7 @@ public class Executor extends AbstractCodec<Executor> {
     safeWriteString(writer, FIELD_EXECUTOR_ID, value.getExecutorId());
     safeWriteString(writer, FIELD_HOST, value.getHost());
     writer.writeInt32(FIELD_PORT, value.getPort());
+    writer.writeInt64(FIELD_MAX_MEMORY, value.getMaxMemory());
     writer.writeInt64(FIELD_STARTTIME, value.getStartTime());
     writer.writeInt64(FIELD_ENDTIME, value.getEndTime());
     writer.writeInt64(FIELD_DURATION, value.getDuration());
