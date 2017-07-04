@@ -19,6 +19,7 @@ package com.github.lightcopy.history;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -35,6 +36,7 @@ import com.mongodb.client.result.UpdateResult;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
@@ -52,6 +54,21 @@ public class Mongo {
   public static final String SQLEXECUTION_COLLECTION = "sqlexecution";
   public static final String STAGE_COLLECTION = "stages";
   public static final String TASK_COLLECTION = "tasks";
+  public static final String EXECUTOR_COLLECTION = "executors";
+
+
+  /** Generic get collection method with conversion codec */
+  private static <T> MongoCollection<T> getCollection(
+      MongoClient client, String collectionName, Class<T> clazz, Codec<T> codec) {
+    MongoCollection<?> collection = client.getDatabase(DATABASE)
+      .getCollection(collectionName);
+    // extract codec registries to add new support
+    CodecRegistry defaults = collection.getCodecRegistry();
+    CodecRegistry support = CodecRegistries.fromCodecs(codec);
+    return collection
+      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
+      .withDocumentClass(clazz);
+  }
 
   /**
    * Get mongo collection for Application.
@@ -59,14 +76,7 @@ public class Mongo {
    * @return collection for Application
    */
   public static MongoCollection<Application> applications(MongoClient client) {
-    MongoCollection<?> collection = client.getDatabase(DATABASE)
-      .getCollection(APPLICATION_COLLECTION);
-    // extract codec registries to add new support
-    CodecRegistry defaults = collection.getCodecRegistry();
-    CodecRegistry support = CodecRegistries.fromCodecs(new Application());
-    return collection
-      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
-      .withDocumentClass(Application.class);
+    return getCollection(client, APPLICATION_COLLECTION, Application.class, new Application());
   }
 
   /**
@@ -75,14 +85,7 @@ public class Mongo {
    * @return collection for Environment
    */
   public static MongoCollection<Environment> environment(MongoClient client) {
-    MongoCollection<?> collection = client.getDatabase(DATABASE)
-      .getCollection(ENVIRONMENT_COLLECTION);
-    // extract codec registries to add new support
-    CodecRegistry defaults = collection.getCodecRegistry();
-    CodecRegistry support = CodecRegistries.fromCodecs(new Environment());
-    return collection
-      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
-      .withDocumentClass(Environment.class);
+    return getCollection(client, ENVIRONMENT_COLLECTION, Environment.class, new Environment());
   }
 
   /**
@@ -91,14 +94,7 @@ public class Mongo {
    * @return collection for SQLExecution
    */
   public static MongoCollection<SQLExecution> sqlExecution(MongoClient client) {
-    MongoCollection<?> collection = client.getDatabase(DATABASE)
-      .getCollection(SQLEXECUTION_COLLECTION);
-    // extract codec registries to add new support
-    CodecRegistry defaults = collection.getCodecRegistry();
-    CodecRegistry support = CodecRegistries.fromCodecs(new SQLExecution());
-    return collection
-      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
-      .withDocumentClass(SQLExecution.class);
+    return getCollection(client, SQLEXECUTION_COLLECTION, SQLExecution.class, new SQLExecution());
   }
 
   /**
@@ -107,14 +103,7 @@ public class Mongo {
    * @return collection for Task
    */
   public static MongoCollection<Task> tasks(MongoClient client) {
-    MongoCollection<?> collection = client.getDatabase(DATABASE)
-      .getCollection(TASK_COLLECTION);
-    // extract codec registries to add new support
-    CodecRegistry defaults = collection.getCodecRegistry();
-    CodecRegistry support = CodecRegistries.fromCodecs(new Task());
-    return collection
-      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
-      .withDocumentClass(Task.class);
+    return getCollection(client, TASK_COLLECTION, Task.class, new Task());
   }
 
   /**
@@ -123,14 +112,7 @@ public class Mongo {
    * @return collection for Stage
    */
   public static MongoCollection<Stage> stages(MongoClient client) {
-    MongoCollection<?> collection = client.getDatabase(DATABASE)
-      .getCollection(STAGE_COLLECTION);
-    // extract codec registries to add new support
-    CodecRegistry defaults = collection.getCodecRegistry();
-    CodecRegistry support = CodecRegistries.fromCodecs(new Stage());
-    return collection
-      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
-      .withDocumentClass(Stage.class);
+    return getCollection(client, STAGE_COLLECTION, Stage.class, new Stage());
   }
 
   /**
@@ -139,14 +121,16 @@ public class Mongo {
    * @return collection for Job
    */
   public static MongoCollection<Job> jobs(MongoClient client) {
-    MongoCollection<?> collection = client.getDatabase(DATABASE)
-      .getCollection(JOB_COLLECTION);
-    // extract codec registries to add new support
-    CodecRegistry defaults = collection.getCodecRegistry();
-    CodecRegistry support = CodecRegistries.fromCodecs(new Job());
-    return collection
-      .withCodecRegistry(CodecRegistries.fromRegistries(defaults, support))
-      .withDocumentClass(Job.class);
+    return getCollection(client, JOB_COLLECTION, Job.class, new Job());
+  }
+
+  /**
+   * Get mongo collection for Executor.
+   * @param client Mongo client
+   * @return collection for Executor
+   */
+  public static MongoCollection<Executor> executors(MongoClient client) {
+    return getCollection(client, EXECUTOR_COLLECTION, Executor.class, new Executor());
   }
 
   /**
@@ -180,6 +164,8 @@ public class Mongo {
       Stage.FIELD_STAGE_ID, Stage.FIELD_STAGE_ATTEMPT_ID);
     // jobs have only one index appId - jobId
     createUniqueIndex(jobs(client), Job.FIELD_APP_ID, Job.FIELD_JOB_ID);
+    // executors have only one index appId - executorId
+    createUniqueIndex(executors(client), Executor.FIELD_APP_ID, Executor.FIELD_EXECUTOR_ID);
   }
 
   /**
@@ -194,6 +180,7 @@ public class Mongo {
     tasks(client).deleteMany(Filters.all(Task.FIELD_APP_ID, appIds));
     stages(client).deleteMany(Filters.all(Stage.FIELD_APP_ID, appIds));
     jobs(client).deleteMany(Filters.all(Job.FIELD_APP_ID, appIds));
+    executors(client).deleteMany(Filters.all(Executor.FIELD_APP_ID, appIds));
   }
 
   /**
