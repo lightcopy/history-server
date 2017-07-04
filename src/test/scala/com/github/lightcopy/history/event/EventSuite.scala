@@ -920,4 +920,43 @@ class EventSuite extends UnitTestSuite {
     event.jobResult.getDetails should be (
       "Job aborted due to stage failure: Task 3 in stage 0.0 failed 1 times\n")
   }
+
+  test("SparkListenerBlockManagerAdded") {
+    val json = """
+    {
+      "Event": "SparkListenerBlockManagerAdded",
+      "Block Manager ID": {
+        "Executor ID": "driver",
+        "Host": "10.180.0.47",
+        "Port": 40942
+      },
+      "Maximum Memory": 384093388,
+      "Timestamp": 1499038158023
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerBlockManagerAdded])
+    event.blockManagerId.executorId should be ("driver")
+    event.blockManagerId.host should be ("10.180.0.47")
+    event.blockManagerId.port should be (40942)
+    event.timestamp should be (1499038158023L)
+  }
+
+  test("SparkListenerBlockManagerRemoved") {
+    val json = """
+    {
+      "Event": "SparkListenerBlockManagerRemoved",
+      "Block Manager ID": {
+        "Executor ID": "driver",
+        "Host": "10.180.0.47",
+        "Port": 40942
+      },
+      "Timestamp": 1499038368015
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerBlockManagerRemoved])
+    event.blockManagerId.executorId should be ("driver")
+    event.blockManagerId.host should be ("10.180.0.47")
+    event.blockManagerId.port should be (40942)
+    event.timestamp should be (1499038368015L)
+  }
 }

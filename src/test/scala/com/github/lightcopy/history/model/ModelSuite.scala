@@ -817,4 +817,63 @@ class ModelSuite extends UnitTestSuite {
     job.updateDuration()
     job.getDuration should be (200L)
   }
+
+  test("Empty executor to bson") {
+    val exc = new Executor()
+    val doc = serialize(exc, exc)
+    val res = deserialize(exc, doc)
+    res.getAppId should be (exc.getAppId)
+    res.getExecutorId should be (exc.getExecutorId)
+    res.getHost should be (exc.getHost)
+    res.getPort should be (exc.getPort)
+    res.getStartTime should be (exc.getStartTime)
+    res.getEndTime should be (exc.getEndTime)
+    res.getDuration should be (exc.getDuration)
+    res.getStatus should be (exc.getStatus)
+  }
+
+  test("Complete executor to bson") {
+    val exc = new Executor()
+    exc.setAppId("app-123")
+    exc.setExecutorId("executor-1")
+    exc.setHost("host")
+    exc.setPort(45323)
+    exc.setStartTime(100L)
+    exc.setEndTime(300L)
+    exc.updateDuration()
+    exc.setStatus(Executor.Status.ACTIVE)
+
+    val doc = serialize(exc, exc)
+    val res = deserialize(exc, doc)
+
+    res.getAppId should be ("app-123")
+    res.getExecutorId should be ("executor-1")
+    res.getHost should be ("host")
+    res.getPort should be (45323)
+    res.getStartTime should be (100L)
+    res.getEndTime should be (300L)
+    res.getDuration should be (200L)
+    res.getStatus should be (Executor.Status.ACTIVE)
+  }
+
+  test("Executor - updateDuration") {
+    val exc = new Executor()
+
+    exc.updateDuration()
+    exc.getDuration should be (-1L)
+
+    exc.setStartTime(123L)
+    exc.updateDuration()
+    exc.getDuration should be (-1L)
+
+    exc.setStartTime(-1L)
+    exc.setEndTime(123L)
+    exc.updateDuration()
+    exc.getDuration should be (-1L)
+
+    exc.setStartTime(100L)
+    exc.setEndTime(300L)
+    exc.updateDuration()
+    exc.getDuration should be (200L)
+  }
 }
