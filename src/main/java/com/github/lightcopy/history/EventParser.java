@@ -74,16 +74,19 @@ public class EventParser {
 
   // whether or not current event parser finished parsing log
   private volatile boolean finished;
-  private FileSystem fs;
-  private MongoClient client;
-  private Application app;
-  private ApplicationSummary summary;
+  private final FileSystem fs;
+  private final MongoClient client;
+  // separate application
+  private final String appId;
+  private final String appPath;
+  private final ApplicationSummary summary;
 
   public EventParser(FileSystem fs, MongoClient client, Application app) {
     this.finished = false;
     this.fs = fs;
     this.client = client;
-    this.app = app;
+    this.appId = app.getAppId();
+    this.appPath = app.getPath();
     // aggregated metrics for application/stages/jobs/executors
     this.summary = new ApplicationSummary();
   }
@@ -97,20 +100,20 @@ public class EventParser {
     }
     FSDataInputStream in = null;
     try {
-      in = fs.open(new Path(app.getPath()));
+      in = fs.open(new Path(appPath));
       BufferedReader reader = new BufferedReader(new InputStreamReader(in));
       String json;
       while ((json = reader.readLine()) != null) {
         Event event = gson.fromJson(json, Event.class);
         if (event.getEventName() != null) {
-          parseJsonEvent(app.getAppId(), event, json, client);
+          parseJsonEvent(event, json);
         } else {
-          LOG.warn("Drop event {} for app {}", json, app.getAppId());
+          LOG.warn("Drop event {} for app {}", json, appId);
         }
       }
     } catch (Exception err) {
-      String msg = "Failed to process events for " + app.getAppId() + "; err: " + err.getMessage();
-      throw new EventProcessException(msg, err);
+      throw new EventProcessException(
+        "Failed to process events for " + appId + "; err: " + err.getMessage(), err);
     } finally {
       if (in != null) {
         try {
@@ -125,52 +128,52 @@ public class EventParser {
   }
 
   /** Parse individual event from json string */
-  private void parseJsonEvent(String appId, Event event, String json, MongoClient client) {
+  private void parseJsonEvent(Event event, String json) {
     switch (event.getEventName()) {
       case "SparkListenerApplicationStart":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerApplicationStart.class));
+        processEvent(gson.fromJson(json, SparkListenerApplicationStart.class));
         break;
       case "SparkListenerApplicationEnd":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerApplicationEnd.class));
+        processEvent(gson.fromJson(json, SparkListenerApplicationEnd.class));
         break;
       case "SparkListenerEnvironmentUpdate":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerEnvironmentUpdate.class));
+        processEvent(gson.fromJson(json, SparkListenerEnvironmentUpdate.class));
         break;
       case "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerSQLExecutionStart.class));
+        processEvent(gson.fromJson(json, SparkListenerSQLExecutionStart.class));
         break;
       case "org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerSQLExecutionEnd.class));
+        processEvent(gson.fromJson(json, SparkListenerSQLExecutionEnd.class));
         break;
       case "SparkListenerTaskStart":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerTaskStart.class));
+        processEvent(gson.fromJson(json, SparkListenerTaskStart.class));
         break;
       case "SparkListenerTaskEnd":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerTaskEnd.class));
+        processEvent(gson.fromJson(json, SparkListenerTaskEnd.class));
         break;
       case "SparkListenerStageSubmitted":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerStageSubmitted.class));
+        processEvent(gson.fromJson(json, SparkListenerStageSubmitted.class));
         break;
       case "SparkListenerStageCompleted":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerStageCompleted.class));
+        processEvent(gson.fromJson(json, SparkListenerStageCompleted.class));
         break;
       case "SparkListenerJobStart":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerJobStart.class));
+        processEvent(gson.fromJson(json, SparkListenerJobStart.class));
         break;
       case "SparkListenerJobEnd":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerJobEnd.class));
+        processEvent(gson.fromJson(json, SparkListenerJobEnd.class));
         break;
       case "SparkListenerExecutorAdded":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerExecutorAdded.class));
+        processEvent(gson.fromJson(json, SparkListenerExecutorAdded.class));
         break;
       case "SparkListenerExecutorRemoved":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerExecutorRemoved.class));
+        processEvent(gson.fromJson(json, SparkListenerExecutorRemoved.class));
         break;
       case "SparkListenerBlockManagerAdded":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerBlockManagerAdded.class));
+        processEvent(gson.fromJson(json, SparkListenerBlockManagerAdded.class));
         break;
       case "SparkListenerBlockManagerRemoved":
-        processEvent(client, appId, gson.fromJson(json, SparkListenerBlockManagerRemoved.class));
+        processEvent(gson.fromJson(json, SparkListenerBlockManagerRemoved.class));
         break;
       default:
         LOG.warn("Unrecongnized event {} ", event);
@@ -181,8 +184,7 @@ public class EventParser {
   // == Processing methods for listener events ==
 
   // == SparkListenerApplicationStart ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerApplicationStart event) {
+  private void processEvent(final SparkListenerApplicationStart event) {
     // check that app id is the same as event log id
     if (!appId.equals(event.appId)) {
       throw new RuntimeException("App ID mismatch: " + appId + " != " + event.appId);
@@ -211,8 +213,7 @@ public class EventParser {
   }
 
   // == SparkListenerApplicationEnd ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerApplicationEnd event) {
+  private void processEvent(final SparkListenerApplicationEnd event) {
     Mongo.findOneAndUpsert(
       Mongo.applications(client),
       Filters.eq(Application.FIELD_APP_ID, appId),
@@ -233,8 +234,7 @@ public class EventParser {
   }
 
   // == SparkListenerEnvironmentUpdate ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerEnvironmentUpdate event) {
+  private void processEvent(final SparkListenerEnvironmentUpdate event) {
     Mongo.findOneAndUpsert(
       Mongo.environment(client),
       Filters.eq(Environment.FIELD_APP_ID, appId),
@@ -257,8 +257,7 @@ public class EventParser {
   }
 
   // == SparkListenerSQLExecutionStart ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerSQLExecutionStart event) {
+  private void processEvent(final SparkListenerSQLExecutionStart event) {
     Mongo.findOneAndUpsert(
       Mongo.sqlExecution(client),
       Filters.and(
@@ -286,8 +285,7 @@ public class EventParser {
   }
 
   // == SparkListenerSQLExecutionEnd ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerSQLExecutionEnd event) {
+  private void processEvent(final SparkListenerSQLExecutionEnd event) {
     Mongo.findOneAndUpsert(
       Mongo.sqlExecution(client),
       Filters.and(
@@ -312,8 +310,7 @@ public class EventParser {
   }
 
   // == SparkListenerTaskStart ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerTaskStart event) {
+  private void processEvent(final SparkListenerTaskStart event) {
     Mongo.findOneAndUpsert(
       Mongo.tasks(client),
       Filters.and(
@@ -343,8 +340,7 @@ public class EventParser {
   }
 
   // == SparkListenerTaskEnd ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerTaskEnd event) {
+  private void processEvent(final SparkListenerTaskEnd event) {
     final int stageId = event.stageId;
     final int stageAttemptId = event.stageAttemptId;
     // If stage attempt id is -1, it means the DAGScheduler had no idea which attempt this task
@@ -408,8 +404,7 @@ public class EventParser {
   }
 
   // == SparkListenerStageSubmitted ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerStageSubmitted event) {
+  private void processEvent(final SparkListenerStageSubmitted event) {
     Mongo.findOneAndUpsert(
       Mongo.stages(client),
       Filters.and(
@@ -437,8 +432,7 @@ public class EventParser {
   }
 
   // == SparkListenerStageCompleted ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerStageCompleted event) {
+  private void processEvent(final SparkListenerStageCompleted event) {
     final int stageId = event.stageInfo.stageId;
     final int stageAttemptId = event.stageInfo.stageAttemptId;
     Mongo.findOneAndUpsert(
@@ -488,8 +482,7 @@ public class EventParser {
   }
 
   // == SparkListenerJobStart ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerJobStart event) {
+  private void processEvent(final SparkListenerJobStart event) {
     Mongo.findOneAndUpsert(
       Mongo.jobs(client),
       Filters.and(
@@ -570,8 +563,7 @@ public class EventParser {
   }
 
   // == SparkListenerJobEnd ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerJobEnd event) {
+  private void processEvent(final SparkListenerJobEnd event) {
     Mongo.findOneAndUpsert(
       Mongo.jobs(client),
       Filters.and(
@@ -645,8 +637,7 @@ public class EventParser {
   }
 
   // == SparkListenerExecutorAdded ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerExecutorAdded event) {
+  private void processEvent(final SparkListenerExecutorAdded event) {
     Mongo.findOneAndUpsert(
       Mongo.executors(client),
       Filters.and(
@@ -673,8 +664,7 @@ public class EventParser {
   }
 
   // == SparkListenerExecutorRemoved ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerExecutorRemoved event) {
+  private void processEvent(final SparkListenerExecutorRemoved event) {
     Mongo.findOneAndUpsert(
       Mongo.executors(client),
       Filters.and(
@@ -698,8 +688,7 @@ public class EventParser {
   }
 
   // == SparkListenerBlockManagerAdded ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerBlockManagerAdded event) {
+  private void processEvent(final SparkListenerBlockManagerAdded event) {
     Mongo.findOneAndUpsert(
       Mongo.executors(client),
       Filters.and(
@@ -726,8 +715,7 @@ public class EventParser {
   }
 
   // == SparkListenerBlockManagerRemoved ==
-  private void processEvent(
-      MongoClient client, final String appId, final SparkListenerBlockManagerRemoved event) {
+  private void processEvent(final SparkListenerBlockManagerRemoved event) {
     Mongo.findOneAndUpsert(
       Mongo.executors(client),
       Filters.and(
