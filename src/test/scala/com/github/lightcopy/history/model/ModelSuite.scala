@@ -501,6 +501,8 @@ class ModelSuite extends UnitTestSuite {
     res.getInputMetrics.get(INPUT_RECORDS_READ) should be (22L)
     res.getOutputMetrics.get(OUTPUT_BYTES_WRITTEN) should be (23L)
     res.getOutputMetrics.get(OUTPUT_RECORDS_WRITTEN) should be (24L)
+
+    res should be (Metrics.fromTaskMetrics(taskMetrics))
   }
 
   test("Merge empty metrics") {
@@ -680,64 +682,6 @@ class ModelSuite extends UnitTestSuite {
     stage.getDuration should be (102L)
     stage.getErrorDescription should be ("reason")
     stage.getErrorDetails should be ("reason\ndetails")
-  }
-
-  test("StageAggregateTracker - getters on empty obj") {
-    val obj = AggregateSummary.stages()
-    obj.getActiveTasks(1, 1) should be (0)
-    obj.getCompletedTasks(2, 1) should be (0)
-    obj.getFailedTasks(3, 1) should be (0)
-    obj.getMetrics(4, 1) should be (new Metrics())
-  }
-
-  test("StageAggregateTracker - increment for stages") {
-    val obj = AggregateSummary.stages()
-
-    obj.incActiveTasks(1, 0)
-    obj.incCompletedTasks(1, 0)
-    obj.decActiveTasks(1, 0)
-
-    obj.incActiveTasks(2, 0)
-    obj.incFailedTasks(2, 0)
-    obj.decActiveTasks(2, 0)
-
-    val metrics = new Metrics()
-    metrics.setResultSize(123L)
-    obj.updateMetrics(2, 0, metrics)
-
-    obj.getActiveTasks(1, 0) should be (0)
-    obj.getCompletedTasks(1, 0) should be (1)
-    obj.getFailedTasks(1, 0) should be (0)
-    obj.getMetrics(1, 0) should be (new Metrics())
-
-    obj.getActiveTasks(2, 0) should be (0)
-    obj.getCompletedTasks(2, 0) should be (0)
-    obj.getFailedTasks(2, 0) should be (1)
-    obj.getMetrics(2, 0) should be (metrics)
-  }
-
-  test("StageAggregateTracker - increment for stages, test id") {
-    val obj = AggregateSummary.stages()
-    obj.incActiveTasks(10, 0)
-    obj.incActiveTasks(0, 10)
-    obj.getActiveTasks(10, 0) should be (1)
-    obj.getActiveTasks(0, 10) should be (1)
-  }
-
-  test("StageAggregateTracker - equals") {
-    val obj1 = AggregateSummary.stages()
-    val obj2 = AggregateSummary.stages()
-    obj1 should be (obj2)
-
-    obj1.incActiveTasks(1, 0)
-    obj1.incCompletedTasks(1, 0)
-    obj1.incFailedTasks(1, 0)
-
-    obj2.incActiveTasks(1, 0)
-    obj2.incCompletedTasks(1, 0)
-    obj2.incFailedTasks(1, 0)
-
-    obj1 should be (obj2)
   }
 
   test("Empty Job to bson") {

@@ -92,4 +92,26 @@ public class StageMetrics {
   public Metrics getMetrics() {
     return metrics;
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || !(obj instanceof StageMetrics)) return false;
+    StageMetrics that = (StageMetrics) obj;
+    return this.activeTasks == that.activeTasks &&
+      this.completedTasks == that.completedTasks &&
+      this.failedTasks == that.failedTasks &&
+      this.totalTasks == that.totalTasks &&
+      this.metrics.equals(that.metrics);
+  }
+
+  @Override
+  public String toString() {
+    return "StageMetrics(" +
+      "activeTasks=" + activeTasks +
+      ", completedTasks=" + completedTasks +
+      ", failedTasks=" + failedTasks +
+      ", totalTasks=" + totalTasks +
+      ", metrics=" + metrics +
+      ")";
+  }
 }

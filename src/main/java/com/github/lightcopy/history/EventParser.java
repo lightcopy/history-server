@@ -52,7 +52,7 @@ import com.github.lightcopy.history.event.SparkListenerTaskStart;
 import com.github.lightcopy.history.event.SparkListenerTaskEnd;
 import com.github.lightcopy.history.event.StageInfo;
 
-import com.github.lightcopy.history.model.AggregateSummary;
+import com.github.lightcopy.history.model.agg.ApplicationSummary;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Executor;
@@ -77,15 +77,15 @@ public class EventParser {
   private FileSystem fs;
   private MongoClient client;
   private Application app;
-  private AggregateSummary.StageAggregateTracker stageAgg;
+  private ApplicationSummary summary;
 
   public EventParser(FileSystem fs, MongoClient client, Application app) {
     this.finished = false;
     this.fs = fs;
     this.client = client;
     this.app = app;
-    // aggregated metrics
-    this.stageAgg = AggregateSummary.stages();
+    // aggregated metrics for application/stages/jobs/executors
+    this.summary = new ApplicationSummary();
   }
 
   /**
@@ -339,12 +339,14 @@ public class EventParser {
       }
     );
     // increment number of active tasks per stage
-    stageAgg.incActiveTasks(event.stageId, event.stageAttemptId);
+    summary.incActiveTasks(event.stageId, event.stageAttemptId);
   }
 
   // == SparkListenerTaskEnd ==
   private void processEvent(
       MongoClient client, final String appId, final SparkListenerTaskEnd event) {
+    final int stageId = event.stageId;
+    final int stageAttemptId = event.stageAttemptId;
     // If stage attempt id is -1, it means the DAGScheduler had no idea which attempt this task
     // completion event is for. For now we allow processing of task, it will be assigned to stage -1
     // which does not exist and we never query by negative attempt
@@ -363,8 +365,8 @@ public class EventParser {
             throw new IllegalStateException("Task end received before task start (" + appId +
               ", taskId=" + event.taskInfo.taskId + ")");
           }
-          obj.setStageId(event.stageId);
-          obj.setStageAttemptId(event.stageAttemptId);
+          obj.setStageId(stageId);
+          obj.setStageAttemptId(stageAttemptId);
           obj.update(event.taskInfo);
           obj.update(event.taskEndReason);
           obj.update(event.taskMetrics);
@@ -374,39 +376,30 @@ public class EventParser {
     );
 
     // update stage info with current metrics and stats snapshot
-    stageAgg.decActiveTasks(event.stageId, event.stageAttemptId);
+    summary.decActiveTasks(stageId, stageAttemptId);
+    summary.incMetrics(stageId, stageAttemptId, Metrics.fromTaskMetrics(event.taskMetrics));
     if (event.taskEndReason.isSuccess()) {
-      stageAgg.incCompletedTasks(event.stageId, event.stageAttemptId);
+      summary.incCompletedTasks(stageId, stageAttemptId);
     } else {
-      stageAgg.incFailedTasks(event.stageId, event.stageAttemptId);
+      summary.incFailedTasks(stageId, stageAttemptId);
     }
-    Metrics update = new Metrics();
-    update.set(event.taskMetrics);
-    stageAgg.updateMetrics(event.stageId, event.stageAttemptId, update);
     // we also update stage with partial counts and metrics for cases when stage never completes
     // if stage complete event is received stage will updated with final metrics anyway.
-    final int activeTasks = stageAgg.getActiveTasks(event.stageId, event.stageAttemptId);
-    final int completedTasks = stageAgg.getCompletedTasks(event.stageId, event.stageAttemptId);
-    final int failedTasks = stageAgg.getFailedTasks(event.stageId, event.stageAttemptId);
-    final Metrics metrics = stageAgg.getMetrics(event.stageId, event.stageAttemptId);
-
     Mongo.findOneAndUpsert(
       Mongo.stages(client),
       Filters.and(
         Filters.eq(Stage.FIELD_APP_ID, appId),
-        Filters.eq(Stage.FIELD_STAGE_ID, event.stageId),
-        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, event.stageAttemptId)
+        Filters.eq(Stage.FIELD_STAGE_ID, stageId),
+        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, stageAttemptId)
       ),
       new Mongo.UpsertBlock<Stage>() {
         @Override
         public Stage update(Stage obj) {
-          // we only update information for running stage, since sometimes tasks can finish after
-          // stages are complete (see comment above)
           if (obj != null && obj.getStatus() == Stage.Status.ACTIVE) {
-            obj.setActiveTasks(activeTasks);
-            obj.setCompletedTasks(completedTasks);
-            obj.setFailedTasks(failedTasks);
-            obj.setMetrics(metrics);
+            obj.setActiveTasks(summary.getActiveTasks(stageId, stageAttemptId));
+            obj.setCompletedTasks(summary.getCompletedTasks(stageId, stageAttemptId));
+            obj.setFailedTasks(summary.getFailedTasks(stageId, stageAttemptId));
+            obj.setMetrics(summary.getMetrics(stageId, stageAttemptId));
           }
           return obj;
         }
@@ -433,6 +426,10 @@ public class EventParser {
           }
           obj.update(event.stageInfo);
           obj.setStatus(Stage.Status.ACTIVE);
+          // update summary for stage
+          summary.markActive(event.stageInfo.stageId, event.stageInfo.stageAttemptId);
+          summary.setTotalTasks(event.stageInfo.stageId, event.stageInfo.stageAttemptId,
+            event.stageInfo.numTasks);
           return obj;
         }
       }
@@ -442,23 +439,14 @@ public class EventParser {
   // == SparkListenerStageCompleted ==
   private void processEvent(
       MongoClient client, final String appId, final SparkListenerStageCompleted event) {
-    // extract metrics for stage and evict key
-    final int activeTasks = stageAgg.getActiveTasks(event.stageInfo.stageId,
-      event.stageInfo.stageAttemptId);
-    final int completedTasks = stageAgg.getCompletedTasks(event.stageInfo.stageId,
-      event.stageInfo.stageAttemptId);
-    final int failedTasks = stageAgg.getFailedTasks(event.stageInfo.stageId,
-      event.stageInfo.stageAttemptId);
-    final Metrics metrics = stageAgg.getMetrics(event.stageInfo.stageId,
-      event.stageInfo.stageAttemptId);
-    stageAgg.evict(event.stageInfo.stageId, event.stageInfo.stageAttemptId);
-
+    final int stageId = event.stageInfo.stageId;
+    final int stageAttemptId = event.stageInfo.stageAttemptId;
     Mongo.findOneAndUpsert(
       Mongo.stages(client),
       Filters.and(
         Filters.eq(Stage.FIELD_APP_ID, appId),
-        Filters.eq(Stage.FIELD_STAGE_ID, event.stageInfo.stageId),
-        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, event.stageInfo.stageAttemptId)
+        Filters.eq(Stage.FIELD_STAGE_ID, stageId),
+        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, stageAttemptId)
       ),
       new Mongo.UpsertBlock<Stage>() {
         @Override
@@ -466,27 +454,31 @@ public class EventParser {
           if (obj == null) {
             throw new IllegalStateException(
               "Stage is not found for SparkListenerStageCompleted: stageId=" +
-              event.stageInfo.stageId + ", stageAttemptId=" + event.stageInfo.stageAttemptId);
+              stageId + ", stageAttemptId=" + stageAttemptId);
           }
           boolean active = obj.getStatus() == Stage.Status.ACTIVE;
           boolean pending = obj.getStatus() == Stage.Status.PENDING;
           obj.setAppId(appId);
           obj.update(event.stageInfo);
+          summary.setTotalTasks(stageId, stageAttemptId, event.stageInfo.numTasks);
           if (active) {
-            if (event.stageInfo.failureReason == null) {
+            if (event.stageInfo.isSuccess()) {
               obj.setStatus(Stage.Status.COMPLETED);
+              summary.markCompleted(stageId, stageAttemptId);
             } else {
               obj.setStatus(Stage.Status.FAILED);
+              summary.markFailed(stageId, stageAttemptId);
             }
-            obj.setActiveTasks(activeTasks);
-            obj.setCompletedTasks(completedTasks);
-            obj.setFailedTasks(failedTasks);
-            obj.setMetrics(metrics);
+            obj.setActiveTasks(summary.getActiveTasks(stageId, stageAttemptId));
+            obj.setCompletedTasks(summary.getCompletedTasks(stageId, stageAttemptId));
+            obj.setFailedTasks(summary.getFailedTasks(stageId, stageAttemptId));
+            obj.setMetrics(summary.getMetrics(stageId, stageAttemptId));
           } else if (pending) {
             // we do not update metrics for skipped stage
             obj.setStatus(Stage.Status.SKIPPED);
+            summary.markSkipped(stageId, stageAttemptId);
           } else {
-            LOG.warn("Stage {} ({}) has invalid stage", obj.getStageId(), obj.getStageAttemptId());
+            LOG.warn("Stage {} ({}) has invalid stage", stageId, stageAttemptId);
             obj.setStatus(Stage.Status.UNKNOWN);
           }
           return obj;
@@ -543,6 +535,8 @@ public class EventParser {
             if (obj.getStatus() == Stage.Status.UNKNOWN) {
               obj.update(info);
               obj.setStatus(Stage.Status.PENDING);
+              summary.markPending(info.stageId, info.stageAttemptId);
+              summary.setTotalTasks(info.stageId, info.stageAttemptId, info.numTasks);
             } else {
               LOG.warn("Stage {} ({}) was already submitted for application {}, status={}",
                 obj.getStageId(), obj.getStageAttemptId(), appId, obj.getStatus());

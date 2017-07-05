@@ -31,6 +31,11 @@ public class StageInfo {
   @SerializedName("Completion Time") public long completionTime;
   @SerializedName("Failure Reason") public String failureReason;
 
+  /** Whether or not this stage is successful */
+  public boolean isSuccess() {
+    return failureReason == null;
+  }
+
   public String getErrorDescription() {
     // return first line as description, if available
     if (failureReason != null) {

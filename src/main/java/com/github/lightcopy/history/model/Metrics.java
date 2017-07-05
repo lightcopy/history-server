@@ -260,6 +260,13 @@ public class Metrics extends AbstractCodec<Metrics> {
     outputMetrics.put(OUTPUT_RECORDS_WRITTEN, taskMetrics.outputMetrics.recordsWritten);
   }
 
+  /** Create metrics directly from task metrics */
+  public static Metrics fromTaskMetrics(TaskMetrics taskMetrics) {
+    Metrics obj = new Metrics();
+    obj.set(taskMetrics);
+    return obj;
+  }
+
   /**
    * Merge other metrics values into this metrics instance.
    * Other instance is not updated.

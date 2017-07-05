@@ -127,33 +127,23 @@ public class ApplicationSummary {
   }
 
   public void markPending(int stageId, int attempt) {
-    long id = stageId(stageId, attempt);
-    unlinkStage(id);
-    pendingStages.add(id);
+    upsertStage(stageId, attempt, Stage.Status.PENDING);
   }
 
   public void markActive(int stageId, int attempt) {
-    long id = stageId(stageId, attempt);
-    unlinkStage(id);
-    activeStages.add(id);
+    upsertStage(stageId, attempt, Stage.Status.ACTIVE);
   }
 
   public void markCompleted(int stageId, int attempt) {
-    long id = stageId(stageId, attempt);
-    unlinkStage(id);
-    completedStages.add(id);
+    upsertStage(stageId, attempt, Stage.Status.COMPLETED);
   }
 
   public void markFailed(int stageId, int attempt) {
-    long id = stageId(stageId, attempt);
-    unlinkStage(id);
-    failedStages.add(id);
+    upsertStage(stageId, attempt, Stage.Status.FAILED);
   }
 
   public void markSkipped(int stageId, int attempt) {
-    long id = stageId(stageId, attempt);
-    unlinkStage(id);
-    skippedStages.add(id);
+    upsertStage(stageId, attempt, Stage.Status.SKIPPED);
   }
 
   public int getActiveTasks(int stageId, int attempt) {

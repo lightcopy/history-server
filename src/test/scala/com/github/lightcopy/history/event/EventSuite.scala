@@ -758,6 +758,7 @@ class EventSuite extends UnitTestSuite {
     event.stageInfo.submissionTime should be (0)
     event.stageInfo.completionTime should be (0)
     event.stageInfo.failureReason should be (null)
+    event.stageInfo.isSuccess should be (true)
     event.properties should be (Map(
       "spark.rdd.scope.noOverride" -> "true",
       "spark.rdd.scope" -> "{\"id\":\"21\",\"name\":\"collect\"}",
@@ -821,6 +822,7 @@ class EventSuite extends UnitTestSuite {
     event.stageInfo.details should be ("org.apache.spark.rdd.RDD.collect(RDD.scala:935)")
     event.stageInfo.submissionTime should be (1498724228488L)
     event.stageInfo.completionTime should be (1498724228533L)
+    event.stageInfo.isSuccess should be (false)
     event.stageInfo.failureReason should be (
       "Job aborted due to stage failure: Task 1 in stage 1.0 failed 1 times")
   }
