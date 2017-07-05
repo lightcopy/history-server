@@ -509,7 +509,7 @@ public class EventParser {
     );
 
     // launch all stages that we used to get total tasks count
-    for (final StageInfo info : event.stagesToSubmit()) {
+    for (final StageInfo info : event.stageInfos) {
       Mongo.findOneAndUpsert(
         Mongo.stages(client),
         Filters.and(

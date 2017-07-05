@@ -42,28 +42,17 @@ public class SparkListenerJobStart {
     return name;
   }
 
-  /** Return list of stages to submit as pending, can be a subset of all stage infos */
-  public List<StageInfo> stagesToSubmit() {
+  /** Get total tasks based on stage infos */
+  public int getTotalTasks() {
     // Compute (a potential underestimate of) the number of tasks that will be run by this job.
     // This may be an underestimate because the job start event references all of the result
     // stages' transitive stage dependencies, but some of these stages might be skipped if their
     // output is available from earlier runs.
-    List<StageInfo> submitStages = new ArrayList<StageInfo>();
+    int numTasks = 0;
     for (StageInfo info : stageInfos) {
       if (info != null && info.completionTime <= 0) {
-        submitStages.add(info);
+        numTasks += info.numTasks;
       }
-    }
-    return submitStages;
-  }
-
-  /** Get total tasks based on stage infos */
-  public int getTotalTasks() {
-    // similar to `stagesToSubmit` method
-    // we count only stages that should be submitted by this job
-    int numTasks = 0;
-    for (StageInfo info : stagesToSubmit()) {
-      numTasks += info.numTasks;
     }
     return numTasks;
   }
