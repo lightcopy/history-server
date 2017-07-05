@@ -22,6 +22,7 @@ import java.util.HashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.Metrics;
 import com.github.lightcopy.history.model.Stage;
 
@@ -40,8 +41,13 @@ public class ApplicationSummary {
   private HashSet<Long> completedStages;
   private HashSet<Long> failedStages;
   private HashSet<Long> skippedStages;
+  // job data within application
+  private HashMap<Integer, HashSet<Integer>> jobs;
+  private HashSet<Integer> runningJobs;
+  private HashSet<Integer> succeededJobs;
+  private HashSet<Integer> failedJobs;
 
-  // Stage methods, increment/decrement/shift
+  // == Stage methods, increment/decrement/shift ==
 
   /** Convert stage id and attempt number into unique stage identifier */
   private static long stageId(int stageId, int attempt) {
@@ -121,11 +127,6 @@ public class ApplicationSummary {
     }
   }
 
-  public void setTotalTasks(int stageId, int attempt, int totalTasks) {
-    long id = stageId(stageId, attempt);
-    stages.get(id).setTotalTasks(totalTasks);
-  }
-
   public void markPending(int stageId, int attempt) {
     upsertStage(stageId, attempt, Stage.Status.PENDING);
   }
@@ -158,11 +159,58 @@ public class ApplicationSummary {
     return stages.get(stageId(stageId, attempt)).getFailedTasks();
   }
 
-  public int getTotalTasks(int stageId, int attempt) {
-    return stages.get(stageId(stageId, attempt)).getTotalTasks();
-  }
-
   public Metrics getMetrics(int stageId, int attempt) {
     return stages.get(stageId(stageId, attempt)).getMetrics();
+  }
+
+  // == Job updates ==
+
+  /** Method removes job id from all status sets */
+  private void unlinkJob(int id) {
+    runningJobs.remove(id);
+    succeededJobs.remove(id);
+    failedJobs.remove(id);
+  }
+
+  /** Link stage (regardless of attempt) to the job */
+  public void addStageToJob(int jobId, int stageId) {
+    if (!jobs.containsKey(jobId)) {
+      jobs.put(jobId, new HashSet<Integer>());
+    }
+    jobs.get(jobId).add(stageId);
+  }
+
+  /** Register job in application summary, if job already exists, just update status */
+  public void upsertJob(int jobId, Job.Status status) {
+    if (!jobs.containsKey(jobId)) {
+      jobs.put(jobId, new HashSet<Integer>());
+    }
+    unlinkJob(jobId);
+    switch (status) {
+      case RUNNING:
+        runningJobs.add(jobId);
+        break;
+      case SUCCEEDED:
+        succeededJobs.add(jobId);
+        break;
+      case FAILED:
+        failedJobs.add(jobId);
+        break;
+      default:
+        LOG.error("Ignore job {} with invalid status {}", jobId, status);
+        break;
+    }
+  }
+
+  public void markJobRunning(int jobId) {
+    upsertJob(jobId, Job.Status.RUNNING);
+  }
+
+  public void markJobSucceeded(int jobId) {
+    upsertJob(jobId, Job.Status.SUCCEEDED);
+  }
+
+  public void markJobFailed(int jobId) {
+    upsertJob(jobId, Job.Status.FAILED);
   }
 }

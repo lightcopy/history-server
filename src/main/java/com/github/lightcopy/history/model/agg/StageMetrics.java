@@ -25,14 +25,12 @@ public class StageMetrics {
   private int activeTasks;
   private int completedTasks;
   private int failedTasks;
-  private int totalTasks;
   private Metrics metrics;
 
   public StageMetrics() {
     this.activeTasks = 0;
     this.completedTasks = 0;
     this.failedTasks = 0;
-    this.totalTasks = 0;
     this.metrics = new Metrics();
   }
 
@@ -54,11 +52,6 @@ public class StageMetrics {
   /** Increment failed tasks by 1 */
   public void incFailedTasks() {
     failedTasks++;
-  }
-
-  /** Set value of total tasks */
-  public void setTotalTasks(int value) {
-    totalTasks = value;
   }
 
   /** Update current metrics with delta update */
@@ -83,11 +76,6 @@ public class StageMetrics {
     return failedTasks;
   }
 
-  /** Get total tasks for stage */
-  public int getTotalTasks() {
-    return totalTasks;
-  }
-
   /** Get metrics for stage */
   public Metrics getMetrics() {
     return metrics;
@@ -100,7 +88,6 @@ public class StageMetrics {
     return this.activeTasks == that.activeTasks &&
       this.completedTasks == that.completedTasks &&
       this.failedTasks == that.failedTasks &&
-      this.totalTasks == that.totalTasks &&
       this.metrics.equals(that.metrics);
   }
 
@@ -110,7 +97,6 @@ public class StageMetrics {
       "activeTasks=" + activeTasks +
       ", completedTasks=" + completedTasks +
       ", failedTasks=" + failedTasks +
-      ", totalTasks=" + totalTasks +
       ", metrics=" + metrics +
       ")";
   }

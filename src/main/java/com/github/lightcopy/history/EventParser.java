@@ -423,8 +423,6 @@ public class EventParser {
           obj.setStatus(Stage.Status.ACTIVE);
           // update summary for stage
           summary.markActive(event.stageInfo.stageId, event.stageInfo.stageAttemptId);
-          summary.setTotalTasks(event.stageInfo.stageId, event.stageInfo.stageAttemptId,
-            event.stageInfo.numTasks);
           return obj;
         }
       }
@@ -454,7 +452,6 @@ public class EventParser {
           boolean pending = obj.getStatus() == Stage.Status.PENDING;
           obj.setAppId(appId);
           obj.update(event.stageInfo);
-          summary.setTotalTasks(stageId, stageAttemptId, event.stageInfo.numTasks);
           if (active) {
             if (event.stageInfo.isSuccess()) {
               obj.setStatus(Stage.Status.COMPLETED);
@@ -529,7 +526,6 @@ public class EventParser {
               obj.update(info);
               obj.setStatus(Stage.Status.PENDING);
               summary.markPending(info.stageId, info.stageAttemptId);
-              summary.setTotalTasks(info.stageId, info.stageAttemptId, info.numTasks);
             } else {
               LOG.warn("Stage {} ({}) was already submitted for application {}, status={}",
                 obj.getStageId(), obj.getStageAttemptId(), appId, obj.getStatus());
