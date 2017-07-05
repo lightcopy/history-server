@@ -16,6 +16,9 @@
 
 package com.github.lightcopy.history.model;
 
+import java.util.Map;
+import java.util.HashMap;
+
 import org.bson.BsonReader;
 import org.bson.BsonType;
 import org.bson.BsonWriter;
@@ -31,32 +34,43 @@ public class Executor extends AbstractCodec<Executor> {
   public static final String FIELD_EXECUTOR_ID = "executorId";
   public static final String FIELD_HOST = "host";
   public static final String FIELD_PORT = "port";
+  public static final String FIELD_CORES = "cores";
   public static final String FIELD_MAX_MEMORY = "maxMemory";
   public static final String FIELD_STARTTIME = "starttime";
   public static final String FIELD_ENDTIME = "endtime";
   public static final String FIELD_DURATION = "duration";
   public static final String FIELD_STATUS = "status";
+  public static final String FIELD_FAILURE_REASON = "failureReason";
+  public static final String FIELD_LOGS = "logs";
 
   private String appId;
   private String executorId;
   private String host;
   private int port;
+  private int cores;
   private long maxMemory;
   private long starttime;
   private long endtime;
   private long duration;
   private Status status;
+  private String failureReason;
+  // map containing "stdout" and "stderr" keys with urls
+  private HashMap<String, String> logs;
 
   public Executor() {
     this.appId = null;
     this.executorId = null;
     this.host = null;
     this.port = -1;
+    this.cores = -1;
     this.maxMemory = -1L;
     this.starttime = -1L;
     this.endtime = -1L;
     this.duration = -1L;
     this.status = Status.UNKNOWN;
+    // this is only set if executor was removed
+    this.failureReason = null;
+    this.logs = new HashMap<String, String>();
   }
 
   // == Getters ==
@@ -75,6 +89,10 @@ public class Executor extends AbstractCodec<Executor> {
 
   public int getPort() {
     return port;
+  }
+
+  public int getCores() {
+    return cores;
   }
 
   public long getMaxMemory() {
@@ -97,6 +115,22 @@ public class Executor extends AbstractCodec<Executor> {
     return status;
   }
 
+  public String getFailureReason() {
+    return failureReason;
+  }
+
+  public HashMap<String, String> getLogs() {
+    return logs;
+  }
+
+  public String getStdoutUrl() {
+    return logs.get("stdout");
+  }
+
+  public String getStderrUrl() {
+    return logs.get("stderr");
+  }
+
   // == Setters ==
 
   public void setAppId(String value) {
@@ -113,6 +147,10 @@ public class Executor extends AbstractCodec<Executor> {
 
   public void setPort(int value) {
     this.port = value;
+  }
+
+  public void setCores(int value) {
+    this.cores = value;
   }
 
   public void setMaxMemory(long value) {
@@ -146,6 +184,14 @@ public class Executor extends AbstractCodec<Executor> {
     this.status = value;
   }
 
+  public void setFailureReason(String value) {
+    this.failureReason = value;
+  }
+
+  public void setLogs(Map<String, String> value) {
+    this.logs = new HashMap<String, String>(value);
+  }
+
   // == Codec methods ==
 
   @Override
@@ -166,6 +212,9 @@ public class Executor extends AbstractCodec<Executor> {
         case FIELD_PORT:
           exc.setPort(reader.readInt32());
           break;
+        case FIELD_CORES:
+          exc.setCores(reader.readInt32());
+          break;
         case FIELD_MAX_MEMORY:
           exc.setMaxMemory(reader.readInt64());
           break;
@@ -180,6 +229,12 @@ public class Executor extends AbstractCodec<Executor> {
           break;
         case FIELD_STATUS:
           exc.setStatus(Status.valueOf(safeReadString(reader)));
+          break;
+        case FIELD_FAILURE_REASON:
+          exc.setFailureReason(safeReadString(reader));
+          break;
+        case FIELD_LOGS:
+          exc.setLogs(readMap(reader,  STRING_ITEM));
           break;
         default:
           reader.skipValue();
@@ -202,11 +257,14 @@ public class Executor extends AbstractCodec<Executor> {
     safeWriteString(writer, FIELD_EXECUTOR_ID, value.getExecutorId());
     safeWriteString(writer, FIELD_HOST, value.getHost());
     writer.writeInt32(FIELD_PORT, value.getPort());
+    writer.writeInt32(FIELD_CORES, value.getCores());
     writer.writeInt64(FIELD_MAX_MEMORY, value.getMaxMemory());
     writer.writeInt64(FIELD_STARTTIME, value.getStartTime());
     writer.writeInt64(FIELD_ENDTIME, value.getEndTime());
     writer.writeInt64(FIELD_DURATION, value.getDuration());
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
+    safeWriteString(writer, FIELD_FAILURE_REASON, value.getFailureReason());
+    writeMap(writer, FIELD_LOGS, value.getLogs(), STRING_ITEM);
     writer.writeEndDocument();
   }
 }

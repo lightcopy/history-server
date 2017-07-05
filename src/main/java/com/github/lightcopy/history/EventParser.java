@@ -39,9 +39,11 @@ import com.github.lightcopy.history.event.SparkListenerApplicationStart;
 import com.github.lightcopy.history.event.SparkListenerApplicationEnd;
 import com.github.lightcopy.history.event.SparkListenerBlockManagerAdded;
 import com.github.lightcopy.history.event.SparkListenerBlockManagerRemoved;
+import com.github.lightcopy.history.event.SparkListenerEnvironmentUpdate;
+import com.github.lightcopy.history.event.SparkListenerExecutorAdded;
+import com.github.lightcopy.history.event.SparkListenerExecutorRemoved;
 import com.github.lightcopy.history.event.SparkListenerJobStart;
 import com.github.lightcopy.history.event.SparkListenerJobEnd;
-import com.github.lightcopy.history.event.SparkListenerEnvironmentUpdate;
 import com.github.lightcopy.history.event.SparkListenerSQLExecutionStart;
 import com.github.lightcopy.history.event.SparkListenerSQLExecutionEnd;
 import com.github.lightcopy.history.event.SparkListenerStageCompleted;
@@ -157,6 +159,12 @@ public class EventParser {
         break;
       case "SparkListenerJobEnd":
         processEvent(client, appId, gson.fromJson(json, SparkListenerJobEnd.class));
+        break;
+      case "SparkListenerExecutorAdded":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerExecutorAdded.class));
+        break;
+      case "SparkListenerExecutorRemoved":
+        processEvent(client, appId, gson.fromJson(json, SparkListenerExecutorRemoved.class));
         break;
       case "SparkListenerBlockManagerAdded":
         processEvent(client, appId, gson.fromJson(json, SparkListenerBlockManagerAdded.class));
@@ -642,6 +650,59 @@ public class EventParser {
         );
       }
     }
+  }
+
+  // == SparkListenerExecutorAdded ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerExecutorAdded event) {
+    Mongo.findOneAndUpsert(
+      Mongo.executors(client),
+      Filters.and(
+        Filters.eq(Executor.FIELD_APP_ID, appId),
+        Filters.eq(Executor.FIELD_EXECUTOR_ID, event.executorId)
+      ),
+      new Mongo.UpsertBlock<Executor>() {
+        @Override
+        public Executor update(Executor obj) {
+          if (obj == null) {
+            obj = new Executor();
+          }
+          obj.setAppId(appId);
+          obj.setExecutorId(event.executorId);
+          obj.setHost(event.info.host);
+          obj.setCores(event.info.totalCores);
+          obj.setStartTime(event.timestamp);
+          obj.setStatus(Executor.Status.ACTIVE);
+          obj.setLogs(event.info.logUrls);
+          return obj;
+        }
+      }
+    );
+  }
+
+  // == SparkListenerExecutorRemoved ==
+  private void processEvent(
+      MongoClient client, final String appId, final SparkListenerExecutorRemoved event) {
+    Mongo.findOneAndUpsert(
+      Mongo.executors(client),
+      Filters.and(
+        Filters.eq(Executor.FIELD_APP_ID, appId),
+        Filters.eq(Executor.FIELD_EXECUTOR_ID, event.executorId)
+      ),
+      new Mongo.UpsertBlock<Executor>() {
+        @Override
+        public Executor update(Executor obj) {
+          // ignore null updates, if any
+          if (obj != null) {
+            obj.setStatus(Executor.Status.REMOVED);
+            obj.setFailureReason(event.reason);
+            obj.setEndTime(event.timestamp);
+            obj.updateDuration();
+          }
+          return obj;
+        }
+      }
+    );
   }
 
   // == SparkListenerBlockManagerAdded ==

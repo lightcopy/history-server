@@ -959,4 +959,46 @@ class EventSuite extends UnitTestSuite {
     event.blockManagerId.port should be (40942)
     event.timestamp should be (1499038368015L)
   }
+
+  test("SparkListenerExecutorAdded") {
+    val json = """
+    {
+      "Event": "SparkListenerExecutorAdded",
+      "Timestamp": 1499221821679,
+      "Executor ID": "0",
+      "Executor Info": {
+        "Host": "10.180.0.47",
+        "Total Cores": 8,
+        "Log Urls": {
+          "stdout": "http://10.180.0.47:8081/logPage/?appId=app-1&executorId=0&logType=stdout",
+          "stderr": "http://10.180.0.47:8081/logPage/?appId=app-1&executorId=0&logType=stderr"
+        }
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerExecutorAdded])
+    event.timestamp should be (1499221821679L)
+    event.executorId should be ("0")
+    event.info.host should be ("10.180.0.47")
+    event.info.totalCores should be (8)
+    event.info.logUrls should be (Map(
+      "stdout" -> "http://10.180.0.47:8081/logPage/?appId=app-1&executorId=0&logType=stdout",
+      "stderr" -> "http://10.180.0.47:8081/logPage/?appId=app-1&executorId=0&logType=stderr"
+    ).asJava)
+  }
+
+  test("SparkListenerExecutorRemoved") {
+    val json = """
+    {
+      "Event": "SparkListenerExecutorRemoved",
+      "Executor ID": "0",
+      "Reason": "Reason",
+      "Timestamp": 1499221821679
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerExecutorRemoved])
+    event.executorId should be ("0")
+    event.reason should be ("Reason")
+    event.timestamp should be (1499221821679L)
+  }
 }

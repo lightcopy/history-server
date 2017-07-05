@@ -826,11 +826,14 @@ class ModelSuite extends UnitTestSuite {
     res.getExecutorId should be (exc.getExecutorId)
     res.getHost should be (exc.getHost)
     res.getPort should be (exc.getPort)
+    res.getCores should be (exc.getCores)
     res.getMaxMemory should be (exc.getMaxMemory)
     res.getStartTime should be (exc.getStartTime)
     res.getEndTime should be (exc.getEndTime)
     res.getDuration should be (exc.getDuration)
     res.getStatus should be (exc.getStatus)
+    res.getFailureReason should be (exc.getFailureReason)
+    res.getLogs should be (exc.getLogs)
   }
 
   test("Complete executor to bson") {
@@ -839,11 +842,14 @@ class ModelSuite extends UnitTestSuite {
     exc.setExecutorId("executor-1")
     exc.setHost("host")
     exc.setPort(45323)
+    exc.setCores(16)
     exc.setMaxMemory(1024L)
     exc.setStartTime(100L)
     exc.setEndTime(300L)
     exc.updateDuration()
-    exc.setStatus(Executor.Status.ACTIVE)
+    exc.setStatus(Executor.Status.REMOVED)
+    exc.setFailureReason("Reason")
+    exc.setLogs(hm(Map("stdout" -> "1", "stderr" -> "2")))
 
     val doc = serialize(exc, exc)
     val res = deserialize(exc, doc)
@@ -852,11 +858,15 @@ class ModelSuite extends UnitTestSuite {
     res.getExecutorId should be ("executor-1")
     res.getHost should be ("host")
     res.getPort should be (45323)
+    res.getCores should be (16)
     res.getMaxMemory should be (1024L)
     res.getStartTime should be (100L)
     res.getEndTime should be (300L)
     res.getDuration should be (200L)
-    res.getStatus should be (Executor.Status.ACTIVE)
+    res.getStatus should be (Executor.Status.REMOVED)
+    res.getFailureReason should be ("Reason")
+    res.getStdoutUrl should be ("1")
+    res.getStderrUrl should be ("2")
   }
 
   test("Executor - updateDuration") {
