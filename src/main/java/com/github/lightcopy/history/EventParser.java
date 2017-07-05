@@ -507,10 +507,8 @@ public class EventParser {
       new Mongo.UpsertBlock<Job>() {
         @Override
         public Job update(Job obj) {
-          if (obj != null) {
-            // we submit unique jobs, if job already exists, throw exception
-            throw new IllegalStateException(
-              "Job " + event.jobId + " is already set in application " + appId);
+          if (obj == null) {
+            obj = new Job();
           }
           obj.setAppId(appId);
           obj.setJobId(event.jobId);
