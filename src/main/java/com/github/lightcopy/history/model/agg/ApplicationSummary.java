@@ -36,6 +36,7 @@ public class ApplicationSummary {
 
   // stage data within application
   private HashMap<Long, StageMetrics> stages;
+  private HashMap<Integer, HashSet<Long>> stageToAttempt;
   private HashSet<Long> pendingStages;
   private HashSet<Long> activeStages;
   private HashSet<Long> completedStages;
@@ -46,6 +47,20 @@ public class ApplicationSummary {
   private HashSet<Integer> runningJobs;
   private HashSet<Integer> succeededJobs;
   private HashSet<Integer> failedJobs;
+
+  public ApplicationSummary() {
+    stages = new HashMap<Long, StageMetrics>();
+    stageToAttempt = new HashMap<Integer, HashSet<Long>>();
+    pendingStages = new HashSet<Long>();
+    activeStages = new HashSet<Long>();
+    completedStages = new HashSet<Long>();
+    failedStages = new HashSet<Long>();
+    skippedStages = new HashSet<Long>();
+    jobs = new HashMap<Integer, HashSet<Integer>>();
+    runningJobs = new HashSet<Integer>();
+    succeededJobs = new HashSet<Integer>();
+    failedJobs = new HashSet<Integer>();
+  }
 
   // == Stage methods, increment/decrement/shift ==
 
@@ -68,6 +83,10 @@ public class ApplicationSummary {
     long id = stageId(stageId, attempt);
     if (!stages.containsKey(id)) {
       stages.put(id, new StageMetrics());
+      if (!stageToAttempt.containsKey(stageId)) {
+        stageToAttempt.put(stageId, new HashSet<Long>());
+      }
+      stageToAttempt.get(stageId).add(id);
     }
     unlinkStage(id);
     switch (status) {
@@ -212,5 +231,69 @@ public class ApplicationSummary {
 
   public void markJobFailed(int jobId) {
     upsertJob(jobId, Job.Status.FAILED);
+  }
+
+  /** All active tasks in all stages for job */
+  public int getActiveTasks(int jobId) {
+    int numTasks = 0;
+    for (int stage : jobs.get(jobId)) {
+      for (long uniqueId : stageToAttempt.get(stage)) {
+        numTasks += stages.get(uniqueId).getActiveTasks();
+      }
+    }
+    return numTasks;
+  }
+
+  public int getCompletedTasks(int jobId) {
+    int numTasks = 0;
+    for (int stage : jobs.get(jobId)) {
+      for (long uniqueId : stageToAttempt.get(stage)) {
+        numTasks += stages.get(uniqueId).getCompletedTasks();
+      }
+    }
+    return numTasks;
+  }
+
+  public int getFailedTasks(int jobId) {
+    int numTasks = 0;
+    for (int stage : jobs.get(jobId)) {
+      for (long uniqueId : stageToAttempt.get(stage)) {
+        numTasks += stages.get(uniqueId).getFailedTasks();
+      }
+    }
+    return numTasks;
+  }
+
+  // method to return number of stages that appear in provided stage set
+  private int getStages(int jobId, HashSet<Long> stagesByStatus) {
+    int numStages = 0;
+    for (int stage : jobs.get(jobId)) {
+      for (long uniqueId : stageToAttempt.get(stage)) {
+        if (stagesByStatus.contains(uniqueId)) {
+          numStages++;
+        }
+      }
+    }
+    return numStages;
+  }
+
+  public int getPendingStages(int jobId) {
+    return getStages(jobId, pendingStages);
+  }
+
+  public int getActiveStages(int jobId) {
+    return getStages(jobId, activeStages);
+  }
+
+  public int getCompletedStages(int jobId) {
+    return getStages(jobId, completedStages);
+  }
+
+  public int getFailedStages(int jobId) {
+    return getStages(jobId, failedStages);
+  }
+
+  public int getSkippedStages(int jobId) {
+    return getStages(jobId, skippedStages);
   }
 }
