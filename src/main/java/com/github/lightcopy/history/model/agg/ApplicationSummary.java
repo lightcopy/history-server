@@ -296,4 +296,16 @@ public class ApplicationSummary {
   public int getSkippedStages(int jobId) {
     return getStages(jobId, skippedStages);
   }
+
+  public int getRunningJobs() {
+    return runningJobs.size();
+  }
+
+  public int getSucceededJobs() {
+    return succeededJobs.size();
+  }
+
+  public int getFailedJobs() {
+    return failedJobs.size();
+  }
 }

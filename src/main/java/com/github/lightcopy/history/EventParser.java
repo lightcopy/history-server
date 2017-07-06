@@ -379,28 +379,6 @@ public class EventParser {
     } else {
       summary.incFailedTasks(stageId, stageAttemptId);
     }
-    // we also update stage with partial counts and metrics for cases when stage never completes
-    // if stage complete event is received stage will updated with final metrics anyway.
-    Mongo.findOneAndUpsert(
-      Mongo.stages(client),
-      Filters.and(
-        Filters.eq(Stage.FIELD_APP_ID, appId),
-        Filters.eq(Stage.FIELD_STAGE_ID, stageId),
-        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, stageAttemptId)
-      ),
-      new Mongo.UpsertBlock<Stage>() {
-        @Override
-        public Stage update(Stage obj) {
-          if (obj != null && obj.getStatus() == Stage.Status.ACTIVE) {
-            obj.setActiveTasks(summary.getActiveTasks(stageId, stageAttemptId));
-            obj.setCompletedTasks(summary.getCompletedTasks(stageId, stageAttemptId));
-            obj.setFailedTasks(summary.getFailedTasks(stageId, stageAttemptId));
-            obj.setMetrics(summary.getMetrics(stageId, stageAttemptId));
-          }
-          return obj;
-        }
-      }
-    );
   }
 
   // == SparkListenerStageSubmitted ==
@@ -460,10 +438,6 @@ public class EventParser {
               obj.setStatus(Stage.Status.FAILED);
               summary.markFailed(stageId, stageAttemptId);
             }
-            obj.setActiveTasks(summary.getActiveTasks(stageId, stageAttemptId));
-            obj.setCompletedTasks(summary.getCompletedTasks(stageId, stageAttemptId));
-            obj.setFailedTasks(summary.getFailedTasks(stageId, stageAttemptId));
-            obj.setMetrics(summary.getMetrics(stageId, stageAttemptId));
           } else if (pending) {
             // we do not update metrics for skipped stage
             obj.setStatus(Stage.Status.SKIPPED);
@@ -497,9 +471,9 @@ public class EventParser {
           obj.setJobName(event.getJobName());
           obj.setStartTime(event.submissionTime);
           obj.setStatus(Job.Status.RUNNING);
-
           // update stage information
           obj.setTotalTasks(event.getTotalTasks());
+          summary.markJobRunning(event.jobId);
           return obj;
         }
       }
@@ -526,6 +500,7 @@ public class EventParser {
               obj.update(info);
               obj.setStatus(Stage.Status.PENDING);
               summary.markPending(info.stageId, info.stageAttemptId);
+              summary.addStageToJob(event.jobId, info.stageId);
             } else {
               LOG.warn("Stage {} ({}) was already submitted for application {}, status={}",
                 obj.getStageId(), obj.getStageAttemptId(), appId, obj.getStatus());
@@ -581,10 +556,12 @@ public class EventParser {
             obj.setStatus(Job.Status.SUCCEEDED);
             obj.setErrorDescription("");
             obj.setErrorDetails(null);
+            summary.markJobSucceeded(event.jobId);
           } else {
             obj.setStatus(Job.Status.FAILED);
             obj.setErrorDescription(event.jobResult.getDescription());
             obj.setErrorDetails(event.jobResult.getDetails());
+            summary.markJobFailed(event.jobId);
           }
           return obj;
         }
@@ -623,6 +600,7 @@ public class EventParser {
               if (obj != null && obj.getStatus() == Stage.Status.PENDING) {
                 // do not update metrics for skipped stage
                 obj.setStatus(Stage.Status.SKIPPED);
+                summary.markSkipped(stage.getStageId(), stage.getStageAttemptId());
               }
               return obj;
             }
