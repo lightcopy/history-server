@@ -70,13 +70,22 @@ public class Mongo {
       .withDocumentClass(clazz);
   }
 
+  // == Encoders ==
+  private static final Application APP_CODEC = new Application();
+  private static final Environment ENV_CODEC = new Environment();
+  private static final SQLExecution SQL_CODEC = new SQLExecution();
+  private static final Task TASK_CODEC = new Task();
+  private static final Stage STAGE_CODEC = new Stage();
+  private static final Job JOB_CODEC = new Job();
+  private static final Executor EXC_CODEC = new Executor();
+
   /**
    * Get mongo collection for Application.
    * @param client Mongo client
    * @return collection for Application
    */
   public static MongoCollection<Application> applications(MongoClient client) {
-    return getCollection(client, APPLICATION_COLLECTION, Application.class, new Application());
+    return getCollection(client, APPLICATION_COLLECTION, Application.class, APP_CODEC);
   }
 
   /**
@@ -85,7 +94,7 @@ public class Mongo {
    * @return collection for Environment
    */
   public static MongoCollection<Environment> environment(MongoClient client) {
-    return getCollection(client, ENVIRONMENT_COLLECTION, Environment.class, new Environment());
+    return getCollection(client, ENVIRONMENT_COLLECTION, Environment.class, ENV_CODEC);
   }
 
   /**
@@ -94,7 +103,7 @@ public class Mongo {
    * @return collection for SQLExecution
    */
   public static MongoCollection<SQLExecution> sqlExecution(MongoClient client) {
-    return getCollection(client, SQLEXECUTION_COLLECTION, SQLExecution.class, new SQLExecution());
+    return getCollection(client, SQLEXECUTION_COLLECTION, SQLExecution.class, SQL_CODEC);
   }
 
   /**
@@ -103,7 +112,7 @@ public class Mongo {
    * @return collection for Task
    */
   public static MongoCollection<Task> tasks(MongoClient client) {
-    return getCollection(client, TASK_COLLECTION, Task.class, new Task());
+    return getCollection(client, TASK_COLLECTION, Task.class, TASK_CODEC);
   }
 
   /**
@@ -112,7 +121,7 @@ public class Mongo {
    * @return collection for Stage
    */
   public static MongoCollection<Stage> stages(MongoClient client) {
-    return getCollection(client, STAGE_COLLECTION, Stage.class, new Stage());
+    return getCollection(client, STAGE_COLLECTION, Stage.class, STAGE_CODEC);
   }
 
   /**
@@ -121,7 +130,7 @@ public class Mongo {
    * @return collection for Job
    */
   public static MongoCollection<Job> jobs(MongoClient client) {
-    return getCollection(client, JOB_COLLECTION, Job.class, new Job());
+    return getCollection(client, JOB_COLLECTION, Job.class, JOB_CODEC);
   }
 
   /**
@@ -130,7 +139,7 @@ public class Mongo {
    * @return collection for Executor
    */
   public static MongoCollection<Executor> executors(MongoClient client) {
-    return getCollection(client, EXECUTOR_COLLECTION, Executor.class, new Executor());
+    return getCollection(client, EXECUTOR_COLLECTION, Executor.class, EXC_CODEC);
   }
 
   /**
