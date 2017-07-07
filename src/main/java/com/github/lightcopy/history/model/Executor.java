@@ -47,6 +47,13 @@ public class Executor extends AbstractCodec<Executor> {
   public static final String FIELD_FAILURE_REASON = "failureReason";
   public static final String FIELD_LOGS = "logs";
 
+  public static final String FIELD_ACTIVE_TASKS = "activeTasks";
+  public static final String FIELD_COMPLETED_TASKS = "completedTasks";
+  public static final String FIELD_FAILED_TASKS = "failedTasks";
+  public static final String FIELD_TOTAL_TASKS = "totalTasks";
+  public static final String FIELD_TASK_TIME = "taskTime";
+  public static final String FIELD_METRICS = "metrics";
+
   private String appId;
   private String executorId;
   private String host;
@@ -60,6 +67,13 @@ public class Executor extends AbstractCodec<Executor> {
   private String failureReason;
   // map containing "stdout" and "stderr" keys with urls
   private HashMap<String, String> logs;
+  // task info + aggregated metrics
+  private int activeTasks;
+  private int completedTasks;
+  private int failedTasks;
+  private int totalTasks;
+  private long taskTime;
+  private Metrics metrics;
 
   public Executor() {
     this.appId = null;
@@ -75,6 +89,13 @@ public class Executor extends AbstractCodec<Executor> {
     // this is only set if executor was removed
     this.failureReason = null;
     this.logs = new HashMap<String, String>();
+
+    this.activeTasks = 0;
+    this.completedTasks = 0;
+    this.failedTasks = 0;
+    this.totalTasks = 0;
+    this.taskTime = 0L;
+    this.metrics = new Metrics();
   }
 
   // == Getters ==
@@ -133,6 +154,30 @@ public class Executor extends AbstractCodec<Executor> {
 
   public String getStderrUrl() {
     return logs.get("stderr");
+  }
+
+  public int getActiveTasks() {
+    return activeTasks;
+  }
+
+  public int getCompletedTasks() {
+    return completedTasks;
+  }
+
+  public int getFailedTasks() {
+    return failedTasks;
+  }
+
+  public int getTotalTasks() {
+    return totalTasks;
+  }
+
+  public long getTaskTime() {
+    return taskTime;
+  }
+
+  public Metrics getMetrics() {
+    return metrics;
   }
 
   // == Setters ==
@@ -196,6 +241,74 @@ public class Executor extends AbstractCodec<Executor> {
     this.logs = new HashMap<String, String>(value);
   }
 
+  public void setActiveTasks(int value) {
+    this.activeTasks = value;
+  }
+
+  public void setCompletedTasks(int value) {
+    this.completedTasks = value;
+  }
+
+  public void setFailedTasks(int value) {
+    this.failedTasks = value;
+  }
+
+  public void setTotalTasks(int value) {
+    this.totalTasks = value;
+  }
+
+  public void setTaskTime(long value) {
+    this.taskTime = value;
+  }
+
+  public void setMetrics(Metrics value) {
+    this.metrics = value;
+  }
+
+  /** Increment active tasks for executor */
+  public void incActiveTasks() {
+    this.activeTasks++;
+    updateTotalTasks();
+  }
+
+  /** Decrement active tasks for executor */
+  public void decActiveTasks() {
+    this.activeTasks--;
+    updateTotalTasks();
+  }
+
+  /** Increment completed tasks for executor */
+  public void incCompletedTasks() {
+    this.completedTasks++;
+    updateTotalTasks();
+  }
+
+  /** Increment failed tasks for executor */
+  public void incFailedTasks() {
+    this.failedTasks++;
+    updateTotalTasks();
+  }
+
+  /** Increment total task time by duration, only if duration is non-negative */
+  public void incTaskTime(long duration) {
+    if (duration >= 0) {
+      this.taskTime += duration;
+    }
+  }
+
+  /** Compute total processed tasks */
+  private void updateTotalTasks() {
+    this.totalTasks = this.activeTasks + this.completedTasks + this.failedTasks;
+  }
+
+  /**
+   * Update metrics for executor based on provided delta.
+   * @param delta incremental update
+   */
+  public void updateMetrics(Metrics delta) {
+    this.metrics.merge(delta);
+  }
+
   // == Codec methods ==
 
   @Override
@@ -240,6 +353,24 @@ public class Executor extends AbstractCodec<Executor> {
         case FIELD_LOGS:
           exc.setLogs(readMap(reader,  STRING_ENCODER));
           break;
+        case FIELD_ACTIVE_TASKS:
+          exc.setActiveTasks(reader.readInt32());
+          break;
+        case FIELD_COMPLETED_TASKS:
+          exc.setCompletedTasks(reader.readInt32());
+          break;
+        case FIELD_FAILED_TASKS:
+          exc.setFailedTasks(reader.readInt32());
+          break;
+        case FIELD_TOTAL_TASKS:
+          exc.setTotalTasks(reader.readInt32());
+          break;
+        case FIELD_TASK_TIME:
+          exc.setTaskTime(reader.readInt64());
+          break;
+        case FIELD_METRICS:
+          exc.setMetrics(exc.getMetrics().decode(reader, decoderContext));
+          break;
         default:
           reader.skipValue();
           break;
@@ -269,6 +400,13 @@ public class Executor extends AbstractCodec<Executor> {
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
     safeWriteString(writer, FIELD_FAILURE_REASON, value.getFailureReason());
     writeMap(writer, FIELD_LOGS, value.getLogs(), STRING_ENCODER);
+    writer.writeInt32(FIELD_ACTIVE_TASKS, value.getActiveTasks());
+    writer.writeInt32(FIELD_COMPLETED_TASKS, value.getCompletedTasks());
+    writer.writeInt32(FIELD_FAILED_TASKS, value.getFailedTasks());
+    writer.writeInt32(FIELD_TOTAL_TASKS, value.getTotalTasks());
+    writer.writeInt64(FIELD_TASK_TIME, value.getTaskTime());
+    writer.writeName(FIELD_METRICS);
+    value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
     writer.writeEndDocument();
   }
 

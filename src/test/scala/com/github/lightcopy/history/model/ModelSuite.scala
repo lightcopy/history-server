@@ -858,6 +858,12 @@ class ModelSuite extends UnitTestSuite {
     res.getStatus should be (exc.getStatus)
     res.getFailureReason should be (exc.getFailureReason)
     res.getLogs should be (exc.getLogs)
+    res.getActiveTasks should be (exc.getActiveTasks)
+    res.getCompletedTasks should be (exc.getCompletedTasks)
+    res.getFailedTasks should be (exc.getFailedTasks)
+    res.getTotalTasks should be (exc.getTotalTasks)
+    res.getTaskTime should be (exc.getTaskTime)
+    res.getMetrics should be (exc.getMetrics)
   }
 
   test("Complete executor to bson") {
@@ -874,6 +880,12 @@ class ModelSuite extends UnitTestSuite {
     exc.setStatus(Executor.Status.REMOVED)
     exc.setFailureReason("Reason")
     exc.setLogs(hm(Map("stdout" -> "1", "stderr" -> "2")))
+    exc.setActiveTasks(1000)
+    exc.setCompletedTasks(2000)
+    exc.setFailedTasks(3000)
+    exc.setTotalTasks(6000)
+    exc.setTaskTime(100000L)
+    exc.setMetrics(new Metrics())
 
     val doc = serialize(exc, exc)
     val res = deserialize(exc, doc)
@@ -891,6 +903,12 @@ class ModelSuite extends UnitTestSuite {
     res.getFailureReason should be ("Reason")
     res.getStdoutUrl should be ("1")
     res.getStderrUrl should be ("2")
+    res.getActiveTasks should be (1000)
+    res.getCompletedTasks should be (2000)
+    res.getFailedTasks should be (3000)
+    res.getTotalTasks should be (6000)
+    res.getTaskTime should be (100000L)
+    res.getMetrics should be (new Metrics())
   }
 
   test("Executor - updateDuration") {
@@ -912,5 +930,20 @@ class ModelSuite extends UnitTestSuite {
     exc.setEndTime(300L)
     exc.updateDuration()
     exc.getDuration should be (200L)
+  }
+
+  test("Executor - task updates") {
+    val exc = new Executor()
+    exc.incActiveTasks()
+    exc.incCompletedTasks()
+    exc.incFailedTasks()
+    exc.incTaskTime(100L)
+    exc.incTaskTime(20L)
+
+    exc.getActiveTasks should be (1)
+    exc.getCompletedTasks should be (1)
+    exc.getFailedTasks should be (1)
+    exc.getTotalTasks should be (3)
+    exc.getTaskTime should be (120L)
   }
 }

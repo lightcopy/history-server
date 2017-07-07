@@ -394,6 +394,10 @@ public class EventParser {
     Job job = Job.getOrCreate(client, appId, stage.getJobId());
     job.incActiveTasks();
     job.upsert();
+    // Update executor
+    Executor exc = Executor.getOrCreate(client, appId, event.taskInfo.executorId);
+    exc.incActiveTasks();
+    exc.upsert();
   }
 
   // == SparkListenerTaskEnd ==
@@ -428,6 +432,17 @@ public class EventParser {
     }
     job.updateMetrics(task.getMetrics());
     job.upsert();
+    // Update executor
+    Executor exc = Executor.getOrCreate(client, appId, event.taskInfo.executorId);
+    exc.decActiveTasks();
+    if (task.getStatus() == Task.Status.SUCCESS) {
+      exc.incCompletedTasks();
+    } else {
+      exc.incFailedTasks();
+    }
+    exc.updateMetrics(task.getMetrics());
+    exc.incTaskTime(task.getDuration());
+    exc.upsert();
   }
 
   // == SparkListenerExecutorAdded ==

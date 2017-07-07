@@ -285,8 +285,8 @@ public class Job extends AbstractCodec<Job> {
   }
 
   /**
-   * Update metrics for stage using provided delta update.
-   * Stage metrics will be updated incrementally based on update.
+   * Update metrics for job using provided delta update.
+   * Job metrics will be updated incrementally based on update.
    * @param update metrics delta
    */
   public void updateMetrics(Metrics update) {
