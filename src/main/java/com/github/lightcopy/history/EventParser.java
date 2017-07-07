@@ -235,61 +235,6 @@ public class EventParser {
     sql.upsert();
   }
 
-  // == SparkListenerTaskStart ==
-  private void processEvent(final SparkListenerTaskStart event) {
-    Task task = Task.getOrCreate(client, appId, event.taskInfo.taskId);
-    task.setStageId(event.stageId);
-    task.setStageAttemptId(event.stageAttemptId);
-    task.update(event.taskInfo);
-    task.upsert();
-  }
-
-  // == SparkListenerTaskEnd ==
-  private void processEvent(final SparkListenerTaskEnd event) {
-    Task task = Task.getOrCreate(client, appId, event.taskInfo.taskId);
-    // If stage attempt id is -1, it means the DAGScheduler had no idea which attempt this task
-    // completion event is for. For now we allow processing of task, it will be assigned to
-    // stage -1 which does not exist and we never query by negative attempt
-    task.setStageId(event.stageId);
-    task.setStageAttemptId(event.stageAttemptId);
-    task.update(event.taskInfo);
-    task.update(event.taskEndReason);
-    task.update(event.taskMetrics);
-    task.upsert();
-  }
-
-  // == SparkListenerStageSubmitted ==
-  private void processEvent(final SparkListenerStageSubmitted event) {
-    Stage stage = Stage.getOrCreate(client, appId,
-      event.stageInfo.stageId, event.stageInfo.stageAttemptId);
-    stage.update(event.stageInfo);
-    stage.setStatus(Stage.Status.ACTIVE);
-    stage.upsert();
-  }
-
-  // == SparkListenerStageCompleted ==
-  private void processEvent(final SparkListenerStageCompleted event) {
-    Stage stage = Stage.getOrCreate(client, appId,
-      event.stageInfo.stageId, event.stageInfo.stageAttemptId);
-    // fetch status before we update main info
-    boolean active = stage.getStatus() == Stage.Status.ACTIVE;
-    boolean pending = stage.getStatus() == Stage.Status.PENDING;
-    stage.update(event.stageInfo);
-    if (active) {
-      if (event.stageInfo.isSuccess()) {
-        stage.setStatus(Stage.Status.COMPLETED);
-      } else {
-        stage.setStatus(Stage.Status.FAILED);
-      }
-    } else if (pending) {
-      stage.setStatus(Stage.Status.SKIPPED);
-    } else {
-      LOG.warn("Stage {} ({}) has invalid stage", stage.getStageId(), stage.getStageAttemptId());
-      stage.setStatus(Stage.Status.UNKNOWN);
-    }
-    stage.upsert();
-  }
-
   // == SparkListenerJobStart ==
   private void processEvent(final SparkListenerJobStart event) {
     Job job = Job.getOrCreate(client, appId, event.jobId);
@@ -366,6 +311,63 @@ public class EventParser {
     }
     LOG.info("Updated {} stages as SKIPPED for job {} in application {}",
       stagesToUpdate.size(), job.getJobId(), appId);
+  }
+
+  // == SparkListenerStageSubmitted ==
+  private void processEvent(final SparkListenerStageSubmitted event) {
+    // if we encounter attempt > 0, this might not be launched by job start event, therefore we
+    // reconstruct job link manually when getting stage (see Stage.getOrCreate for more info)
+    Stage stage = Stage.getOrCreate(client, appId,
+      event.stageInfo.stageId, event.stageInfo.stageAttemptId);
+    stage.update(event.stageInfo);
+    stage.setStatus(Stage.Status.ACTIVE);
+    stage.upsert();
+  }
+
+  // == SparkListenerStageCompleted ==
+  private void processEvent(final SparkListenerStageCompleted event) {
+    Stage stage = Stage.getOrCreate(client, appId,
+      event.stageInfo.stageId, event.stageInfo.stageAttemptId);
+    // fetch status before we update main info
+    boolean active = stage.getStatus() == Stage.Status.ACTIVE;
+    boolean pending = stage.getStatus() == Stage.Status.PENDING;
+    stage.update(event.stageInfo);
+    if (active) {
+      if (event.stageInfo.isSuccess()) {
+        stage.setStatus(Stage.Status.COMPLETED);
+      } else {
+        stage.setStatus(Stage.Status.FAILED);
+      }
+    } else if (pending) {
+      stage.setStatus(Stage.Status.SKIPPED);
+    } else {
+      LOG.warn("Stage {} ({}) has invalid stage", stage.getStageId(), stage.getStageAttemptId());
+      stage.setStatus(Stage.Status.UNKNOWN);
+    }
+    stage.upsert();
+  }
+
+  // == SparkListenerTaskStart ==
+  private void processEvent(final SparkListenerTaskStart event) {
+    Task task = Task.getOrCreate(client, appId, event.taskInfo.taskId);
+    task.setStageId(event.stageId);
+    task.setStageAttemptId(event.stageAttemptId);
+    task.update(event.taskInfo);
+    task.upsert();
+  }
+
+  // == SparkListenerTaskEnd ==
+  private void processEvent(final SparkListenerTaskEnd event) {
+    Task task = Task.getOrCreate(client, appId, event.taskInfo.taskId);
+    // If stage attempt id is -1, it means the DAGScheduler had no idea which attempt this task
+    // completion event is for. For now we allow processing of task, it will be assigned to
+    // stage -1 which does not exist and we never query by negative attempt
+    task.setStageId(event.stageId);
+    task.setStageAttemptId(event.stageAttemptId);
+    task.update(event.taskInfo);
+    task.update(event.taskEndReason);
+    task.update(event.taskMetrics);
+    task.upsert();
   }
 
   // == SparkListenerExecutorAdded ==

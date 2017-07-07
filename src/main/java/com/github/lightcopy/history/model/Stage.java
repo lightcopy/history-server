@@ -22,12 +22,19 @@ import org.bson.BsonWriter;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.client.model.Filters;
+
 import com.github.lightcopy.history.Mongo;
 import com.github.lightcopy.history.event.StageInfo;
 
 public class Stage extends AbstractCodec<Stage> {
+  private static final Logger LOG = LoggerFactory.getLogger(Stage.class);
+
   // stage lifecycle status
   public enum Status {
     UNKNOWN, PENDING, SKIPPED, ACTIVE, COMPLETED, FAILED
@@ -392,6 +399,24 @@ public class Stage extends AbstractCodec<Stage> {
       stage.setAppId(appId);
       stage.setStageId(stageId);
       stage.setStageAttemptId(attempt);
+    }
+    // if stage attempt is not the first, and does not have job link, we search all previous
+    // attempts in order to find the latest job id >= 0. If none found, then keep default -1
+    if (stage.getStageAttemptId() > 0 && stage.getJobId() < 0) {
+      // workaround for final variable
+      final int[] maxJobId = new int[]{-1};
+      Mongo.stages(client).find(Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_STAGE_ID, stageId)
+      )).forEach(new Block<Stage>() {
+        @Override
+        public void apply(Stage stage) {
+          maxJobId[0] = Math.max(maxJobId[0], stage.getJobId());
+        }
+      });
+      LOG.warn("Stage {} ({}) does not have jobId, assign {}",
+        stage.getStageId(), stage.getStageAttemptId(), maxJobId[0]);
+      stage.setJobId(maxJobId[0]);
     }
     stage.setMongoClient(client);
     return stage;
