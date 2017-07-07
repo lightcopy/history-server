@@ -25,6 +25,10 @@ import org.bson.BsonWriter;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
+import com.mongodb.MongoClient;
+import com.mongodb.client.model.Filters;
+import com.github.lightcopy.history.Mongo;
+
 public class Executor extends AbstractCodec<Executor> {
   public enum Status {
     UNKNOWN, ACTIVE, REMOVED
@@ -266,5 +270,35 @@ public class Executor extends AbstractCodec<Executor> {
     safeWriteString(writer, FIELD_FAILURE_REASON, value.getFailureReason());
     writeMap(writer, FIELD_LOGS, value.getLogs(), STRING_ENCODER);
     writer.writeEndDocument();
+  }
+
+  // == Mongo methods ==
+
+  public static Executor getOrCreate(MongoClient client, String appId, String executorId) {
+    Executor exc = Mongo.executors(client).find(
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_EXECUTOR_ID, executorId)
+      )).first();
+    if (exc == null) {
+      exc = new Executor();
+      exc.setAppId(appId);
+      exc.setExecutorId(executorId);
+    }
+    exc.setMongoClient(client);
+    return exc;
+  }
+
+  @Override
+  protected void upsert(MongoClient client) {
+    if (appId == null || executorId == null) return;
+    Mongo.findAndUpsertOne(
+      Mongo.executors(client),
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_EXECUTOR_ID, executorId)
+      ),
+      this
+    );
   }
 }

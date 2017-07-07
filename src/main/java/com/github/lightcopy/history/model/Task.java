@@ -22,6 +22,9 @@ import org.bson.BsonWriter;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
+import com.mongodb.MongoClient;
+import com.mongodb.client.model.Filters;
+import com.github.lightcopy.history.Mongo;
 import com.github.lightcopy.history.event.TaskEndReason;
 import com.github.lightcopy.history.event.TaskInfo;
 import com.github.lightcopy.history.event.TaskMetrics;
@@ -379,5 +382,35 @@ public class Task extends AbstractCodec<Task> {
     writer.writeName(FIELD_TASK_METRICS);
     value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
     writer.writeEndDocument();
+  }
+
+  // == Mongo methods ==
+
+  public static Task getOrCreate(MongoClient client, String appId, long taskId) {
+    Task task = Mongo.tasks(client).find(
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_TASK_ID, taskId)
+      )).first();
+    if (task == null) {
+      task = new Task();
+      task.setAppId(appId);
+      task.setTaskId(taskId);
+    }
+    task.setMongoClient(client);
+    return task;
+  }
+
+  @Override
+  protected void upsert(MongoClient client) {
+    if (appId == null || taskId < 0) return;
+    Mongo.findAndUpsertOne(
+      Mongo.tasks(client),
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_TASK_ID, taskId)
+      ),
+      this
+    );
   }
 }

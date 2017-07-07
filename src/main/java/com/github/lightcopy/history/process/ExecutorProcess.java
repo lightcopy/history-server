@@ -26,9 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.mongodb.MongoClient;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.UpdateOptions;
-import com.mongodb.client.result.UpdateResult;
 
 import com.github.lightcopy.history.EventParser;
 import com.github.lightcopy.history.EventProcessException;
@@ -116,21 +113,13 @@ public class ExecutorProcess extends InterruptibleThread {
    */
   private void updateApplication(MongoClient client, final Application app,
       final Application.LoadStatus currentStatus) {
+    Application mongoApp = Application.getOrCreate(client, app.getAppId());
     // upsert application log status
-    Mongo.findOneAndUpsert(
-      Mongo.applications(mongo),
-      Filters.eq(Application.FIELD_APP_ID, app.getAppId()),
-      new Mongo.UpsertBlock<Application>() {
-        @Override
-        public Application update(Application obj) {
-          // here we need to update application in Mongo to assign status
-          // we assume that Mongo always has the latest updates
-          obj.updateLoadStatus(currentStatus);
-          app.copyFrom(obj);
-          return obj;
-        }
-      }
-    );
+    mongoApp.updateLoadStatus(currentStatus);
+    mongoApp.upsert();
+    // here we need to update application in Mongo to assign status
+    // we assume that Mongo always has the latest updates
+    app.copyFrom(mongoApp);
   }
 
   /** Whether or not executor thread is stopped */

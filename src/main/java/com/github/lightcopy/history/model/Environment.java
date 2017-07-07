@@ -26,6 +26,10 @@ import org.bson.BsonWriter;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
+import com.mongodb.MongoClient;
+import com.mongodb.client.model.Filters;
+import com.github.lightcopy.history.Mongo;
+
 /**
  * Class to represent environment information for application.
  */
@@ -126,6 +130,7 @@ public class Environment extends AbstractCodec<Environment> {
   private ArrayList<Entry> classpathEntries;
 
   public Environment() {
+    this.appId = null;
     this.jvmInformation = new ArrayList<Entry>();
     this.sparkProperties = new ArrayList<Entry>();
     this.systemProperties = new ArrayList<Entry>();
@@ -253,5 +258,27 @@ public class Environment extends AbstractCodec<Environment> {
     // write classpath entries
     writeList(writer, FIELD_CLASSPATH_ENT, value.getClasspathEntries(), WRITE_ENCODER);
     writer.writeEndDocument();
+  }
+
+  // == Mongo methods ==
+
+  public static Environment getOrCreate(MongoClient client, String appId) {
+    Environment env = Mongo.environment(client).find(Filters.eq(FIELD_APP_ID, appId)).first();
+    if (env == null) {
+      env = new Environment();
+      env.setAppId(appId);
+    }
+    env.setMongoClient(client);
+    return env;
+  }
+
+  @Override
+  protected void upsert(MongoClient client) {
+    if (appId == null) return;
+    Mongo.findAndUpsertOne(
+      Mongo.environment(client),
+      Filters.eq(FIELD_APP_ID, appId),
+      this
+    );
   }
 }

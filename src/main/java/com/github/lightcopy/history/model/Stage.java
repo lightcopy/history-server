@@ -22,6 +22,9 @@ import org.bson.BsonWriter;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
+import com.mongodb.MongoClient;
+import com.mongodb.client.model.Filters;
+import com.github.lightcopy.history.Mongo;
 import com.github.lightcopy.history.event.StageInfo;
 
 public class Stage extends AbstractCodec<Stage> {
@@ -373,5 +376,38 @@ public class Stage extends AbstractCodec<Stage> {
     safeWriteString(writer, FIELD_ERROR_DESCRIPTION, value.getErrorDescription());
     safeWriteString(writer, FIELD_ERROR_DETAILS, value.getErrorDetails());
     writer.writeEndDocument();
+  }
+
+  // == Mongo methods ==
+
+  public static Stage getOrCreate(MongoClient client, String appId, int stageId, int attempt) {
+    Stage stage = Mongo.stages(client).find(
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_STAGE_ID, stageId),
+        Filters.eq(FIELD_STAGE_ATTEMPT_ID, attempt)
+      )).first();
+    if (stage == null) {
+      stage = new Stage();
+      stage.setAppId(appId);
+      stage.setStageId(stageId);
+      stage.setStageAttemptId(attempt);
+    }
+    stage.setMongoClient(client);
+    return stage;
+  }
+
+  @Override
+  protected void upsert(MongoClient client) {
+    if (appId == null || stageId < 0 || stageAttemptId < 0) return;
+    Mongo.findAndUpsertOne(
+      Mongo.stages(client),
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_STAGE_ID, stageId),
+        Filters.eq(FIELD_STAGE_ATTEMPT_ID, stageAttemptId)
+      ),
+      this
+    );
   }
 }

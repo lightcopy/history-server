@@ -22,6 +22,10 @@ import org.bson.BsonWriter;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
+import com.mongodb.MongoClient;
+import com.mongodb.client.model.Filters;
+import com.github.lightcopy.history.Mongo;
+
 public class Job extends AbstractCodec<Job> {
   // job lifecycle status
   public enum Status {
@@ -286,5 +290,35 @@ public class Job extends AbstractCodec<Job> {
     writer.writeName(FIELD_METRICS);
     value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
     writer.writeEndDocument();
+  }
+
+  // == Mongo methods ==
+
+  public static Job getOrCreate(MongoClient client, String appId, int jobId) {
+    Job job = Mongo.jobs(client).find(
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_JOB_ID, jobId)
+      )).first();
+    if (job == null) {
+      job = new Job();
+      job.setAppId(appId);
+      job.setJobId(jobId);
+    }
+    job.setMongoClient(client);
+    return job;
+  }
+
+  @Override
+  protected void upsert(MongoClient client) {
+    if (appId == null || jobId < 0) return;
+    Mongo.findAndUpsertOne(
+      Mongo.jobs(client),
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_JOB_ID, jobId)
+      ),
+      this
+    );
   }
 }

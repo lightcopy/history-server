@@ -57,7 +57,6 @@ import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
-import com.github.lightcopy.history.model.Metrics;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 import com.github.lightcopy.history.model.Task;
@@ -189,530 +188,224 @@ public class EventParser {
     if (!appId.equals(event.appId)) {
       throw new RuntimeException("App ID mismatch: " + appId + " != " + event.appId);
     }
-
-    Mongo.findOneAndUpsert(
-      Mongo.applications(client),
-      Filters.eq(Application.FIELD_APP_ID, appId),
-      new Mongo.UpsertBlock<Application>() {
-        @Override
-        public Application update(Application obj) {
-          if (obj == null) {
-            obj = new Application();
-            // update appId, because it is new application
-            obj.setAppId(appId);
-          }
-          // update application based on event
-          obj.setAppName(event.appName);
-          obj.setStartTime(event.timestamp);
-          obj.setUser(event.user);
-          obj.setAppStatus(Application.AppStatus.IN_PROGRESS);
-          return obj;
-        }
-      }
-    );
+    Application app = Application.getOrCreate(client, appId);
+    app.setAppName(event.appName);
+    app.setStartTime(event.timestamp);
+    app.setUser(event.user);
+    app.setAppStatus(Application.AppStatus.IN_PROGRESS);
+    app.upsert();
   }
 
   // == SparkListenerApplicationEnd ==
   private void processEvent(final SparkListenerApplicationEnd event) {
-    Mongo.findOneAndUpsert(
-      Mongo.applications(client),
-      Filters.eq(Application.FIELD_APP_ID, appId),
-      new Mongo.UpsertBlock<Application>() {
-        @Override
-        public Application update(Application obj) {
-          if (obj == null) {
-            // this covers test when application start event is missing
-            obj = new Application();
-            obj.setAppId(appId);
-          }
-          obj.setEndTime(event.timestamp);
-          obj.setAppStatus(Application.AppStatus.FINISHED);
-          return obj;
-        }
-      }
-    );
+    Application app = Application.getOrCreate(client, appId);
+    app.setEndTime(event.timestamp);
+    app.setAppStatus(Application.AppStatus.FINISHED);
+    app.upsert();
   }
 
   // == SparkListenerEnvironmentUpdate ==
   private void processEvent(final SparkListenerEnvironmentUpdate event) {
-    Mongo.findOneAndUpsert(
-      Mongo.environment(client),
-      Filters.eq(Environment.FIELD_APP_ID, appId),
-      new Mongo.UpsertBlock<Environment>() {
-        @Override
-        public Environment update(Environment obj) {
-          if (obj == null) {
-            // this is done because environment update comes before application start event
-            obj = new Environment();
-            obj.setAppId(appId);
-          }
-          obj.setJvmInformation(event.jvmInformation);
-          obj.setSparkProperties(event.sparkProperties);
-          obj.setSystemProperties(event.systemProperties);
-          obj.setClasspathEntries(event.classpathEntries);
-          return obj;
-        }
-      }
-    );
+    Environment env = Environment.getOrCreate(client, appId);
+    env.setJvmInformation(event.jvmInformation);
+    env.setSparkProperties(event.sparkProperties);
+    env.setSystemProperties(event.systemProperties);
+    env.setClasspathEntries(event.classpathEntries);
+    env.upsert();
   }
 
   // == SparkListenerSQLExecutionStart ==
   private void processEvent(final SparkListenerSQLExecutionStart event) {
-    Mongo.findOneAndUpsert(
-      Mongo.sqlExecution(client),
-      Filters.and(
-        Filters.eq(SQLExecution.FIELD_APP_ID, appId),
-        Filters.eq(SQLExecution.FIELD_EXECUTION_ID, event.executionId)
-      ),
-      new Mongo.UpsertBlock<SQLExecution>() {
-        @Override
-        public SQLExecution update(SQLExecution obj) {
-          if (obj == null) {
-            obj = new SQLExecution();
-            obj.setAppId(appId);
-            obj.setExecutionId(event.executionId);
-          }
-          obj.setDescription(event.description);
-          obj.setDetails(event.details);
-          obj.setPhysicalPlan(event.physicalPlanDescription);
-          obj.setStartTime(event.time);
-          obj.updateDuration();
-          obj.setStatus(SQLExecution.Status.RUNNING);
-          return obj;
-        }
-      }
-    );
+    SQLExecution sql = SQLExecution.getOrCreate(client, appId, event.executionId);
+    sql.setDescription(event.description);
+    sql.setDetails(event.details);
+    sql.setPhysicalPlan(event.physicalPlanDescription);
+    sql.setStartTime(event.time);
+    sql.updateDuration();
+    sql.setStatus(SQLExecution.Status.RUNNING);
+    sql.upsert();
   }
 
   // == SparkListenerSQLExecutionEnd ==
   private void processEvent(final SparkListenerSQLExecutionEnd event) {
-    Mongo.findOneAndUpsert(
-      Mongo.sqlExecution(client),
-      Filters.and(
-        Filters.eq(SQLExecution.FIELD_APP_ID, appId),
-        Filters.eq(SQLExecution.FIELD_EXECUTION_ID, event.executionId)
-      ),
-      new Mongo.UpsertBlock<SQLExecution>() {
-        @Override
-        public SQLExecution update(SQLExecution obj) {
-          if (obj == null) {
-            obj = new SQLExecution();
-            obj.setAppId(appId);
-            obj.setExecutionId(event.executionId);
-          }
-          obj.setEndTime(event.time);
-          obj.updateDuration();
-          obj.setStatus(SQLExecution.Status.COMPLETED);
-          return obj;
-        }
-      }
-    );
+    SQLExecution sql = SQLExecution.getOrCreate(client, appId, event.executionId);
+    sql.setEndTime(event.time);
+    sql.updateDuration();
+    sql.setStatus(SQLExecution.Status.COMPLETED);
+    sql.upsert();
   }
 
   // == SparkListenerTaskStart ==
   private void processEvent(final SparkListenerTaskStart event) {
-    Mongo.findOneAndUpsert(
-      Mongo.tasks(client),
-      Filters.and(
-        Filters.eq(Task.FIELD_APP_ID, appId),
-        Filters.eq(Task.FIELD_TASK_ID, event.taskInfo.taskId)
-      ),
-      new Mongo.UpsertBlock<Task>() {
-        @Override
-        public Task update(Task obj) {
-          // we never receive task for the same appId-taskId combination
-          if (obj != null) {
-            // TODO: consider logging such events and continue
-            throw new IllegalStateException("Duplicate task (" + appId + ", taskId=" +
-              event.taskInfo.taskId + ")");
-          }
-          obj = new Task();
-          obj.setAppId(appId);
-          obj.setStageId(event.stageId);
-          obj.setStageAttemptId(event.stageAttemptId);
-          obj.update(event.taskInfo);
-          return obj;
-        }
-      }
-    );
-    // increment number of active tasks per stage
-    summary.incActiveTasks(event.stageId, event.stageAttemptId);
+    Task task = Task.getOrCreate(client, appId, event.taskInfo.taskId);
+    task.setStageId(event.stageId);
+    task.setStageAttemptId(event.stageAttemptId);
+    task.update(event.taskInfo);
+    task.upsert();
   }
 
   // == SparkListenerTaskEnd ==
   private void processEvent(final SparkListenerTaskEnd event) {
-    final int stageId = event.stageId;
-    final int stageAttemptId = event.stageAttemptId;
+    Task task = Task.getOrCreate(client, appId, event.taskInfo.taskId);
     // If stage attempt id is -1, it means the DAGScheduler had no idea which attempt this task
-    // completion event is for. For now we allow processing of task, it will be assigned to stage -1
-    // which does not exist and we never query by negative attempt
-    Mongo.findOneAndUpsert(
-      Mongo.tasks(client),
-      Filters.and(
-        Filters.eq(Task.FIELD_APP_ID, appId),
-        Filters.eq(Task.FIELD_TASK_ID, event.taskInfo.taskId)
-      ),
-      new Mongo.UpsertBlock<Task>() {
-        @Override
-        public Task update(Task obj) {
-          // task end should always be received after task start
-          if (obj == null) {
-            // TODO: consider logging such events and continue
-            throw new IllegalStateException("Task end received before task start (" + appId +
-              ", taskId=" + event.taskInfo.taskId + ")");
-          }
-          obj.setStageId(stageId);
-          obj.setStageAttemptId(stageAttemptId);
-          obj.update(event.taskInfo);
-          obj.update(event.taskEndReason);
-          obj.update(event.taskMetrics);
-          return obj;
-        }
-      }
-    );
-
-    // update stage info with current metrics and stats snapshot
-    summary.decActiveTasks(stageId, stageAttemptId);
-    summary.incMetrics(stageId, stageAttemptId, Metrics.fromTaskMetrics(event.taskMetrics));
-    if (event.taskEndReason.isSuccess()) {
-      summary.incCompletedTasks(stageId, stageAttemptId);
-    } else {
-      summary.incFailedTasks(stageId, stageAttemptId);
-    }
+    // completion event is for. For now we allow processing of task, it will be assigned to
+    // stage -1 which does not exist and we never query by negative attempt
+    task.setStageId(event.stageId);
+    task.setStageAttemptId(event.stageAttemptId);
+    task.update(event.taskInfo);
+    task.update(event.taskEndReason);
+    task.update(event.taskMetrics);
+    task.upsert();
   }
 
   // == SparkListenerStageSubmitted ==
   private void processEvent(final SparkListenerStageSubmitted event) {
-    Mongo.findOneAndUpsert(
-      Mongo.stages(client),
-      Filters.and(
-        Filters.eq(Stage.FIELD_APP_ID, appId),
-        Filters.eq(Stage.FIELD_STAGE_ID, event.stageInfo.stageId),
-        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, event.stageInfo.stageAttemptId)
-      ),
-      new Mongo.UpsertBlock<Stage>() {
-        @Override
-        public Stage update(Stage obj) {
-          if (obj == null) {
-            obj = new Stage();
-            obj.setAppId(appId);
-          }
-          obj.update(event.stageInfo);
-          obj.setStatus(Stage.Status.ACTIVE);
-          // update summary for stage
-          summary.markActive(event.stageInfo.stageId, event.stageInfo.stageAttemptId);
-          return obj;
-        }
-      }
-    );
+    Stage stage = Stage.getOrCreate(client, appId,
+      event.stageInfo.stageId, event.stageInfo.stageAttemptId);
+    stage.update(event.stageInfo);
+    stage.setStatus(Stage.Status.ACTIVE);
+    stage.upsert();
   }
 
   // == SparkListenerStageCompleted ==
   private void processEvent(final SparkListenerStageCompleted event) {
-    final int stageId = event.stageInfo.stageId;
-    final int stageAttemptId = event.stageInfo.stageAttemptId;
-    Mongo.findOneAndUpsert(
-      Mongo.stages(client),
-      Filters.and(
-        Filters.eq(Stage.FIELD_APP_ID, appId),
-        Filters.eq(Stage.FIELD_STAGE_ID, stageId),
-        Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, stageAttemptId)
-      ),
-      new Mongo.UpsertBlock<Stage>() {
-        @Override
-        public Stage update(Stage obj) {
-          if (obj == null) {
-            throw new IllegalStateException(
-              "Stage is not found for SparkListenerStageCompleted: stageId=" +
-              stageId + ", stageAttemptId=" + stageAttemptId);
-          }
-          boolean active = obj.getStatus() == Stage.Status.ACTIVE;
-          boolean pending = obj.getStatus() == Stage.Status.PENDING;
-          obj.setAppId(appId);
-          obj.update(event.stageInfo);
-          if (active) {
-            if (event.stageInfo.isSuccess()) {
-              obj.setStatus(Stage.Status.COMPLETED);
-              summary.markCompleted(stageId, stageAttemptId);
-            } else {
-              obj.setStatus(Stage.Status.FAILED);
-              summary.markFailed(stageId, stageAttemptId);
-            }
-          } else if (pending) {
-            // we do not update metrics for skipped stage
-            obj.setStatus(Stage.Status.SKIPPED);
-            summary.markSkipped(stageId, stageAttemptId);
-          } else {
-            LOG.warn("Stage {} ({}) has invalid stage", stageId, stageAttemptId);
-            obj.setStatus(Stage.Status.UNKNOWN);
-          }
-          return obj;
-        }
+    Stage stage = Stage.getOrCreate(client, appId,
+      event.stageInfo.stageId, event.stageInfo.stageAttemptId);
+    // fetch status before we update main info
+    boolean active = stage.getStatus() == Stage.Status.ACTIVE;
+    boolean pending = stage.getStatus() == Stage.Status.PENDING;
+    stage.update(event.stageInfo);
+    if (active) {
+      if (event.stageInfo.isSuccess()) {
+        stage.setStatus(Stage.Status.COMPLETED);
+      } else {
+        stage.setStatus(Stage.Status.FAILED);
       }
-    );
+    } else if (pending) {
+      stage.setStatus(Stage.Status.SKIPPED);
+    } else {
+      LOG.warn("Stage {} ({}) has invalid stage", stage.getStageId(), stage.getStageAttemptId());
+      stage.setStatus(Stage.Status.UNKNOWN);
+    }
+    stage.upsert();
   }
 
   // == SparkListenerJobStart ==
   private void processEvent(final SparkListenerJobStart event) {
-    Mongo.findOneAndUpsert(
-      Mongo.jobs(client),
-      Filters.and(
-        Filters.eq(Job.FIELD_APP_ID, appId),
-        Filters.eq(Job.FIELD_JOB_ID, event.jobId)
-      ),
-      new Mongo.UpsertBlock<Job>() {
-        @Override
-        public Job update(Job obj) {
-          if (obj == null) {
-            obj = new Job();
-          }
-          obj.setAppId(appId);
-          obj.setJobId(event.jobId);
-          obj.setJobName(event.getJobName());
-          obj.setStartTime(event.submissionTime);
-          obj.setStatus(Job.Status.RUNNING);
-          // update stage information
-          obj.setTotalTasks(event.getTotalTasks());
-          summary.markJobRunning(event.jobId);
-          return obj;
-        }
-      }
-    );
+    Job job = Job.getOrCreate(client, appId, event.jobId);
+    job.setJobName(event.getJobName());
+    job.setStartTime(event.submissionTime);
+    job.setStatus(Job.Status.RUNNING);
+    job.setTotalTasks(event.getTotalTasks());
+    job.upsert();
 
     // launch all stages that we used to get total tasks count
     for (final StageInfo info : event.stageInfos) {
-      Mongo.findOneAndUpsert(
-        Mongo.stages(client),
-        Filters.and(
-          Filters.eq(Stage.FIELD_APP_ID, appId),
-          Filters.eq(Stage.FIELD_STAGE_ID, info.stageId),
-          Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, info.stageAttemptId)
-        ),
-        new Mongo.UpsertBlock<Stage>() {
-          @Override
-          public Stage update(Stage obj) {
-            if (obj == null) {
-              obj = new Stage();
-              obj.setAppId(appId);
-            }
-            // update stage only if it is unknown, meaning that we have not submitted it yet
-            if (obj.getStatus() == Stage.Status.UNKNOWN) {
-              obj.update(info);
-              obj.setStatus(Stage.Status.PENDING);
-              summary.markPending(info.stageId, info.stageAttemptId);
-              summary.addStageToJob(event.jobId, info.stageId);
-            } else {
-              LOG.warn("Stage {} ({}) was already submitted for application {}, status={}",
-                obj.getStageId(), obj.getStageAttemptId(), appId, obj.getStatus());
-            }
-            return obj;
-          }
-        }
-      );
+      Stage stage = Stage.getOrCreate(client, appId, info.stageId, info.stageAttemptId);
+      // update stage only if it is unknown, meaning that we have not submitted it yet
+      if (stage.getStatus() == Stage.Status.UNKNOWN) {
+        stage.update(info);
+        stage.setJobId(event.jobId);
+        stage.setStatus(Stage.Status.PENDING);
+        stage.upsert();
+      } else {
+        // do not upsert here, stage has not been updated
+        LOG.warn("Stage {} ({}) was already submitted for application {}, status={}",
+          stage.getStageId(), stage.getStageAttemptId(), appId, stage.getStatus());
+      }
     }
 
     // update sql execution - add job id to the query
     int queryId = event.getExecutionId();
     if (queryId >= 0) {
-      Mongo.findOneAndUpsert(
-        Mongo.sqlExecution(client),
-        Filters.and(
-          Filters.eq(SQLExecution.FIELD_APP_ID, appId),
-          Filters.eq(SQLExecution.FIELD_EXECUTION_ID, queryId)
-        ),
-        new Mongo.UpsertBlock<SQLExecution>() {
-          @Override
-          public SQLExecution update(SQLExecution query) {
-            if (query != null) {
-              query.addJobId(event.jobId);
-            }
-            return query;
-          }
-        }
-      );
+      SQLExecution sql = SQLExecution.getOrCreate(client, appId, queryId);
+      sql.addJobId(event.jobId);
+      sql.upsert();
     }
   }
 
   // == SparkListenerJobEnd ==
   private void processEvent(final SparkListenerJobEnd event) {
-    Mongo.findOneAndUpsert(
-      Mongo.jobs(client),
-      Filters.and(
-        Filters.eq(Job.FIELD_APP_ID, appId),
-        Filters.eq(Job.FIELD_JOB_ID, event.jobId)
-      ),
-      new Mongo.UpsertBlock<Job>() {
-        @Override
-        public Job update(Job obj) {
-          if (obj == null) {
-            LOG.warn("Job is null for application {} and jobId {}", appId, event.jobId);
-            obj = new Job();
-          }
-          obj.setAppId(appId);
-          obj.setJobId(event.jobId);
-          obj.setEndTime(event.completionTime);
-          obj.updateDuration();
-          if (event.jobResult.isSuccess()) {
-            obj.setStatus(Job.Status.SUCCEEDED);
-            obj.setErrorDescription("");
-            obj.setErrorDetails(null);
-            summary.markJobSucceeded(event.jobId);
-          } else {
-            obj.setStatus(Job.Status.FAILED);
-            obj.setErrorDescription(event.jobResult.getDescription());
-            obj.setErrorDetails(event.jobResult.getDetails());
-            summary.markJobFailed(event.jobId);
-          }
-          return obj;
-        }
-      }
-    );
+    Job job = Job.getOrCreate(client, appId, event.jobId);
+    job.setEndTime(event.completionTime);
+    job.updateDuration();
+    if (event.jobResult.isSuccess()) {
+      job.setStatus(Job.Status.SUCCEEDED);
+      job.setErrorDescription("");
+      job.setErrorDetails(null);
+    } else {
+      job.setStatus(Job.Status.FAILED);
+      job.setErrorDescription(event.jobResult.getDescription());
+      job.setErrorDetails(event.jobResult.getDetails());
+    }
+    job.upsert();
 
     // mark all pending stages for the job as skipped
     // first, we find all stages that belong to the job
-    // TODO: optimize this block of code to do atomic update for stage
+    // TODO: Update this block, so it is part of Mongo or Job, or Stage class.
     final ArrayList<Stage> stagesToUpdate = new ArrayList<Stage>();
     Mongo.stages(client).find(
       Filters.and(
         Filters.eq(Stage.FIELD_APP_ID, appId),
-        Filters.eq(Stage.FIELD_JOB_ID, event.jobId)
+        Filters.eq(Stage.FIELD_JOB_ID, job.getJobId()),
+        Filters.eq(Stage.FIELD_STATUS, Stage.Status.PENDING.name())
       )
     ).forEach(new Block<Stage>() {
       @Override
       public void apply(Stage stage) {
+        // TODO: remove this workaround, should be already set when loaded
+        stage.setMongoClient(client);
         stagesToUpdate.add(stage);
       }
     });
 
     // mark all pending stages as skipped
-    for (final Stage stage : stagesToUpdate) {
-      if (stage.getStatus() == Stage.Status.PENDING) {
-        Mongo.findOneAndUpsert(
-          Mongo.stages(client),
-          Filters.and(
-            Filters.eq(Stage.FIELD_APP_ID, appId),
-            Filters.eq(Stage.FIELD_STAGE_ID, stage.getStageId()),
-            Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, stage.getStageAttemptId())
-          ),
-          new Mongo.UpsertBlock<Stage>() {
-            @Override
-            public Stage update(Stage obj) {
-              if (obj != null && obj.getStatus() == Stage.Status.PENDING) {
-                // do not update metrics for skipped stage
-                obj.setStatus(Stage.Status.SKIPPED);
-                summary.markSkipped(stage.getStageId(), stage.getStageAttemptId());
-              }
-              return obj;
-            }
-          }
-        );
-      }
+    for (Stage stage : stagesToUpdate) {
+      stage.setStatus(Stage.Status.SKIPPED);
+      stage.upsert();
     }
+    LOG.info("Updated {} stages as SKIPPED for job {} in application {}",
+      stagesToUpdate.size(), job.getJobId(), appId);
   }
 
   // == SparkListenerExecutorAdded ==
   private void processEvent(final SparkListenerExecutorAdded event) {
-    Mongo.findOneAndUpsert(
-      Mongo.executors(client),
-      Filters.and(
-        Filters.eq(Executor.FIELD_APP_ID, appId),
-        Filters.eq(Executor.FIELD_EXECUTOR_ID, event.executorId)
-      ),
-      new Mongo.UpsertBlock<Executor>() {
-        @Override
-        public Executor update(Executor obj) {
-          if (obj == null) {
-            obj = new Executor();
-          }
-          obj.setAppId(appId);
-          obj.setExecutorId(event.executorId);
-          obj.setHost(event.info.host);
-          obj.setCores(event.info.totalCores);
-          obj.setStartTime(event.timestamp);
-          obj.setStatus(Executor.Status.ACTIVE);
-          obj.setLogs(event.info.logUrls);
-          return obj;
-        }
-      }
-    );
+    Executor exc = Executor.getOrCreate(client, appId, event.executorId);
+    exc.setHost(event.info.host);
+    exc.setCores(event.info.totalCores);
+    exc.setStartTime(event.timestamp);
+    exc.setStatus(Executor.Status.ACTIVE);
+    exc.setLogs(event.info.logUrls);
+    exc.upsert();
   }
 
   // == SparkListenerExecutorRemoved ==
   private void processEvent(final SparkListenerExecutorRemoved event) {
-    Mongo.findOneAndUpsert(
-      Mongo.executors(client),
-      Filters.and(
-        Filters.eq(Executor.FIELD_APP_ID, appId),
-        Filters.eq(Executor.FIELD_EXECUTOR_ID, event.executorId)
-      ),
-      new Mongo.UpsertBlock<Executor>() {
-        @Override
-        public Executor update(Executor obj) {
-          // ignore null updates, if any
-          if (obj != null) {
-            obj.setStatus(Executor.Status.REMOVED);
-            obj.setFailureReason(event.reason);
-            obj.setEndTime(event.timestamp);
-            obj.updateDuration();
-          }
-          return obj;
-        }
-      }
-    );
+    Executor exc = Executor.getOrCreate(client, appId, event.executorId);
+    exc.setStatus(Executor.Status.REMOVED);
+    exc.setFailureReason(event.reason);
+    exc.setEndTime(event.timestamp);
+    exc.updateDuration();
+    exc.upsert();
   }
 
   // == SparkListenerBlockManagerAdded ==
   private void processEvent(final SparkListenerBlockManagerAdded event) {
-    Mongo.findOneAndUpsert(
-      Mongo.executors(client),
-      Filters.and(
-        Filters.eq(Executor.FIELD_APP_ID, appId),
-        Filters.eq(Executor.FIELD_EXECUTOR_ID, event.blockManagerId.executorId)
-      ),
-      new Mongo.UpsertBlock<Executor>() {
-        @Override
-        public Executor update(Executor obj) {
-          if (obj == null) {
-            obj = new Executor();
-          }
-          obj.setAppId(appId);
-          obj.setExecutorId(event.blockManagerId.executorId);
-          obj.setHost(event.blockManagerId.host);
-          obj.setPort(event.blockManagerId.port);
-          obj.setMaxMemory(event.maximumMemory);
-          obj.setStartTime(event.timestamp);
-          obj.setStatus(Executor.Status.ACTIVE);
-          return obj;
-        }
-      }
-    );
+    Executor exc = Executor.getOrCreate(client, appId, event.blockManagerId.executorId);
+    exc.setHost(event.blockManagerId.host);
+    exc.setPort(event.blockManagerId.port);
+    exc.setMaxMemory(event.maximumMemory);
+    exc.setStartTime(event.timestamp);
+    exc.setStatus(Executor.Status.ACTIVE);
+    exc.upsert();
   }
 
   // == SparkListenerBlockManagerRemoved ==
   private void processEvent(final SparkListenerBlockManagerRemoved event) {
-    Mongo.findOneAndUpsert(
-      Mongo.executors(client),
-      Filters.and(
-        Filters.eq(Executor.FIELD_APP_ID, appId),
-        Filters.eq(Executor.FIELD_EXECUTOR_ID, event.blockManagerId.executorId)
-      ),
-      new Mongo.UpsertBlock<Executor>() {
-        @Override
-        public Executor update(Executor obj) {
-          if (obj == null) {
-            // having this is strange, since we would receive blockAdded event first
-            obj = new Executor();
-            obj.setAppId(appId);
-            obj.setExecutorId(event.blockManagerId.executorId);
-            obj.setHost(event.blockManagerId.host);
-            obj.setPort(event.blockManagerId.port);
-          }
-          obj.setStatus(Executor.Status.REMOVED);
-          obj.setEndTime(event.timestamp);
-          obj.updateDuration();
-          return obj;
-        }
-      }
-    );
+    Executor exc = Executor.getOrCreate(client, appId, event.blockManagerId.executorId);
+    exc.setStatus(Executor.Status.REMOVED);
+    exc.setEndTime(event.timestamp);
+    exc.updateDuration();
+    exc.upsert();
   }
 }

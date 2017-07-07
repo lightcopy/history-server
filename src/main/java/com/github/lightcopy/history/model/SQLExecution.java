@@ -24,6 +24,10 @@ import org.bson.BsonWriter;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
+import com.mongodb.MongoClient;
+import com.mongodb.client.model.Filters;
+import com.github.lightcopy.history.Mongo;
+
 /**
  * Class to represent SQL information for jobs.
  * Execution status does not failures, because query is only scheduled, if it is correct, and
@@ -236,5 +240,35 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
     writeList(writer, FIELD_JOB_IDS, value.getJobIds(), INT_ENCODER);
     writer.writeEndDocument();
+  }
+
+  // == Mongo methods ==
+
+  public static SQLExecution getOrCreate(MongoClient client, String appId, int executionId) {
+    SQLExecution sql = Mongo.sqlExecution(client).find(
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_EXECUTION_ID, executionId)
+      )).first();
+    if (sql == null) {
+      sql = new SQLExecution();
+      sql.setAppId(appId);
+      sql.setExecutionId(executionId);
+    }
+    sql.setMongoClient(client);
+    return sql;
+  }
+
+  @Override
+  protected void upsert(MongoClient client) {
+    if (appId == null || executionId < 0) return;
+    Mongo.findAndUpsertOne(
+      Mongo.sqlExecution(client),
+      Filters.and(
+        Filters.eq(FIELD_APP_ID, appId),
+        Filters.eq(FIELD_EXECUTION_ID, executionId)
+      ),
+      this
+    );
   }
 }

@@ -28,11 +28,11 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.FindOneAndReplaceOptions;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.ReturnDocument;
 import com.mongodb.client.model.Sorts;
-import com.mongodb.client.model.UpdateOptions;
-import com.mongodb.client.result.UpdateResult;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
@@ -203,43 +203,22 @@ public class Mongo {
     removeData(client, appIds);
   }
 
-  /** Smple upsert block to provide when updating single item in collection */
-  public static interface UpsertBlock<T> {
-    /**
-     * Update provided item and return that update.
-     * @param item found item or null if there is no filter match
-     * @return updated item
-     */
-    T update(T item);
-  }
-
   /**
-   * Find document for provided filter in collection and apply update in block and upsert item in
-   * collection. If original item exists, it will be replaced with new item; otherwise new item will
-   * be inserted. This is similar to update, but allows us to work with Java classes directly rather
-   * than constructing update.
+   * Atomic find and upsert for single record.
    *
-   * Client must ensure that filter returns only one record, otherwise upsert might update the
-   * wrong document.
+   * If document is not found method would insert replacement. Client must ensure that all ids
+   * confirm to the index structures created for collection.
+   * If document was found, it will be replaced with provided replacement.
    *
-   * If block.update() method returns null, upsert is ignored, and old document or null remains
-   * unmodified.
-   *
-   * @param collection Mongo collection
-   * @param filter filter to fetch one item
-   * @param block block with upsert logic
+   * @param collection collection to insert into
+   * @param filter filter to use, mostly by ids
+   * @param replacement document to replace
    */
-  public static <T> void findOneAndUpsert(
-      MongoCollection<T> collection, Bson filter, UpsertBlock<T> block) {
-    T item = collection.find(filter).first();
-    T update = block.update(item);
-    if (update != null) {
-      UpdateOptions options = new UpdateOptions().upsert(true);
-      UpdateResult res = collection.replaceOne(filter, update, options);
-      if (!res.wasAcknowledged()) {
-        throw new RuntimeException("Failed to upsert item " + update + ", original " + item);
-      }
-    }
+  public static <T> void findAndUpsertOne(
+      MongoCollection<T> collection, Bson filter, T replacement) {
+    FindOneAndReplaceOptions options =
+      new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER);
+    collection.findOneAndReplace(filter, replacement, options);
   }
 
   /**

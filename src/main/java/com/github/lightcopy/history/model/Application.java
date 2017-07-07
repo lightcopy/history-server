@@ -24,7 +24,9 @@ import org.bson.BsonWriter;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
-import com.github.lightcopy.history.model.AbstractCodec;
+import com.mongodb.MongoClient;
+import com.mongodb.client.model.Filters;
+import com.github.lightcopy.history.Mongo;
 
 /**
  * Class to represent Spark application and its metadata.
@@ -322,5 +324,27 @@ public class Application extends AbstractCodec<Application> {
     writer.writeInt64(FIELD_MTIME, value.getModificationTime());
     safeWriteString(writer, FIELD_LOAD_STATUS, value.getLoadStatus().name());
     writer.writeEndDocument();
+  }
+
+  // == Mongo methods ==
+
+  public static Application getOrCreate(MongoClient client, String appId) {
+    Application app = Mongo.applications(client).find(Filters.eq(FIELD_APP_ID, appId)).first();
+    if (app == null) {
+      app = new Application();
+      app.setAppId(appId);
+    }
+    app.setMongoClient(client);
+    return app;
+  }
+
+  @Override
+  protected void upsert(MongoClient client) {
+    if (appId == null) return;
+    Mongo.findAndUpsertOne(
+      Mongo.applications(client),
+      Filters.eq(FIELD_APP_ID, appId),
+      this
+    );
   }
 }

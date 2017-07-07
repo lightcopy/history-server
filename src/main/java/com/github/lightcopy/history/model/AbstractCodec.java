@@ -25,7 +25,38 @@ import org.bson.BsonType;
 import org.bson.BsonWriter;
 import org.bson.codecs.Codec;
 
+import com.mongodb.MongoClient;
+
 public abstract class AbstractCodec<T> implements Codec<T> {
+
+  // mongo client for upsert
+  private MongoClient client;
+
+  AbstractCodec() {
+    this.client = null;
+  }
+
+  /**
+   * Set mongo client for current codec.
+   * @param client MongoClient
+   */
+  public void setMongoClient(MongoClient client) {
+    this.client = client;
+  }
+
+  /**
+   * Upsert data into MongoDB.
+   * Should discard upsert if keys are not set, which depends on each model.
+   */
+  public final void upsert() {
+    upsert(client);
+  }
+
+  /** Upsert current instance using provided client */
+  protected void upsert(MongoClient client) {
+    throw new UnsupportedOperationException();
+  }
+
   /**
    * Method to write String safely bypassing null values.
    * @param writer bson writer to use
