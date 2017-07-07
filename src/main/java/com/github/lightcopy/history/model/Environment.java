@@ -84,7 +84,7 @@ public class Environment extends AbstractCodec<Environment> {
   }
 
   // read block for Mongo serde
-  public static final ReadItem<Entry> READ_BLOCK = new ReadItem<Entry>() {
+  public static final ReadEncoder<Entry> READ_ENCODER = new ReadEncoder<Entry>() {
     @Override
     public Entry read(BsonReader reader) {
       String name = null;
@@ -108,7 +108,7 @@ public class Environment extends AbstractCodec<Environment> {
   };
 
   // write block for Mongo serde
-  public static final WriteItem<Entry> WRITE_BLOCK = new WriteItem<Entry>() {
+  public static final WriteEncoder<Entry> WRITE_ENCODER = new WriteEncoder<Entry>() {
     @Override
     public void write(BsonWriter writer, Entry entry) {
       writer.writeStartDocument();
@@ -215,16 +215,16 @@ public class Environment extends AbstractCodec<Environment> {
           env.setAppId(safeReadString(reader));
           break;
         case FIELD_JVM_INFO:
-          env.setJvmInformation(readList(reader, READ_BLOCK));
+          env.setJvmInformation(readList(reader, READ_ENCODER));
           break;
         case FIELD_SPARK_PROPS:
-          env.setSparkProperties(readList(reader, READ_BLOCK));
+          env.setSparkProperties(readList(reader, READ_ENCODER));
           break;
         case FIELD_SYSTEM_PROPS:
-          env.setSystemProperties(readList(reader, READ_BLOCK));
+          env.setSystemProperties(readList(reader, READ_ENCODER));
           break;
         case FIELD_CLASSPATH_ENT:
-          env.setClasspathEntries(readList(reader, READ_BLOCK));
+          env.setClasspathEntries(readList(reader, READ_ENCODER));
           break;
         default:
           reader.skipValue();
@@ -245,13 +245,13 @@ public class Environment extends AbstractCodec<Environment> {
     writer.writeStartDocument();
     safeWriteString(writer, FIELD_APP_ID, value.getAppId());
     // write jvm information as nested document
-    writeList(writer, FIELD_JVM_INFO, value.getJvmInformation(), WRITE_BLOCK);
+    writeList(writer, FIELD_JVM_INFO, value.getJvmInformation(), WRITE_ENCODER);
     // write spark properties
-    writeList(writer, FIELD_SPARK_PROPS, value.getSparkProperties(), WRITE_BLOCK);
+    writeList(writer, FIELD_SPARK_PROPS, value.getSparkProperties(), WRITE_ENCODER);
     // write system properties
-    writeList(writer, FIELD_SYSTEM_PROPS, value.getSystemProperties(), WRITE_BLOCK);
+    writeList(writer, FIELD_SYSTEM_PROPS, value.getSystemProperties(), WRITE_ENCODER);
     // write classpath entries
-    writeList(writer, FIELD_CLASSPATH_ENT, value.getClasspathEntries(), WRITE_BLOCK);
+    writeList(writer, FIELD_CLASSPATH_ENT, value.getClasspathEntries(), WRITE_ENCODER);
     writer.writeEndDocument();
   }
 }

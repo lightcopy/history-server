@@ -206,7 +206,7 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
           sql.setStatus(Status.valueOf(safeReadString(reader)));
           break;
         case FIELD_JOB_IDS:
-          sql.setJobIds(readList(reader, INT_ITEM));
+          sql.setJobIds(readList(reader, INT_ENCODER));
           break;
         default:
           reader.skipValue();
@@ -234,7 +234,7 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
     writer.writeInt64(FIELD_ENDTIME, value.getEndTime());
     writer.writeInt64(FIELD_DURATION, value.getDuration());
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
-    writeList(writer, FIELD_JOB_IDS, value.getJobIds(), INT_ITEM);
+    writeList(writer, FIELD_JOB_IDS, value.getJobIds(), INT_ENCODER);
     writer.writeEndDocument();
   }
 }

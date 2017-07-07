@@ -368,19 +368,19 @@ public class Metrics extends AbstractCodec<Metrics> {
           metrics.setDiskBytesSpilled(reader.readInt64());
           break;
         case FIELD_EXECUTOR_METRICS:
-          metrics.setExecutorMetrics(readMap(reader, LONG_ITEM));
+          metrics.setExecutorMetrics(readMap(reader, LONG_ENCODER));
           break;
         case FIELD_SHUFFLE_READ_METRICS:
-          metrics.setShuffleReadMetrics(readMap(reader, LONG_ITEM));
+          metrics.setShuffleReadMetrics(readMap(reader, LONG_ENCODER));
           break;
         case FIELD_SHUFFLE_WRITE_METRICS:
-          metrics.setShuffleWriteMetrics(readMap(reader, LONG_ITEM));
+          metrics.setShuffleWriteMetrics(readMap(reader, LONG_ENCODER));
           break;
         case FIELD_INPUT_METRICS:
-          metrics.setInputMetrics(readMap(reader, LONG_ITEM));
+          metrics.setInputMetrics(readMap(reader, LONG_ENCODER));
           break;
         case FIELD_OUTPUT_METRICS:
-          metrics.setOutputMetrics(readMap(reader, LONG_ITEM));
+          metrics.setOutputMetrics(readMap(reader, LONG_ENCODER));
           break;
         default:
           reader.skipValue();
@@ -404,11 +404,11 @@ public class Metrics extends AbstractCodec<Metrics> {
     writer.writeInt64(FIELD_RESULT_SERIALIZATION_TIME, value.getResultSerializationTime());
     writer.writeInt64(FIELD_MEMORY_BYTES_SPILLED, value.getMemoryBytesSpilled());
     writer.writeInt64(FIELD_DISK_BYTES_SPILLED, value.getDiskBytesSpilled());
-    writeMap(writer, FIELD_EXECUTOR_METRICS, value.getExecutorMetrics(), LONG_ITEM);
-    writeMap(writer, FIELD_SHUFFLE_READ_METRICS, value.getShuffleReadMetrics(), LONG_ITEM);
-    writeMap(writer, FIELD_SHUFFLE_WRITE_METRICS, value.getShuffleWriteMetrics(), LONG_ITEM);
-    writeMap(writer, FIELD_INPUT_METRICS, value.getInputMetrics(), LONG_ITEM);
-    writeMap(writer, FIELD_OUTPUT_METRICS, value.getOutputMetrics(), LONG_ITEM);
+    writeMap(writer, FIELD_EXECUTOR_METRICS, value.getExecutorMetrics(), LONG_ENCODER);
+    writeMap(writer, FIELD_SHUFFLE_READ_METRICS, value.getShuffleReadMetrics(), LONG_ENCODER);
+    writeMap(writer, FIELD_SHUFFLE_WRITE_METRICS, value.getShuffleWriteMetrics(), LONG_ENCODER);
+    writeMap(writer, FIELD_INPUT_METRICS, value.getInputMetrics(), LONG_ENCODER);
+    writeMap(writer, FIELD_OUTPUT_METRICS, value.getOutputMetrics(), LONG_ENCODER);
     writer.writeEndDocument();
   }
 }

@@ -68,21 +68,21 @@ public abstract class AbstractCodec<T> implements Codec<T> {
     }
   }
 
-  /** ReadItem for for deserializing collection */
-  public static interface ReadItem<T> {
+  /** ReadEncoder for for deserializing collection */
+  public static interface ReadEncoder<T> {
     T read(BsonReader reader);
   }
 
-  /** WriteItem for serializing collection */
-  public static interface WriteItem<T> {
+  /** WriteEncoder for serializing collection */
+  public static interface WriteEncoder<T> {
     void write(BsonWriter writer, T value);
   }
 
   /** Internal class to provide both implementations for basic types */
-  private static abstract class ReadWriteItem<T> implements ReadItem<T>, WriteItem<T> { }
+  private static abstract class ReadWriteEncoder<T> implements ReadEncoder<T>, WriteEncoder<T> { }
 
   /** Encoder for String type */
-  public static final ReadWriteItem<String> STRING_ITEM = new ReadWriteItem<String>() {
+  public static final ReadWriteEncoder<String> STRING_ENCODER = new ReadWriteEncoder<String>() {
     @Override
     public String read(BsonReader reader) {
       return safeReadString(reader);
@@ -95,7 +95,7 @@ public abstract class AbstractCodec<T> implements Codec<T> {
   };
 
   /** Encoder for Long type */
-  public static final ReadWriteItem<Long> LONG_ITEM = new ReadWriteItem<Long>() {
+  public static final ReadWriteEncoder<Long> LONG_ENCODER = new ReadWriteEncoder<Long>() {
     @Override
     public Long read(BsonReader reader) {
       return reader.readInt64();
@@ -108,7 +108,7 @@ public abstract class AbstractCodec<T> implements Codec<T> {
   };
 
   /** Encoder for Integer type */
-  public static final ReadWriteItem<Integer> INT_ITEM = new ReadWriteItem<Integer>() {
+  public static final ReadWriteEncoder<Integer> INT_ENCODER = new ReadWriteEncoder<Integer>() {
     @Override
     public Integer read(BsonReader reader) {
       return reader.readInt32();
@@ -127,7 +127,7 @@ public abstract class AbstractCodec<T> implements Codec<T> {
    * @param block deserialization block
    * @return list
    */
-  public <T> ArrayList<T> readList(BsonReader reader, ReadItem<T> block) {
+  public <T> ArrayList<T> readList(BsonReader reader, ReadEncoder<T> block) {
     ArrayList<T> list = new ArrayList<T>();
     reader.readStartArray();
     while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
@@ -145,7 +145,8 @@ public abstract class AbstractCodec<T> implements Codec<T> {
    * @param value list value for that key
    * @param block serialization block
    */
-  public <T> void writeList(BsonWriter writer, String key, ArrayList<T> value, WriteItem<T> block) {
+  public <T> void writeList(
+      BsonWriter writer, String key, ArrayList<T> value, WriteEncoder<T> block) {
     writer.writeStartArray(key);
     if (value != null) {
       for (T item : value) {
@@ -161,7 +162,7 @@ public abstract class AbstractCodec<T> implements Codec<T> {
    * @param reader bson reader
    * @return HashMap<String, T> instance
    */
-  public <T> HashMap<String, T> readMap(BsonReader reader, ReadItem<T> block) {
+  public <T> HashMap<String, T> readMap(BsonReader reader, ReadEncoder<T> block) {
     HashMap<String, T> map = new HashMap<String, T>();
     reader.readStartArray();
     while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
@@ -195,7 +196,7 @@ public abstract class AbstractCodec<T> implements Codec<T> {
    * @param value map value for that key
    */
   public <T> void writeMap(
-      BsonWriter writer, String key, HashMap<String, T> value, WriteItem<T> block) {
+      BsonWriter writer, String key, HashMap<String, T> value, WriteEncoder<T> block) {
     writer.writeStartArray(key);
     if (value != null) {
       for (Map.Entry<String, T> entry : value.entrySet()) {

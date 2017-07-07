@@ -234,7 +234,7 @@ public class Executor extends AbstractCodec<Executor> {
           exc.setFailureReason(safeReadString(reader));
           break;
         case FIELD_LOGS:
-          exc.setLogs(readMap(reader,  STRING_ITEM));
+          exc.setLogs(readMap(reader,  STRING_ENCODER));
           break;
         default:
           reader.skipValue();
@@ -264,7 +264,7 @@ public class Executor extends AbstractCodec<Executor> {
     writer.writeInt64(FIELD_DURATION, value.getDuration());
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
     safeWriteString(writer, FIELD_FAILURE_REASON, value.getFailureReason());
-    writeMap(writer, FIELD_LOGS, value.getLogs(), STRING_ITEM);
+    writeMap(writer, FIELD_LOGS, value.getLogs(), STRING_ENCODER);
     writer.writeEndDocument();
   }
 }
