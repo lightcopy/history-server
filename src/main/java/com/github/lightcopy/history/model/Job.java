@@ -16,6 +16,8 @@
 
 package com.github.lightcopy.history.model;
 
+import java.util.HashSet;
+
 import org.bson.BsonReader;
 import org.bson.BsonType;
 import org.bson.BsonWriter;
@@ -41,11 +43,19 @@ public class Job extends AbstractCodec<Job> {
   public static final String FIELD_STATUS = "status";
   public static final String FIELD_ERROR_DESCRIPTION = "errorDescription";
   public static final String FIELD_ERROR_DETAILS = "errorDetails";
+
   public static final String FIELD_ACTIVE_TASKS = "activeTasks";
   public static final String FIELD_COMPLETED_TASKS = "completedTasks";
   public static final String FIELD_FAILED_TASKS = "failedTasks";
+  public static final String FIELD_SKIPPED_TASKS = "skippedTasks";
   public static final String FIELD_TOTAL_TASKS = "totalTasks";
   public static final String FIELD_METRICS = "metrics";
+
+  public static final String FIELD_PENDING_STAGES = "pendingStages";
+  public static final String FIELD_ACTIVE_STAGES = "activeStages";
+  public static final String FIELD_COMPLETED_STAGES = "completedStages";
+  public static final String FIELD_FAILED_STAGES = "failedStages";
+  public static final String FIELD_SKIPPED_STAGES = "skippedStages";
 
   private String appId;
   private int jobId;
@@ -61,8 +71,15 @@ public class Job extends AbstractCodec<Job> {
   private int activeTasks;
   private int completedTasks;
   private int failedTasks;
+  private int skippedTasks;
   private int totalTasks;
   private Metrics metrics;
+  // stage info
+  private HashSet<Long> pendingStages;
+  private HashSet<Long> activeStages;
+  private HashSet<Long> completedStages;
+  private HashSet<Long> failedStages;
+  private HashSet<Long> skippedStages;
 
   public Job() {
     this.appId = null;
@@ -74,11 +91,23 @@ public class Job extends AbstractCodec<Job> {
     this.status = Status.UNKNOWN;
     this.errorDescription = null;
     this.errorDetails = null;
-    this.activeTasks = -1;
-    this.completedTasks = -1;
-    this.failedTasks = -1;
-    this.totalTasks = -1;
+
+    // set tasks data to 0, so we can increment/decrement them
+    // naturally, without conditions
+    this.activeTasks = 0;
+    this.completedTasks = 0;
+    this.failedTasks = 0;
+    this.skippedTasks = 0;
+    this.totalTasks = 0;
     this.metrics = new Metrics();
+
+    // set stages to empty sets, so we can easily increment/decrement them
+    // stage id is stored as long (stageId << 32 | attempt)
+    this.pendingStages = new HashSet<Long>();
+    this.activeStages = new HashSet<Long>();
+    this.completedStages = new HashSet<Long>();
+    this.failedStages = new HashSet<Long>();
+    this.skippedStages = new HashSet<Long>();
   }
 
   // == Getters ==
@@ -131,12 +160,36 @@ public class Job extends AbstractCodec<Job> {
     return this.failedTasks;
   }
 
+  public int getSkippedTasks() {
+    return this.skippedTasks;
+  }
+
   public int getTotalTasks() {
     return this.totalTasks;
   }
 
   public Metrics getMetrics() {
     return this.metrics;
+  }
+
+  public HashSet<Long> getPendingStages() {
+    return pendingStages;
+  }
+
+  public HashSet<Long> getActiveStages() {
+    return activeStages;
+  }
+
+  public HashSet<Long> getCompletedStages() {
+    return completedStages;
+  }
+
+  public HashSet<Long> getFailedStages() {
+    return failedStages;
+  }
+
+  public HashSet<Long> getSkippedStages() {
+    return skippedStages;
   }
 
   // == Setters ==
@@ -199,12 +252,115 @@ public class Job extends AbstractCodec<Job> {
     this.failedTasks = value;
   }
 
+  public void setSkippedTasks(int value) {
+    this.skippedTasks = value;
+  }
+
   public void setTotalTasks(int value) {
     this.totalTasks = value;
   }
 
   public void setMetrics(Metrics value) {
     this.metrics = value;
+  }
+
+  public void setPendingStages(HashSet<Long> value) {
+    this.pendingStages = value;
+  }
+
+  public void setActiveStages(HashSet<Long> value) {
+    this.activeStages = value;
+  }
+
+  public void setCompletedStages(HashSet<Long> value) {
+    this.completedStages = value;
+  }
+
+  public void setFailedStages(HashSet<Long> value) {
+    this.failedStages = value;
+  }
+
+  public void setSkippedStages(HashSet<Long> value) {
+    this.skippedStages = value;
+  }
+
+  /**
+   * Update metrics for stage using provided delta update.
+   * Stage metrics will be updated incrementally based on update.
+   * @param update metrics delta
+   */
+  public void updateMetrics(Metrics update) {
+    this.metrics.merge(update);
+  }
+
+  /** Increment active tasks for job */
+  public void incActiveTasks() {
+    this.activeTasks++;
+  }
+
+  /** Decrement active tasks for job */
+  public void decActiveTasks() {
+    this.activeTasks--;
+  }
+
+  /** Increment completed tasks for job */
+  public void incCompletedTasks() {
+    this.completedTasks++;
+  }
+
+  /** Increment failed tasks for job */
+  public void incFailedTasks() {
+    this.failedTasks++;
+  }
+
+  /** Increment skipped tasks by delta for job */
+  public void incSkippedTasks(int delta) {
+    this.skippedTasks += delta;
+  }
+
+  /** Return unique stage id including attempt */
+  private static long uniqueStageId(int stageId, int attempt) {
+    return ((long) stageId) << 32 | attempt;
+  }
+
+  /** Unlink stage from all statuses, stage can be in one set only */
+  public void unlinkStage(int stageId, int attempt) {
+    long id = uniqueStageId(stageId, attempt);
+    pendingStages.remove(id);
+    activeStages.remove(id);
+    completedStages.remove(id);
+    failedStages.remove(id);
+    skippedStages.remove(id);
+  }
+
+  /** Increment pending stages for job */
+  public void markStagePending(int stageId, int attempt) {
+    unlinkStage(stageId, attempt);
+    this.pendingStages.add(uniqueStageId(stageId, attempt));
+  }
+
+  /** Increment active stages for job */
+  public void markStageActive(int stageId, int attempt) {
+    unlinkStage(stageId, attempt);
+    this.activeStages.add(uniqueStageId(stageId, attempt));
+  }
+
+  /** Increment completed stages for job */
+  public void markStageCompleted(int stageId, int attempt) {
+    unlinkStage(stageId, attempt);
+    this.completedStages.add(uniqueStageId(stageId, attempt));
+  }
+
+  /** Increment failed stages for job */
+  public void markStageFailed(int stageId, int attempt) {
+    unlinkStage(stageId, attempt);
+    this.failedStages.add(uniqueStageId(stageId, attempt));
+  }
+
+  /** Increment skipped stages for job */
+  public void markStageSkipped(int stageId, int attempt) {
+    unlinkStage(stageId, attempt);
+    this.skippedStages.add(uniqueStageId(stageId, attempt));
   }
 
   // == Codec methods ==
@@ -251,11 +407,29 @@ public class Job extends AbstractCodec<Job> {
         case FIELD_FAILED_TASKS:
           job.setFailedTasks(reader.readInt32());
           break;
+        case FIELD_SKIPPED_TASKS:
+          job.setSkippedTasks(reader.readInt32());
+          break;
         case FIELD_TOTAL_TASKS:
           job.setTotalTasks(reader.readInt32());
           break;
         case FIELD_METRICS:
           job.setMetrics(job.getMetrics().decode(reader, decoderContext));
+          break;
+        case FIELD_PENDING_STAGES:
+          job.setPendingStages(readSet(reader, LONG_ENCODER));
+          break;
+        case FIELD_ACTIVE_STAGES:
+          job.setActiveStages(readSet(reader, LONG_ENCODER));
+          break;
+        case FIELD_COMPLETED_STAGES:
+          job.setCompletedStages(readSet(reader, LONG_ENCODER));
+          break;
+        case FIELD_FAILED_STAGES:
+          job.setFailedStages(readSet(reader, LONG_ENCODER));
+          break;
+        case FIELD_SKIPPED_STAGES:
+          job.setSkippedStages(readSet(reader, LONG_ENCODER));
           break;
         default:
           reader.skipValue();
@@ -286,9 +460,15 @@ public class Job extends AbstractCodec<Job> {
     writer.writeInt32(FIELD_ACTIVE_TASKS, value.getActiveTasks());
     writer.writeInt32(FIELD_COMPLETED_TASKS, value.getCompletedTasks());
     writer.writeInt32(FIELD_FAILED_TASKS, value.getFailedTasks());
+    writer.writeInt32(FIELD_SKIPPED_TASKS, value.getSkippedTasks());
     writer.writeInt32(FIELD_TOTAL_TASKS, value.getTotalTasks());
     writer.writeName(FIELD_METRICS);
     value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
+    writeSet(writer, FIELD_PENDING_STAGES, value.getPendingStages(), LONG_ENCODER);
+    writeSet(writer, FIELD_ACTIVE_STAGES, value.getActiveStages(), LONG_ENCODER);
+    writeSet(writer, FIELD_COMPLETED_STAGES, value.getCompletedStages(), LONG_ENCODER);
+    writeSet(writer, FIELD_FAILED_STAGES, value.getFailedStages(), LONG_ENCODER);
+    writeSet(writer, FIELD_SKIPPED_STAGES, value.getSkippedStages(), LONG_ENCODER);
     writer.writeEndDocument();
   }
 

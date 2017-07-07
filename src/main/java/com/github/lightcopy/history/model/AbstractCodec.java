@@ -18,6 +18,7 @@ package com.github.lightcopy.history.model;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.bson.BsonReader;
@@ -178,6 +179,42 @@ public abstract class AbstractCodec<T> implements Codec<T> {
    */
   public <T> void writeList(
       BsonWriter writer, String key, ArrayList<T> value, WriteEncoder<T> block) {
+    writer.writeStartArray(key);
+    if (value != null) {
+      for (T item : value) {
+        block.write(writer, item);
+      }
+    }
+    writer.writeEndArray();
+  }
+
+  /**
+   * Read set from bson document.
+   * Requires deserialization block to parse T items.
+   * @param reader bson reader
+   * @param block deserialization block
+   * @return set
+   */
+  public <T> HashSet<T> readSet(BsonReader reader, ReadEncoder<T> block) {
+    HashSet<T> set = new HashSet<T>();
+    reader.readStartArray();
+    while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+      set.add(block.read(reader));
+    }
+    reader.readEndArray();
+    return set;
+  }
+
+  /**
+   * Write set as bson document.
+   * Requires serialization block to parse T item.
+   * @param writer bson writer
+   * @param key document field key
+   * @param value set value for that key
+   * @param block serialization block
+   */
+  public <T> void writeSet(
+      BsonWriter writer, String key, HashSet<T> value, WriteEncoder<T> block) {
     writer.writeStartArray(key);
     if (value != null) {
       for (T item : value) {

@@ -242,7 +242,8 @@ public class EventParser {
     job.setStartTime(event.submissionTime);
     job.setStatus(Job.Status.RUNNING);
     job.setTotalTasks(event.getTotalTasks());
-    job.upsert();
+
+    // Upsert job after all stage updates
 
     // launch all stages that we used to get total tasks count
     for (final StageInfo info : event.stageInfos) {
@@ -253,12 +254,14 @@ public class EventParser {
         stage.setJobId(event.jobId);
         stage.setStatus(Stage.Status.PENDING);
         stage.upsert();
+        job.markStagePending(stage.getStageId(), stage.getStageAttemptId());
       } else {
         // do not upsert here, stage has not been updated
         LOG.warn("Stage {} ({}) was already submitted for application {}, status={}",
           stage.getStageId(), stage.getStageAttemptId(), appId, stage.getStatus());
       }
     }
+    job.upsert();
 
     // update sql execution - add job id to the query
     int queryId = event.getExecutionId();
@@ -283,7 +286,7 @@ public class EventParser {
       job.setErrorDescription(event.jobResult.getDescription());
       job.setErrorDetails(event.jobResult.getDetails());
     }
-    job.upsert();
+    // upsert job at the end of the method, since we need to update stages as well
 
     // mark all pending stages for the job as skipped
     // first, we find all stages that belong to the job
@@ -308,9 +311,15 @@ public class EventParser {
     for (Stage stage : stagesToUpdate) {
       stage.setStatus(Stage.Status.SKIPPED);
       stage.upsert();
+
+      // do not update metrics for skipped stages
+      job.markStageSkipped(stage.getStageId(), stage.getStageAttemptId());
+      job.incSkippedTasks(stage.getTotalTasks());
     }
     LOG.info("Updated {} stages as SKIPPED for job {} in application {}",
       stagesToUpdate.size(), job.getJobId(), appId);
+
+    job.upsert();
   }
 
   // == SparkListenerStageSubmitted ==
@@ -322,6 +331,11 @@ public class EventParser {
     stage.update(event.stageInfo);
     stage.setStatus(Stage.Status.ACTIVE);
     stage.upsert();
+
+    // Update job
+    Job job = Job.getOrCreate(client, appId, stage.getJobId());
+    job.markStageActive(stage.getStageId(), stage.getStageAttemptId());
+    job.upsert();
   }
 
   // == SparkListenerStageCompleted ==
@@ -345,6 +359,24 @@ public class EventParser {
       stage.setStatus(Stage.Status.UNKNOWN);
     }
     stage.upsert();
+
+    Job job = Job.getOrCreate(client, appId, stage.getJobId());
+    switch (stage.getStatus()) {
+      case COMPLETED:
+        job.markStageCompleted(stage.getStageId(), stage.getStageAttemptId());
+        break;
+      case FAILED:
+        job.markStageFailed(stage.getStageId(), stage.getStageAttemptId());
+        break;
+      case SKIPPED:
+        job.markStageSkipped(stage.getStageId(), stage.getStageAttemptId());
+        break;
+      default:
+        // ignore update completely, remove stage from job
+        job.unlinkStage(stage.getStageId(), stage.getStageAttemptId());
+        break;
+    }
+    job.upsert();
   }
 
   // == SparkListenerTaskStart ==
@@ -354,6 +386,14 @@ public class EventParser {
     task.setStageAttemptId(event.stageAttemptId);
     task.update(event.taskInfo);
     task.upsert();
+    // Update stage
+    Stage stage = Stage.getOrCreate(client, appId, event.stageId, event.stageAttemptId);
+    stage.incActiveTasks();
+    stage.upsert();
+    // Update job
+    Job job = Job.getOrCreate(client, appId, stage.getJobId());
+    job.incActiveTasks();
+    job.upsert();
   }
 
   // == SparkListenerTaskEnd ==
@@ -368,6 +408,26 @@ public class EventParser {
     task.update(event.taskEndReason);
     task.update(event.taskMetrics);
     task.upsert();
+    // Update stage
+    Stage stage = Stage.getOrCreate(client, appId, event.stageId, event.stageAttemptId);
+    stage.decActiveTasks();
+    if (task.getStatus() == Task.Status.SUCCESS) {
+      stage.incCompletedTasks();
+    } else {
+      stage.incFailedTasks();
+    }
+    stage.updateMetrics(task.getMetrics());
+    stage.upsert();
+    // Update job
+    Job job = Job.getOrCreate(client, appId, stage.getJobId());
+    job.decActiveTasks();
+    if (task.getStatus() == Task.Status.SUCCESS) {
+      job.incCompletedTasks();
+    } else {
+      job.incFailedTasks();
+    }
+    job.updateMetrics(task.getMetrics());
+    job.upsert();
   }
 
   // == SparkListenerExecutorAdded ==

@@ -90,10 +90,14 @@ public class Stage extends AbstractCodec<Stage> {
     this.stageId = -1;
     this.stageAttemptId = -1;
     this.stageName = null;
-    this.activeTasks = -1;
-    this.completedTasks = -1;
-    this.failedTasks = -1;
-    this.totalTasks = -1;
+
+    // set tasks data to 0, so we can increment/decrement them
+    // naturally, without conditions
+    this.activeTasks = 0;
+    this.completedTasks = 0;
+    this.failedTasks = 0;
+    this.totalTasks = 0;
+
     this.details = null;
     this.starttime = -1L;
     this.endtime = -1L;
@@ -282,6 +286,26 @@ public class Stage extends AbstractCodec<Stage> {
    */
   public void updateMetrics(Metrics update) {
     this.metrics.merge(update);
+  }
+
+  /** Increment active tasks for stage */
+  public void incActiveTasks() {
+    this.activeTasks++;
+  }
+
+  /** Decrement active tasks for stage */
+  public void decActiveTasks() {
+    this.activeTasks--;
+  }
+
+  /** Increment completed tasks for stage */
+  public void incCompletedTasks() {
+    this.completedTasks++;
+  }
+
+  /** Increment failed tasks for stage */
+  public void incFailedTasks() {
+    this.failedTasks++;
   }
 
   // == Codec methods ==

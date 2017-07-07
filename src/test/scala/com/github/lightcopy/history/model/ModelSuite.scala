@@ -52,6 +52,14 @@ class ModelSuite extends UnitTestSuite {
     res
   }
 
+  def hs[T](values: T*): java.util.HashSet[T] = {
+    val res = new java.util.HashSet[T]()
+    for (value <- values) {
+      res.add(value)
+    }
+    res
+  }
+
   def al[T](seq: Seq[T]): java.util.ArrayList[T] = {
     val res = new java.util.ArrayList[T]()
     for (item <- seq) {
@@ -684,6 +692,22 @@ class ModelSuite extends UnitTestSuite {
     stage.getErrorDetails should be ("reason\ndetails")
   }
 
+  test("Stage - incremental task updates") {
+    val stage = new Stage()
+    stage.incActiveTasks()
+    stage.incActiveTasks()
+    stage.getActiveTasks() should be (2)
+
+    stage.decActiveTasks()
+    stage.getActiveTasks() should be (1)
+
+    stage.incFailedTasks()
+    stage.getFailedTasks() should be (1)
+
+    stage.incCompletedTasks()
+    stage.getCompletedTasks() should be (1)
+  }
+
   test("Empty Job to bson") {
     val job = new Job()
     val doc = serialize(job, job)
@@ -701,8 +725,14 @@ class ModelSuite extends UnitTestSuite {
     res.getActiveTasks should be (job.getActiveTasks)
     res.getCompletedTasks should be (job.getCompletedTasks)
     res.getFailedTasks should be (job.getFailedTasks)
+    res.getSkippedTasks should be (job.getSkippedTasks)
     res.getTotalTasks should be (job.getTotalTasks)
     res.getMetrics should be (job.getMetrics)
+    res.getPendingStages should be (job.getPendingStages)
+    res.getActiveStages should be (job.getActiveStages)
+    res.getCompletedStages should be (job.getCompletedStages)
+    res.getFailedStages should be (job.getFailedStages)
+    res.getSkippedStages should be (job.getSkippedStages)
   }
 
   test("Complete Job to bson") {
@@ -719,8 +749,14 @@ class ModelSuite extends UnitTestSuite {
     job.setActiveTasks(10)
     job.setCompletedTasks(20)
     job.setFailedTasks(30)
+    job.setSkippedTasks(40)
     job.setTotalTasks(60)
     job.setMetrics(new Metrics())
+    job.setPendingStages(hs(100L))
+    job.setActiveStages(hs(200L))
+    job.setCompletedStages(hs(300L))
+    job.setFailedStages(hs(400L))
+    job.setSkippedStages(hs(500L))
 
     val doc = serialize(job, job)
     val res = deserialize(job, doc)
@@ -737,8 +773,52 @@ class ModelSuite extends UnitTestSuite {
     res.getActiveTasks should be (10)
     res.getCompletedTasks should be (20)
     res.getFailedTasks should be (30)
+    res.getSkippedTasks should be (40)
     res.getTotalTasks should be (60)
     res.getMetrics should be (new Metrics())
+    res.getPendingStages should be (hs(100L))
+    res.getActiveStages should be (hs(200L))
+    res.getCompletedStages should be (hs(300L))
+    res.getFailedStages should be (hs(400L))
+    res.getSkippedStages should be (hs(500L))
+  }
+
+  test("Job - incremental task updates") {
+    val job = new Job()
+    job.incActiveTasks()
+    job.incActiveTasks()
+    job.getActiveTasks() should be (2)
+
+    job.decActiveTasks()
+    job.getActiveTasks() should be (1)
+
+    job.incFailedTasks()
+    job.getFailedTasks() should be (1)
+
+    job.incCompletedTasks()
+    job.getCompletedTasks() should be (1)
+
+    job.incSkippedTasks(11)
+    job.incSkippedTasks(4)
+    job.getSkippedTasks() should be (15)
+  }
+
+  test("Job - incremental stage updates") {
+    val job = new Job()
+    job.markStagePending(100, 1)
+    job.getPendingStages() should be (hs(100.toLong << 32 | 1))
+
+    job.markStageActive(200, 1)
+    job.getActiveStages() should be (hs(200.toLong << 32 | 1))
+
+    job.markStageCompleted(300, 1)
+    job.getCompletedStages() should be (hs(300.toLong << 32 | 1))
+
+    job.markStageFailed(400, 1)
+    job.getFailedStages() should be (hs(400.toLong << 32 | 1))
+
+    job.markStageSkipped(500, 1)
+    job.getSkippedStages() should be (hs(500.toLong << 32 | 1))
   }
 
   test("Job update duration") {
