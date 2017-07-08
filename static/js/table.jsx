@@ -193,15 +193,15 @@ class Pagination extends React.Component {
       var nextAction = (this.props.nextPage == null) ? (() => {}) : this.props.nextAction;
 
       pagination = (
-        <ul className="pagination pagination-sm">
+        <ul className="pagination pagination-sm margin-top-none">
           <li className={prevDisabled}>
             <a href="javascript:void(0);" aria-label="Previous" onClick={prevAction}>
               <span className="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
             </a>
           </li>
-          <li className="active">
+          <li>
             <a href="javascript:void(0);" aria-label="Current">
-              <span aria-hidden="true">{this.props.currentPage}</span>
+              <strong aria-hidden="true">{this.props.currentPage}</strong>
             </a>
           </li>
           <li className={nextDisabled}>
