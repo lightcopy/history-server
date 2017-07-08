@@ -87,6 +87,8 @@ public class ApplicationSummary extends AbstractCodec<ApplicationSummary> {
   public static final String FIELD_FAILED_JOBS = "failedJobs";
   public static final String FIELD_ACTIVE_EXECUTORS = "activeExecutors";
   public static final String FIELD_REMOVED_EXECUTORS = "removedExecutors";
+  public static final String FIELD_RUNNING_QUERIES = "runningQueries";
+  public static final String FIELD_COMPLETED_QUERIES = "completedQueries";
   // job summary fields
   public static final String FIELD_JOB_ID = "jobId";
   public static final String FIELD_PENDING_STAGES = "pendingStages";
@@ -156,14 +158,22 @@ public class ApplicationSummary extends AbstractCodec<ApplicationSummary> {
   // executor data within application
   private HashSet<String> activeExecutors;
   private HashSet<String> removedExecutors;
+  // query data within application
+  private int runningQueries;
+  private int completedQueries;
 
   public ApplicationSummary() {
     this.appId = null;
     this.runningJobs = new HashMap<String, JobSummary>();
     this.succeededJobs = new HashMap<String, JobSummary>();
     this.failedJobs = new HashMap<String, JobSummary>();
+    // we cannot keep just counts for executors, because there are more than 2 events for
+    // adding and removing executors/block managers
     this.activeExecutors = new HashSet<String>();
     this.removedExecutors = new HashSet<String>();
+    // queries have only 2 events: start and completion, we just use counters here
+    this.runningQueries = 0;
+    this.completedQueries = 0;
   }
 
   // == Getters ==
@@ -190,6 +200,14 @@ public class ApplicationSummary extends AbstractCodec<ApplicationSummary> {
 
   public HashSet<String> getRemovedExecutors() {
     return removedExecutors;
+  }
+
+  public int getRunningQueries() {
+    return runningQueries;
+  }
+
+  public int getCompletedQueries() {
+    return completedQueries;
   }
 
   // === Setters ==
@@ -281,6 +299,30 @@ public class ApplicationSummary extends AbstractCodec<ApplicationSummary> {
     }
   }
 
+  public void setRunningQueries(int value) {
+    this.runningQueries = value;
+  }
+
+  public void setCompletedQueries(int value) {
+    this.completedQueries = value;
+  }
+
+  /** Update SQLExecution queries summary */
+  public void update(SQLExecution query) {
+    switch (query.getStatus()) {
+      case RUNNING:
+        runningQueries++;
+        break;
+      case COMPLETED:
+        runningQueries--;
+        completedQueries++;
+        break;
+      default:
+        // no-op for unknown status
+        break;
+    }
+  }
+
   // == Codec methods ==
 
   @Override
@@ -307,6 +349,12 @@ public class ApplicationSummary extends AbstractCodec<ApplicationSummary> {
         case FIELD_REMOVED_EXECUTORS:
           sum.setRemovedExecutors(readSet(reader, STRING_ENCODER));
           break;
+        case FIELD_RUNNING_QUERIES:
+          sum.setRunningQueries(reader.readInt32());
+          break;
+        case FIELD_COMPLETED_QUERIES:
+          sum.setCompletedQueries(reader.readInt32());
+          break;
         default:
           reader.skipValue();
           break;
@@ -330,6 +378,8 @@ public class ApplicationSummary extends AbstractCodec<ApplicationSummary> {
     writeMap(writer, FIELD_FAILED_JOBS, value.getFailedJobs(), JOB_SUMMARY_WRITER);
     writeSet(writer, FIELD_ACTIVE_EXECUTORS, value.getActiveExecutors(), STRING_ENCODER);
     writeSet(writer, FIELD_REMOVED_EXECUTORS, value.getRemovedExecutors(), STRING_ENCODER);
+    writer.writeInt32(FIELD_RUNNING_QUERIES, value.getRunningQueries());
+    writer.writeInt32(FIELD_COMPLETED_QUERIES, value.getCompletedQueries());
     writer.writeEndDocument();
   }
 

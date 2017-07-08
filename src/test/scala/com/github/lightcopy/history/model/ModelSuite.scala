@@ -1028,6 +1028,9 @@ class ModelSuite extends UnitTestSuite {
     sum.setActiveExecutors(hs("a", "b", "c"))
     sum.setRemovedExecutors(hs("d", "e"))
 
+    sum.setRunningQueries(23)
+    sum.setCompletedQueries(45)
+
     val doc = serialize(sum, sum)
     val res = deserialize(sum, doc)
 
@@ -1036,6 +1039,8 @@ class ModelSuite extends UnitTestSuite {
     res.getFailedJobs should be (sum.getFailedJobs)
     res.getActiveExecutors should be (sum.getActiveExecutors)
     res.getRemovedExecutors should be (sum.getRemovedExecutors)
+    res.getRunningQueries should be (sum.getRunningQueries)
+    res.getCompletedQueries should be (sum.getCompletedQueries)
   }
 
   test("ApplicationSummary - upsert job") {
@@ -1104,5 +1109,24 @@ class ModelSuite extends UnitTestSuite {
     sum.update(exc)
     sum.getActiveExecutors.size should be (0)
     sum.getRemovedExecutors.size should be (1)
+  }
+
+  test("ApplicationSummary - upsert query") {
+    val sum = new ApplicationSummary()
+    val sql = new SQLExecution()
+
+    sum.update(sql)
+    sum.getRunningQueries should be (0)
+    sum.getCompletedQueries should be (0)
+
+    sql.setStatus(SQLExecution.Status.RUNNING)
+    sum.update(sql)
+    sum.getRunningQueries should be (1)
+    sum.getCompletedQueries should be (0)
+
+    sql.setStatus(SQLExecution.Status.COMPLETED)
+    sum.update(sql)
+    sum.getRunningQueries should be (0)
+    sum.getCompletedQueries should be (1)
   }
 }

@@ -231,6 +231,11 @@ public class EventParser {
     sql.updateDuration();
     sql.setStatus(SQLExecution.Status.RUNNING);
     sql.upsert();
+
+    // update summary for active query
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(sql);
+    summary.upsert();
   }
 
   // == SparkListenerSQLExecutionEnd ==
@@ -240,6 +245,11 @@ public class EventParser {
     sql.updateDuration();
     sql.setStatus(SQLExecution.Status.COMPLETED);
     sql.upsert();
+
+    // update summary for finished query
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(sql);
+    summary.upsert();
   }
 
   // == SparkListenerJobStart ==
@@ -502,7 +512,7 @@ public class EventParser {
     exc.updateDuration();
     exc.upsert();
 
-    // update summary for active executor
+    // update summary for removed executor
     ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
     summary.update(exc);
     summary.upsert();
@@ -532,7 +542,7 @@ public class EventParser {
     exc.updateDuration();
     exc.upsert();
 
-    // update summary for active executor
+    // update summary for removed executor
     ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
     summary.update(exc);
     summary.upsert();
