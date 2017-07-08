@@ -344,7 +344,7 @@ public class Task extends AbstractCodec<Task> {
           task.setErrorDetails(safeReadString(reader));
           break;
         case FIELD_TASK_METRICS:
-          task.setMetrics(task.getMetrics().decode(reader, decoderContext));
+          task.setMetrics(Metrics.CODEC.decode(reader, decoderContext));
           break;
         default:
           reader.skipValue();
@@ -380,7 +380,7 @@ public class Task extends AbstractCodec<Task> {
     safeWriteString(writer, FIELD_ERR_DESC, value.getErrorDescription());
     safeWriteString(writer, FIELD_ERR_DETAILS, value.getErrorDetails());
     writer.writeName(FIELD_TASK_METRICS);
-    value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
+    Metrics.CODEC.encode(writer, value.getMetrics(), encoderContext);
     writer.writeEndDocument();
   }
 

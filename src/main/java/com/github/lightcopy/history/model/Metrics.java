@@ -462,4 +462,9 @@ public class Metrics extends AbstractCodec<Metrics> {
     writeMap(writer, FIELD_OUTPUT_METRICS, value.getOutputMetrics(), LONG_ENCODER);
     writer.writeEndDocument();
   }
+
+  // == Mongo methods ==
+
+  // Codec to use when reading/writing data into bson
+  public static final Metrics CODEC = new Metrics();
 }

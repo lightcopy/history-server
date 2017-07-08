@@ -414,7 +414,7 @@ public class Job extends AbstractCodec<Job> {
           job.setTotalTasks(reader.readInt32());
           break;
         case FIELD_METRICS:
-          job.setMetrics(job.getMetrics().decode(reader, decoderContext));
+          job.setMetrics(Metrics.CODEC.decode(reader, decoderContext));
           break;
         case FIELD_PENDING_STAGES:
           job.setPendingStages(readSet(reader, LONG_ENCODER));
@@ -463,7 +463,7 @@ public class Job extends AbstractCodec<Job> {
     writer.writeInt32(FIELD_SKIPPED_TASKS, value.getSkippedTasks());
     writer.writeInt32(FIELD_TOTAL_TASKS, value.getTotalTasks());
     writer.writeName(FIELD_METRICS);
-    value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
+    Metrics.CODEC.encode(writer, value.getMetrics(), encoderContext);
     writeSet(writer, FIELD_PENDING_STAGES, value.getPendingStages(), LONG_ENCODER);
     writeSet(writer, FIELD_ACTIVE_STAGES, value.getActiveStages(), LONG_ENCODER);
     writeSet(writer, FIELD_COMPLETED_STAGES, value.getCompletedStages(), LONG_ENCODER);

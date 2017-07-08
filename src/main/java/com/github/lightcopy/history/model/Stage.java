@@ -362,7 +362,7 @@ public class Stage extends AbstractCodec<Stage> {
           stage.setStatus(Status.valueOf(safeReadString(reader)));
           break;
         case FIELD_METRICS:
-          stage.setMetrics(stage.getMetrics().decode(reader, decoderContext));
+          stage.setMetrics(Metrics.CODEC.decode(reader, decoderContext));
           break;
         case FIELD_ERROR_DESCRIPTION:
           stage.setErrorDescription(safeReadString(reader));
@@ -403,7 +403,7 @@ public class Stage extends AbstractCodec<Stage> {
     writer.writeInt64(FIELD_DURATION, value.getDuration());
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
     writer.writeName(FIELD_METRICS);
-    value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
+    Metrics.CODEC.encode(writer, value.getMetrics(), encoderContext);
     safeWriteString(writer, FIELD_ERROR_DESCRIPTION, value.getErrorDescription());
     safeWriteString(writer, FIELD_ERROR_DETAILS, value.getErrorDetails());
     writer.writeEndDocument();

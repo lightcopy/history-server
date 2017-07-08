@@ -369,7 +369,7 @@ public class Executor extends AbstractCodec<Executor> {
           exc.setTaskTime(reader.readInt64());
           break;
         case FIELD_METRICS:
-          exc.setMetrics(exc.getMetrics().decode(reader, decoderContext));
+          exc.setMetrics(Metrics.CODEC.decode(reader, decoderContext));
           break;
         default:
           reader.skipValue();
@@ -406,7 +406,7 @@ public class Executor extends AbstractCodec<Executor> {
     writer.writeInt32(FIELD_TOTAL_TASKS, value.getTotalTasks());
     writer.writeInt64(FIELD_TASK_TIME, value.getTaskTime());
     writer.writeName(FIELD_METRICS);
-    value.getMetrics().encode(writer, value.getMetrics(), encoderContext);
+    Metrics.CODEC.encode(writer, value.getMetrics(), encoderContext);
     writer.writeEndDocument();
   }
 
