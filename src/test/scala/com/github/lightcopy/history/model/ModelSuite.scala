@@ -44,8 +44,8 @@ class ModelSuite extends UnitTestSuite {
     codec.decode(reader, decoder)
   }
 
-  def hm(map: Map[String, String]): java.util.HashMap[String, String] = {
-    val res = new java.util.HashMap[String, String]()
+  def hm[T](map: Map[String, T]): java.util.HashMap[String, T] = {
+    val res = new java.util.HashMap[String, T]()
     for ((key, value) <- map) {
       res.put(key, value)
     }
@@ -998,5 +998,111 @@ class ModelSuite extends UnitTestSuite {
     exc.getFailedTasks should be (1)
     exc.getTotalTasks should be (3)
     exc.getTaskTime should be (120L)
+  }
+
+  test("Empty ApplicationSummary to bson") {
+    val sum = new ApplicationSummary()
+    val doc = serialize(sum, sum)
+    val res = deserialize(sum, doc)
+    res.getRunningJobs should be (sum.getRunningJobs)
+    res.getSucceededJobs should be (sum.getSucceededJobs)
+    res.getFailedJobs should be (sum.getFailedJobs)
+    res.getActiveExecutors should be (sum.getActiveExecutors)
+    res.getRemovedExecutors should be (sum.getRemovedExecutors)
+  }
+
+  test("Complete ApplicationSummary to bson") {
+    val sum = new ApplicationSummary()
+    val jobSummary = new ApplicationSummary.JobSummary()
+    jobSummary.jobId = 1
+    jobSummary.pendingStages = 2;
+    jobSummary.activeStages = 3;
+    jobSummary.completedStages = 4;
+    jobSummary.failedStages = 5;
+    jobSummary.skippedStages = 6;
+
+    sum.setRunningJobs(hm(Map("1" -> jobSummary)))
+    sum.setSucceededJobs(hm(Map("1" -> jobSummary)))
+    sum.setFailedJobs(hm(Map("1" -> jobSummary)))
+
+    sum.setActiveExecutors(hs("a", "b", "c"))
+    sum.setRemovedExecutors(hs("d", "e"))
+
+    val doc = serialize(sum, sum)
+    val res = deserialize(sum, doc)
+
+    res.getRunningJobs should be (sum.getRunningJobs)
+    res.getSucceededJobs should be (sum.getSucceededJobs)
+    res.getFailedJobs should be (sum.getFailedJobs)
+    res.getActiveExecutors should be (sum.getActiveExecutors)
+    res.getRemovedExecutors should be (sum.getRemovedExecutors)
+  }
+
+  test("ApplicationSummary - upsert job") {
+    val sum = new ApplicationSummary()
+    val job = new Job()
+    job.setJobId(12)
+
+    job.setStatus(Job.Status.RUNNING)
+    job.markStagePending(1, 2)
+    job.markStageActive(2, 3)
+
+    sum.update(job)
+    sum.getRunningJobs().size should be (1)
+    sum.getSucceededJobs().size should be (0)
+    sum.getFailedJobs().size should be (0)
+    sum.getRunningJobs.get("12").jobId should be (12)
+    sum.getRunningJobs.get("12").pendingStages should be (1)
+    sum.getRunningJobs.get("12").activeStages should be (1)
+    sum.getRunningJobs.get("12").completedStages should be (0)
+    sum.getRunningJobs.get("12").failedStages should be (0)
+    sum.getRunningJobs.get("12").skippedStages should be (0)
+
+    job.markStageCompleted(2, 3)
+    job.markStageFailed(3, 4)
+
+    sum.update(job)
+    sum.getRunningJobs().size should be (1)
+    sum.getSucceededJobs().size should be (0)
+    sum.getFailedJobs().size should be (0)
+    sum.getRunningJobs.get("12").jobId should be (12)
+    sum.getRunningJobs.get("12").pendingStages should be (1)
+    sum.getRunningJobs.get("12").activeStages should be (0)
+    sum.getRunningJobs.get("12").completedStages should be (1)
+    sum.getRunningJobs.get("12").failedStages should be (1)
+    sum.getRunningJobs.get("12").skippedStages should be (0)
+
+    job.setStatus(Job.Status.SUCCEEDED)
+
+    sum.update(job)
+    sum.getRunningJobs().size should be (0)
+    sum.getSucceededJobs().size should be (1)
+    sum.getFailedJobs().size should be (0)
+    sum.getSucceededJobs.get("12").jobId should be (12)
+    sum.getSucceededJobs.get("12").pendingStages should be (1)
+    sum.getSucceededJobs.get("12").activeStages should be (0)
+    sum.getSucceededJobs.get("12").completedStages should be (1)
+    sum.getSucceededJobs.get("12").failedStages should be (1)
+    sum.getSucceededJobs.get("12").skippedStages should be (0)
+  }
+
+  test("ApplicationSummary - upsert executor") {
+    val sum = new ApplicationSummary()
+    val exc = new Executor()
+    exc.setExecutorId("123")
+
+    sum.update(exc)
+    sum.getActiveExecutors.size should be (0)
+    sum.getRemovedExecutors.size should be (0)
+
+    exc.setStatus(Executor.Status.ACTIVE)
+    sum.update(exc)
+    sum.getActiveExecutors.size should be (1)
+    sum.getRemovedExecutors.size should be (0)
+
+    exc.setStatus(Executor.Status.REMOVED)
+    sum.update(exc)
+    sum.getActiveExecutors.size should be (0)
+    sum.getRemovedExecutors.size should be (1)
   }
 }

@@ -54,8 +54,8 @@ import com.github.lightcopy.history.event.SparkListenerTaskEnd;
 import com.github.lightcopy.history.event.StageInfo;
 import com.github.lightcopy.history.event.TaskMetrics;
 
-import com.github.lightcopy.history.model.agg.ApplicationSummary;
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
@@ -81,7 +81,6 @@ public class EventParser {
   // separate application
   private final String appId;
   private final String appPath;
-  private final ApplicationSummary summary;
 
   public EventParser(FileSystem fs, MongoClient client, Application app) {
     this.finished = false;
@@ -89,8 +88,6 @@ public class EventParser {
     this.client = client;
     this.appId = app.getAppId();
     this.appPath = app.getPath();
-    // aggregated metrics for application/stages/jobs/executors
-    this.summary = new ApplicationSummary();
   }
 
   /**
@@ -200,6 +197,10 @@ public class EventParser {
     app.setUser(event.user);
     app.setAppStatus(Application.AppStatus.IN_PROGRESS);
     app.upsert();
+
+    // create entry for application summary
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.upsert();
   }
 
   // == SparkListenerApplicationEnd ==
@@ -276,6 +277,11 @@ public class EventParser {
       sql.addJobId(event.jobId);
       sql.upsert();
     }
+
+    // update application summary
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(job);
+    summary.upsert();
   }
 
   // == SparkListenerJobEnd ==
@@ -326,6 +332,11 @@ public class EventParser {
       stagesToUpdate.size(), job.getJobId(), appId);
 
     job.upsert();
+
+    // update application summary
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(job);
+    summary.upsert();
   }
 
   // == SparkListenerStageSubmitted ==
@@ -342,6 +353,11 @@ public class EventParser {
     Job job = Job.getOrCreate(client, appId, stage.getJobId());
     job.markStageActive(stage.getStageId(), stage.getStageAttemptId());
     job.upsert();
+
+    // update application summary
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(job);
+    summary.upsert();
   }
 
   // == SparkListenerStageCompleted ==
@@ -383,6 +399,11 @@ public class EventParser {
         break;
     }
     job.upsert();
+
+    // update application summary
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(job);
+    summary.upsert();
   }
 
   // == SparkListenerTaskStart ==
@@ -465,6 +486,11 @@ public class EventParser {
     exc.setStatus(Executor.Status.ACTIVE);
     exc.setLogs(event.info.logUrls);
     exc.upsert();
+
+    // update summary for active executor
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(exc);
+    summary.upsert();
   }
 
   // == SparkListenerExecutorRemoved ==
@@ -475,6 +501,11 @@ public class EventParser {
     exc.setEndTime(event.timestamp);
     exc.updateDuration();
     exc.upsert();
+
+    // update summary for active executor
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(exc);
+    summary.upsert();
   }
 
   // == SparkListenerBlockManagerAdded ==
@@ -486,6 +517,11 @@ public class EventParser {
     exc.setStartTime(event.timestamp);
     exc.setStatus(Executor.Status.ACTIVE);
     exc.upsert();
+
+    // update summary for active executor
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(exc);
+    summary.upsert();
   }
 
   // == SparkListenerBlockManagerRemoved ==
@@ -495,6 +531,11 @@ public class EventParser {
     exc.setEndTime(event.timestamp);
     exc.updateDuration();
     exc.upsert();
+
+    // update summary for active executor
+    ApplicationSummary summary = ApplicationSummary.getOrCreate(client, appId);
+    summary.update(exc);
+    summary.upsert();
   }
 
   // == SparkListenerExecutorMetricsUpdate ==

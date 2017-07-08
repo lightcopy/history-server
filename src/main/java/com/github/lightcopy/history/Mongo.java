@@ -35,6 +35,7 @@ import com.mongodb.client.model.ReturnDocument;
 import com.mongodb.client.model.Sorts;
 
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
@@ -49,6 +50,7 @@ import com.github.lightcopy.history.model.Task;
 public class Mongo {
   public static final String DATABASE = "history_server";
   public static final String APPLICATION_COLLECTION = "applications";
+  public static final String APP_SUMMARY_COLLECTION = "application_summary";
   public static final String ENVIRONMENT_COLLECTION = "environment";
   public static final String JOB_COLLECTION = "jobs";
   public static final String SQLEXECUTION_COLLECTION = "sqlexecution";
@@ -72,6 +74,7 @@ public class Mongo {
 
   // == Encoders ==
   private static final Application APP_CODEC = new Application();
+  private static final ApplicationSummary APP_SUM_CODEC = new ApplicationSummary();
   private static final Environment ENV_CODEC = new Environment();
   private static final SQLExecution SQL_CODEC = new SQLExecution();
   private static final Task TASK_CODEC = new Task();
@@ -86,6 +89,15 @@ public class Mongo {
    */
   public static MongoCollection<Application> applications(MongoClient client) {
     return getCollection(client, APPLICATION_COLLECTION, Application.class, APP_CODEC);
+  }
+
+  /**
+   * Get mongo collection for ApplicationSummary.
+   * @param client Mongo client
+   * @return collection for ApplicationSummary
+   */
+  public static MongoCollection<ApplicationSummary> appSummary(MongoClient client) {
+    return getCollection(client, APP_SUMMARY_COLLECTION, ApplicationSummary.class, APP_SUM_CODEC);
   }
 
   /**
@@ -158,6 +170,7 @@ public class Mongo {
    */
   public static void buildIndexes(MongoClient client) {
     createUniqueIndex(applications(client), Application.FIELD_APP_ID);
+    createUniqueIndex(appSummary(client), ApplicationSummary.FIELD_APP_ID);
     createUniqueIndex(environment(client), Environment.FIELD_APP_ID);
     createUniqueIndex(sqlExecution(client),
       SQLExecution.FIELD_APP_ID, SQLExecution.FIELD_EXECUTION_ID);
@@ -184,6 +197,7 @@ public class Mongo {
    */
   public static void removeData(MongoClient client, List<String> appIds) {
     applications(client).deleteMany(Filters.all(Application.FIELD_APP_ID, appIds));
+    appSummary(client).deleteMany(Filters.all(ApplicationSummary.FIELD_APP_ID, appIds));
     environment(client).deleteMany(Filters.all(Environment.FIELD_APP_ID, appIds));
     sqlExecution(client).deleteMany(Filters.all(SQLExecution.FIELD_APP_ID, appIds));
     tasks(client).deleteMany(Filters.all(Task.FIELD_APP_ID, appIds));
