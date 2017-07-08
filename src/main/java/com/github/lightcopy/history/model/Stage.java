@@ -449,7 +449,7 @@ public class Stage extends AbstractCodec<Stage> {
   @Override
   protected void upsert(MongoClient client) {
     if (appId == null || stageId < 0 || stageAttemptId < 0) return;
-    Mongo.findAndUpsertOne(
+    Mongo.upsertOne(
       Mongo.stages(client),
       Filters.and(
         Filters.eq(FIELD_APP_ID, appId),

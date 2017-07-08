@@ -404,7 +404,7 @@ public class Task extends AbstractCodec<Task> {
   @Override
   protected void upsert(MongoClient client) {
     if (appId == null || taskId < 0) return;
-    Mongo.findAndUpsertOne(
+    Mongo.upsertOne(
       Mongo.tasks(client),
       Filters.and(
         Filters.eq(FIELD_APP_ID, appId),

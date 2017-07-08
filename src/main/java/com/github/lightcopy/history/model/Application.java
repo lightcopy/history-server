@@ -341,7 +341,7 @@ public class Application extends AbstractCodec<Application> {
   @Override
   protected void upsert(MongoClient client) {
     if (appId == null) return;
-    Mongo.findAndUpsertOne(
+    Mongo.upsertOne(
       Mongo.applications(client),
       Filters.eq(FIELD_APP_ID, appId),
       this

@@ -275,7 +275,7 @@ public class Environment extends AbstractCodec<Environment> {
   @Override
   protected void upsert(MongoClient client) {
     if (appId == null) return;
-    Mongo.findAndUpsertOne(
+    Mongo.upsertOne(
       Mongo.environment(client),
       Filters.eq(FIELD_APP_ID, appId),
       this

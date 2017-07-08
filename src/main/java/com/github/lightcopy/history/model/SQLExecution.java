@@ -262,7 +262,7 @@ public class SQLExecution extends AbstractCodec<SQLExecution> {
   @Override
   protected void upsert(MongoClient client) {
     if (appId == null || executionId < 0) return;
-    Mongo.findAndUpsertOne(
+    Mongo.upsertOne(
       Mongo.sqlExecution(client),
       Filters.and(
         Filters.eq(FIELD_APP_ID, appId),

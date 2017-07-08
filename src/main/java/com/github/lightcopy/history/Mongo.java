@@ -28,11 +28,10 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.FindOneAndReplaceOptions;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.IndexOptions;
-import com.mongodb.client.model.ReturnDocument;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.UpdateOptions;
 
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationSummary;
@@ -218,7 +217,7 @@ public class Mongo {
   }
 
   /**
-   * Atomic find and upsert for single record.
+   * Atomic upsert for single record.
    *
    * If document is not found method would insert replacement. Client must ensure that all ids
    * confirm to the index structures created for collection.
@@ -228,11 +227,9 @@ public class Mongo {
    * @param filter filter to use, mostly by ids
    * @param replacement document to replace
    */
-  public static <T> void findAndUpsertOne(
-      MongoCollection<T> collection, Bson filter, T replacement) {
-    FindOneAndReplaceOptions options =
-      new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER);
-    collection.findOneAndReplace(filter, replacement, options);
+  public static <T> void upsertOne(MongoCollection<T> collection, Bson filter, T replacement) {
+    UpdateOptions options = new UpdateOptions().upsert(true);
+    collection.replaceOne(filter, replacement, options);
   }
 
   /**

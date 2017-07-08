@@ -492,7 +492,7 @@ public class Job extends AbstractCodec<Job> {
   @Override
   protected void upsert(MongoClient client) {
     if (appId == null || jobId < 0) return;
-    Mongo.findAndUpsertOne(
+    Mongo.upsertOne(
       Mongo.jobs(client),
       Filters.and(
         Filters.eq(FIELD_APP_ID, appId),

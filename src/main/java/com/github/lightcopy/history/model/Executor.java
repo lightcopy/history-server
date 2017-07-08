@@ -430,7 +430,7 @@ public class Executor extends AbstractCodec<Executor> {
   @Override
   protected void upsert(MongoClient client) {
     if (appId == null || executorId == null) return;
-    Mongo.findAndUpsertOne(
+    Mongo.upsertOne(
       Mongo.executors(client),
       Filters.and(
         Filters.eq(FIELD_APP_ID, appId),
