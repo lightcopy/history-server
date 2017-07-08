@@ -41,6 +41,7 @@ import com.github.lightcopy.history.conf.AppConf;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 
@@ -292,6 +293,24 @@ public class ApplicationContext extends ResourceConfig {
           return apiError404("No SQL query " + id + " found for application " + appId);
         }
         return Response.ok(gson.toJson(sql)).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/executors/{status}")
+    @Produces("application/json")
+    public Response listExecutors(
+        @PathParam("appId") String appId,
+        @PathParam("status") String status,
+        @DefaultValue("1") @QueryParam("page") int page,
+        @DefaultValue("100") @QueryParam("pageSize") int pageSize,
+        @DefaultValue("") @QueryParam("sortBy") String sortBy,
+        @DefaultValue("true") @QueryParam("asc") boolean asc) {
+      try {
+        return Response.ok(gson.toJson(getProvider().executors(
+          appId, Executor.Status.valueOf(status), page, pageSize, sortBy, asc))).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }

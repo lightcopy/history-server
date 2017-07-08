@@ -36,6 +36,7 @@ import com.mongodb.client.model.Sorts;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 import com.github.lightcopy.history.model.Task;
@@ -241,6 +242,28 @@ class EventLogManager implements ApiProvider {
         )
       )
       .first();
+  }
+
+  @Override
+  public List<Executor> executors(
+      String appId, Executor.Status status, int page, int pageSize, String sortBy, boolean asc) {
+    final List<Executor> list = new ArrayList<Executor>();
+    Mongo.page(
+      Mongo.executors(mongo),
+      Filters.and(
+        Filters.eq(Executor.FIELD_APP_ID, appId),
+        Filters.eq(Executor.FIELD_STATUS, status.name())
+      ),
+      page, pageSize, sortBy, asc)
+    .forEach(
+      new Block<Executor>() {
+        @Override
+        public void apply(Executor exc) {
+          list.add(exc);
+        }
+      }
+    );
+    return list;
   }
 
   @Override

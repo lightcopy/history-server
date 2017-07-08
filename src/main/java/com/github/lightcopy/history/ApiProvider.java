@@ -21,6 +21,7 @@ import java.util.List;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 import com.github.lightcopy.history.model.Task;
@@ -87,6 +88,19 @@ public interface ApiProvider {
    * @return valid sql execution or null, if not found
    */
   SQLExecution sqlExecution(String appId, int executionId);
+
+  /**
+   * Return list of executors based on provided appId and status.
+   * @param appId application id
+   * @param status executor status
+   * @param page page number
+   * @param pageSize page size
+   * @param sortBy field name to sort by
+   * @param asc ascending sort if true, descending otherwise
+   * @return list of executors
+   */
+  List<Executor> executors(
+    String appId, Executor.Status status, int page, int pageSize, String sortBy, boolean asc);
 
   /**
    * Return list of stages for appid.

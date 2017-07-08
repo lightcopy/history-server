@@ -23,6 +23,7 @@ import java.util.List;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
+import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 import com.github.lightcopy.history.model.Task;
@@ -168,6 +169,12 @@ public class DevServer extends AbstractServer {
       sql.addJobId(1);
       sql.addJobId(2);
       return sql;
+    }
+
+    @Override
+    public List<Executor> executors(
+        String appId, Executor.Status status, int page, int pageSize, String sortBy, boolean asc) {
+      return new ArrayList<Executor>();
     }
 
     @Override
