@@ -54,15 +54,17 @@ module.exports = {
     if (diff < 0) {
       return "-";
     }
-    var seconds = Math.floor(diff / 1000)
-    var hours = Math.floor(seconds / 3600)
-    var minutes = Math.floor(seconds / 60)
+    var secondsFloat = diff / 1000;
+    var seconds = Math.floor(secondsFloat);
+    var hours = Math.floor(seconds / 3600);
+    var minutes = Math.floor(seconds / 60);
     if (hours > 0) {
       return `${hours} h ${minutes % 60} m`;
     } else if (minutes > 0) {
       return `${minutes} m ${seconds % 60} s`;
     } else {
-      return `${seconds} s`;
+      // report seconds as floating point numbers
+      return `${this.rnd(secondsFloat, 1)} s`;
     }
   },
 
