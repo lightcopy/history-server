@@ -42,6 +42,7 @@ import com.github.lightcopy.history.event.SparkListenerBlockManagerRemoved;
 import com.github.lightcopy.history.event.SparkListenerEnvironmentUpdate;
 import com.github.lightcopy.history.event.SparkListenerExecutorAdded;
 import com.github.lightcopy.history.event.SparkListenerExecutorRemoved;
+import com.github.lightcopy.history.event.SparkListenerExecutorMetricsUpdate;
 import com.github.lightcopy.history.event.SparkListenerJobStart;
 import com.github.lightcopy.history.event.SparkListenerJobEnd;
 import com.github.lightcopy.history.event.SparkListenerSQLExecutionStart;
@@ -51,12 +52,14 @@ import com.github.lightcopy.history.event.SparkListenerStageSubmitted;
 import com.github.lightcopy.history.event.SparkListenerTaskStart;
 import com.github.lightcopy.history.event.SparkListenerTaskEnd;
 import com.github.lightcopy.history.event.StageInfo;
+import com.github.lightcopy.history.event.TaskMetrics;
 
 import com.github.lightcopy.history.model.agg.ApplicationSummary;
 import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
+import com.github.lightcopy.history.model.Metrics;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 import com.github.lightcopy.history.model.Task;
@@ -173,6 +176,9 @@ public class EventParser {
         break;
       case "SparkListenerBlockManagerRemoved":
         processEvent(gson.fromJson(json, SparkListenerBlockManagerRemoved.class));
+        break;
+      case "SparkListenerExecutorMetricsUpdate":
+        processEvent(gson.fromJson(json, SparkListenerExecutorMetricsUpdate.class));
         break;
       default:
         LOG.warn("Unrecongnized event {} ", event);
@@ -403,6 +409,7 @@ public class EventParser {
   // == SparkListenerTaskEnd ==
   private void processEvent(final SparkListenerTaskEnd event) {
     Task task = Task.getOrCreate(client, appId, event.taskInfo.taskId);
+    Metrics delta = Metrics.fromTaskMetrics(event.taskMetrics).delta(task.getMetrics());
     // If stage attempt id is -1, it means the DAGScheduler had no idea which attempt this task
     // completion event is for. For now we allow processing of task, it will be assigned to
     // stage -1 which does not exist and we never query by negative attempt
@@ -410,8 +417,10 @@ public class EventParser {
     task.setStageAttemptId(event.stageAttemptId);
     task.update(event.taskInfo);
     task.update(event.taskEndReason);
+    // overwrite task metrics
     task.update(event.taskMetrics);
     task.upsert();
+
     // Update stage
     Stage stage = Stage.getOrCreate(client, appId, event.stageId, event.stageAttemptId);
     stage.decActiveTasks();
@@ -420,8 +429,9 @@ public class EventParser {
     } else {
       stage.incFailedTasks();
     }
-    stage.updateMetrics(task.getMetrics());
+    stage.updateMetrics(delta);
     stage.upsert();
+
     // Update job
     Job job = Job.getOrCreate(client, appId, stage.getJobId());
     job.decActiveTasks();
@@ -430,8 +440,9 @@ public class EventParser {
     } else {
       job.incFailedTasks();
     }
-    job.updateMetrics(task.getMetrics());
+    job.updateMetrics(delta);
     job.upsert();
+
     // Update executor
     Executor exc = Executor.getOrCreate(client, appId, event.taskInfo.executorId);
     exc.decActiveTasks();
@@ -440,7 +451,7 @@ public class EventParser {
     } else {
       exc.incFailedTasks();
     }
-    exc.updateMetrics(task.getMetrics());
+    exc.updateMetrics(delta);
     exc.incTaskTime(task.getDuration());
     exc.upsert();
   }
@@ -483,6 +494,37 @@ public class EventParser {
     exc.setStatus(Executor.Status.REMOVED);
     exc.setEndTime(event.timestamp);
     exc.updateDuration();
+    exc.upsert();
+  }
+
+  // == SparkListenerExecutorMetricsUpdate ==
+  private void processEvent(final SparkListenerExecutorMetricsUpdate event) {
+    // TODO: update executor-per-stage metrics
+    Task task = Task.getOrCreate(client, appId, event.metrics.taskId);
+    Metrics oldMetrics = task.getMetrics().copy();
+    Metrics newMetrics =
+      Metrics.fromTaskMetrics(TaskMetrics.fromAccumulableInfo(event.metrics.updates));
+    Metrics delta = newMetrics.delta(oldMetrics);
+
+    // overwrite task metrics
+    task.setMetrics(newMetrics);
+    task.upsert();
+
+    // update metrics for stage
+    Stage stage = Stage.getOrCreate(client, appId,
+      event.metrics.stageId, event.metrics.stageAttemptId);
+    // update stage metrics as current metrics - old task metrics
+    stage.updateMetrics(delta);
+    stage.upsert();
+
+    // update metrics for job
+    Job job = Job.getOrCreate(client, appId, stage.getJobId());
+    job.updateMetrics(delta);
+    job.upsert();
+
+    // Update metrics for executor
+    Executor exc = Executor.getOrCreate(client, appId, event.executorId);
+    exc.updateMetrics(delta);
     exc.upsert();
   }
 }

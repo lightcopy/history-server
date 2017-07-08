@@ -599,6 +599,59 @@ class ModelSuite extends UnitTestSuite {
     metrics should be (exp)
   }
 
+  test("Metrics copy") {
+    val metrics = new Metrics()
+    metrics.setResultSize(1L)
+    metrics.setJvmGcTime(2L)
+    val copy = metrics.copy()
+
+    copy should be (metrics)
+
+    metrics.setResultSize(100L)
+    metrics.getResultSize should be (100L)
+    copy.getResultSize should be (1L)
+  }
+
+  test("Metrics subtract") {
+    import com.github.lightcopy.history.model.Metrics._
+
+    val metrics = new Metrics()
+    metrics.setResultSize(1L)
+    metrics.setJvmGcTime(2L)
+    metrics.setResultSerializationTime(3L)
+    metrics.setMemoryBytesSpilled(4L)
+    metrics.setDiskBytesSpilled(5L)
+    metrics.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_TIME, 6L)
+    metrics.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_CPU_TIME, 7L)
+    metrics.getExecutorMetrics.put(EXECUTOR_RUN_TIME, 8L)
+    metrics.getExecutorMetrics.put(EXECUTOR_CPU_TIME, 9L)
+
+    val update = new Metrics()
+    update.setResultSize(10L)
+    update.setJvmGcTime(20L)
+    update.setResultSerializationTime(30L)
+    update.setMemoryBytesSpilled(40L)
+    update.setDiskBytesSpilled(50L)
+    update.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_TIME, 60L)
+    update.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_CPU_TIME, 70L)
+    update.getExecutorMetrics.put(EXECUTOR_RUN_TIME, 80L)
+    update.getExecutorMetrics.put(EXECUTOR_CPU_TIME, 90L)
+
+    val exp = new Metrics()
+    exp.setResultSize(9L)
+    exp.setJvmGcTime(18L)
+    exp.setResultSerializationTime(27L)
+    exp.setMemoryBytesSpilled(36L)
+    exp.setDiskBytesSpilled(45L)
+    exp.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_TIME, 54L)
+    exp.getExecutorMetrics.put(EXECUTOR_DESERIALIZE_CPU_TIME, 63L)
+    exp.getExecutorMetrics.put(EXECUTOR_RUN_TIME, 72L)
+    exp.getExecutorMetrics.put(EXECUTOR_CPU_TIME, 81L)
+
+    val delta = update.delta(metrics)
+    delta should be (exp)
+  }
+
   test("Empty Stage into bson") {
     val stage = new Stage()
     val doc = serialize(stage, stage)

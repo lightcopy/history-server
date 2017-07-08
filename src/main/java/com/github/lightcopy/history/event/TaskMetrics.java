@@ -60,4 +60,89 @@ public class TaskMetrics {
   @SerializedName("Input Metrics") public InputMetrics inputMetrics;
   @SerializedName("Output Metrics") public OutputMetrics outputMetrics;
   @SerializedName("Updated Blocks") public List<Block> updatedBlocks;
+
+  /** Convert list of accumulators into task metrics */
+  public static TaskMetrics fromAccumulableInfo(List<AccumulableInfo> infos) {
+    TaskMetrics metrics = new TaskMetrics();
+    for (AccumulableInfo info : infos) {
+      if (info.name != null && info.update != null) {
+        switch (info.name) {
+          case "internal.metrics.executorDeserializeTime":
+            metrics.executorDeserializeTime = (long) info.update;
+            break;
+          case "internal.metrics.executorDeserializeCpuTime":
+            metrics.executorDeserializeCpuTime = (long) info.update;
+            break;
+          case "internal.metrics.executorRunTime":
+            metrics.executorRunTime = (long) info.update;
+            break;
+          case "internal.metrics.executorCpuTime":
+            metrics.executorCpuTime = (long) info.update;
+            break;
+          case "internal.metrics.jvmGCTime":
+            metrics.jvmGcTime = (long) info.update;
+            break;
+          case "internal.metrics.resultSize":
+            metrics.resultSize = (long) info.update;
+            break;
+          case "internal.metrics.resultSerializationTime":
+            metrics.resultSerializationTime = (long) info.update;
+            break;
+          case "internal.metrics.memoryBytesSpilled":
+            metrics.memoryBytesSpilled = (long) info.update;
+            break;
+          case "internal.metrics.diskBytesSpilled":
+            metrics.diskBytesSpilled = (long) info.update;
+            break;
+
+          case "internal.metrics.shuffle.read.remoteBlocksFetched":
+            metrics.shuffleReadMetrics.remoteBlocksFetched = (long) info.update;
+            break;
+          case "internal.metrics.shuffle.read.localBlocksFetched":
+            metrics.shuffleReadMetrics.localBlocksFetched = (long) info.update;
+            break;
+          case "internal.metrics.shuffle.read.fetchWaitTime":
+            metrics.shuffleReadMetrics.fetchWaitTime = (long) info.update;
+            break;
+          case "internal.metrics.shuffle.read.remoteBytesRead":
+            metrics.shuffleReadMetrics.remoteBytesRead = (long) info.update;
+            break;
+          case "internal.metrics.shuffle.read.localBytesRead":
+            metrics.shuffleReadMetrics.localBytesRead = (long) info.update;
+            break;
+          case "internal.metrics.shuffle.read.recordsRead":
+            metrics.shuffleReadMetrics.totalRecordsRead = (long) info.update;
+            break;
+
+          case "internal.metrics.shuffle.write.bytesWritten":
+            metrics.shuffleWriteMetrics.shuffleBytesWritten = (long) info.update;
+            break;
+          case "internal.metrics.shuffle.write.writeTime":
+            metrics.shuffleWriteMetrics.shuffleWriteTime = (long) info.update;
+            break;
+          case "internal.metrics.shuffle.write.recordsWritten":
+            metrics.shuffleWriteMetrics.shuffleRecordsWritten = (long) info.update;
+            break;
+
+          case "internal.metrics.input.bytesRead":
+            metrics.inputMetrics.bytesRead = (long) info.update;
+            break;
+          case "internal.metrics.input.recordsRead":
+            metrics.inputMetrics.recordsRead = (long) info.update;
+            break;
+
+          case "internal.metrics.output.bytesWritten":
+            metrics.outputMetrics.bytesWritten = (long) info.update;
+            break;
+          case "internal.metrics.output.recordsWritten":
+            metrics.outputMetrics.recordsWritten = (long) info.update;
+            break;
+
+          default:
+            break;
+        }
+      }
+    }
+    return metrics;
+  }
 }

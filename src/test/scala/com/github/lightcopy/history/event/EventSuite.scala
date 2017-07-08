@@ -1003,4 +1003,36 @@ class EventSuite extends UnitTestSuite {
     event.reason should be ("Reason")
     event.timestamp should be (1499221821679L)
   }
+
+  test("SparkListenerExecutorMetricsUpdate") {
+    val json = """
+    {
+      "Event": "SparkListenerExecutorMetricsUpdate",
+      "Executor ID": "1",
+      "Metrics Updated": {
+        "Task ID": 123,
+        "Stage ID": 2,
+        "Stage Attempt ID": 3,
+        "Accumulator Updates": [
+          {
+            "ID": 126,
+            "Name": "internal.metrics.executorRunTime",
+            "Update": 10,
+            "Value": 10,
+            "Internal": true,
+            "Count Failed Values": true
+          }
+        ]
+      }
+    }
+    """
+    val event = gson.fromJson(json, classOf[SparkListenerExecutorMetricsUpdate])
+    event.executorId should be ("1")
+    event.metrics.taskId should be (123L)
+    event.metrics.stageId should be (2)
+    event.metrics.stageAttemptId should be (3)
+    event.metrics.updates.size should be (1)
+    event.metrics.updates.get(0).name should be ("internal.metrics.executorRunTime")
+    event.metrics.updates.get(0).update should be (10L)
+  }
 }

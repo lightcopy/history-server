@@ -294,7 +294,7 @@ public class Metrics extends AbstractCodec<Metrics> {
     merge(shuffleWriteMetrics, other.getShuffleWriteMetrics(), SHUFFLE_BYTES_WRITTEN);
     merge(shuffleWriteMetrics, other.getShuffleWriteMetrics(), SHUFFLE_WRITE_TIME);
     merge(shuffleWriteMetrics, other.getShuffleWriteMetrics(), SHUFFLE_RECORDS_WRITTEN);
-    // output input metrics
+    // merge input metrics
     merge(inputMetrics, other.getInputMetrics(), INPUT_BYTES_READ);
     merge(inputMetrics, other.getInputMetrics(), INPUT_RECORDS_READ);
     // merge output metrics
@@ -309,6 +309,57 @@ public class Metrics extends AbstractCodec<Metrics> {
     Long value = dst.get(key);
     value = (value == null) ? update : (value + update);
     dst.put(key, value);
+  }
+
+  private static void subtract(HashMap<String, Long> dst, HashMap<String, Long> src, String key) {
+    Long update = src.get(key);
+    update = (update == null) ? 0L : update;
+    Long value = dst.get(key);
+    value = (value == null) ? -update : (value - update);
+    dst.put(key, value);
+  }
+
+  /** Return copy of current metrics */
+  public Metrics copy() {
+    Metrics copy = new Metrics();
+    copy.merge(this);
+    return copy;
+  }
+
+  /** Create metrics object that contains difference between this metrics and 'other' */
+  public Metrics delta(Metrics other) {
+    Metrics delta = new Metrics();
+    delta.merge(this);
+
+    delta.setResultSize(delta.getResultSize() - other.getResultSize());
+    delta.setJvmGcTime(delta.getJvmGcTime() - other.getJvmGcTime());
+    delta.setResultSerializationTime(delta.getResultSerializationTime() - other.getResultSerializationTime());
+    delta.setMemoryBytesSpilled(delta.getMemoryBytesSpilled() - other.getMemoryBytesSpilled());
+    delta.setDiskBytesSpilled(delta.getDiskBytesSpilled() - other.getDiskBytesSpilled());
+    // subtract executor metrics
+    subtract(delta.getExecutorMetrics(), other.getExecutorMetrics(), EXECUTOR_DESERIALIZE_TIME);
+    subtract(delta.getExecutorMetrics(), other.getExecutorMetrics(), EXECUTOR_DESERIALIZE_CPU_TIME);
+    subtract(delta.getExecutorMetrics(), other.getExecutorMetrics(), EXECUTOR_RUN_TIME);
+    subtract(delta.getExecutorMetrics(), other.getExecutorMetrics(), EXECUTOR_CPU_TIME);
+    // subtract shuffle read metrics
+    subtract(delta.getShuffleReadMetrics(), other.getShuffleReadMetrics(), SHUFFLE_REMOTE_BLOCKS_FETCHED);
+    subtract(delta.getShuffleReadMetrics(), other.getShuffleReadMetrics(), SHUFFLE_LOCAL_BLOCKS_FETCHED);
+    subtract(delta.getShuffleReadMetrics(), other.getShuffleReadMetrics(), SHUFFLE_FETCH_WAIT_TIME);
+    subtract(delta.getShuffleReadMetrics(), other.getShuffleReadMetrics(), SHUFFLE_REMOTE_BYTES_READ);
+    subtract(delta.getShuffleReadMetrics(), other.getShuffleReadMetrics(), SHUFFLE_LOCAL_BYTES_READ);
+    subtract(delta.getShuffleReadMetrics(), other.getShuffleReadMetrics(), SHUFFLE_TOTAL_RECORDS_READ);
+    // subtract shuffle write metrics
+    subtract(delta.getShuffleWriteMetrics(), other.getShuffleWriteMetrics(), SHUFFLE_BYTES_WRITTEN);
+    subtract(delta.getShuffleWriteMetrics(), other.getShuffleWriteMetrics(), SHUFFLE_WRITE_TIME);
+    subtract(delta.getShuffleWriteMetrics(), other.getShuffleWriteMetrics(), SHUFFLE_RECORDS_WRITTEN);
+    // subtract input metrics
+    subtract(delta.getInputMetrics(), other.getInputMetrics(), INPUT_BYTES_READ);
+    subtract(delta.getInputMetrics(), other.getInputMetrics(), INPUT_RECORDS_READ);
+    // subtract output metrics
+    subtract(delta.getOutputMetrics(), other.getOutputMetrics(), OUTPUT_BYTES_WRITTEN);
+    subtract(delta.getOutputMetrics(), other.getOutputMetrics(), OUTPUT_RECORDS_WRITTEN);
+
+    return delta;
   }
 
   @Override
