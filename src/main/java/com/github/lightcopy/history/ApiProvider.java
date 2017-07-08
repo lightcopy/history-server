@@ -19,6 +19,7 @@ package com.github.lightcopy.history;
 import java.util.List;
 
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
@@ -48,6 +49,14 @@ public interface ApiProvider {
    *
    */
   Application application(String appId);
+
+  /**
+   * Return application summary for provided appId.
+   * Result can be null, if application summary is not found.
+   * @param appId
+   * @return application summary
+   */
+  ApplicationSummary appSummary(String appId);
 
   /**
    * Return environment for provided appId.

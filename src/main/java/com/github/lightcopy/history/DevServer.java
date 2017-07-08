@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
@@ -103,6 +104,14 @@ public class DevServer extends AbstractServer {
     }
 
     @Override
+    public ApplicationSummary appSummary(String appId) {
+      ApplicationSummary sum = new ApplicationSummary();
+      sum.setRunningQueries(3);
+      sum.setCompletedQueries(12);
+      return sum;
+    }
+
+    @Override
     public Environment environment(String appId) {
       Environment env = new Environment();
 
@@ -155,6 +164,9 @@ public class DevServer extends AbstractServer {
       sql.setEndTime(1498724277381L);
       sql.updateDuration();
       sql.setStatus(SQLExecution.Status.COMPLETED);
+      sql.addJobId(0);
+      sql.addJobId(1);
+      sql.addJobId(2);
       return sql;
     }
 

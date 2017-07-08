@@ -39,6 +39,7 @@ import com.google.gson.JsonObject;
 
 import com.github.lightcopy.history.conf.AppConf;
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
@@ -233,6 +234,19 @@ public class ApplicationContext extends ResourceConfig {
         Application app = getProvider().application(appId);
         if (app == null) return apiError404("No application " + appId + " found");
         return Response.ok(gson.toJson(app)).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/summary")
+    @Produces("application/json")
+    public Response getAppSummary(@PathParam("appId") String appId) {
+      try {
+        ApplicationSummary summary = getProvider().appSummary(appId);
+        if (summary == null) return apiError404("No application summary for " + appId + " found");
+        return Response.ok(gson.toJson(summary)).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }

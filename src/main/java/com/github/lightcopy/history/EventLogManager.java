@@ -34,6 +34,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
 
 import com.github.lightcopy.history.model.Application;
+import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
@@ -192,6 +193,13 @@ class EventLogManager implements ApiProvider {
     // this method returns either first application that has appId or null if not found.
     return Mongo.applications(mongo)
       .find(Filters.eq(Application.FIELD_APP_ID, appId))
+      .first();
+  }
+
+  @Override
+  public ApplicationSummary appSummary(String appId) {
+    return Mongo.appSummary(mongo)
+      .find(Filters.eq(ApplicationSummary.FIELD_APP_ID, appId))
       .first();
   }
 
