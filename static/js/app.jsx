@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import {browserHistory, IndexRedirect, IndexRoute, Router, Route} from "react-router";
 import Applications from "./applications";
 import Jobs from "./jobs";
+import Stage from "./stage";
 import Stages from "./stages";
 import Storage from "./storage";
 import Environment from "./environment";
@@ -21,7 +22,10 @@ ReactDOM.render((
             <IndexRoute component={Jobs} />
             <Route path=":jobId" component={Stages} />
           </Route>
-          <Route path="stages" component={Stages} />
+          <Route path="stages">
+            <IndexRoute component={Stages} />
+            <Route path=":stageId/attempt/:attempt" component={Stage} />
+          </Route>
           <Route path="storage" component={Storage} />
           <Route path="environment" component={Environment} />
           <Route path="executors" component={Executors} />

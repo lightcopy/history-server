@@ -401,8 +401,8 @@ public class ApplicationContext extends ResourceConfig {
       try {
         Stage stage = getProvider().stage(appId, stageId, attemptId);
         if (stage == null) {
-          return apiError404("No stage " + stageId + " (attempt" + attemptId +
-            ") found for application " + appId);
+          return apiError404("No stage " + stageId +
+            " (attempt " + attemptId + ") found for application " + appId);
         }
         return Response.ok(gson.toJson(stage)).build();
       } catch (Exception err) {

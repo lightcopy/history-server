@@ -346,13 +346,31 @@ public class DevServer extends AbstractServer {
 
     @Override
     public Stage stage(String appId, int stageId, int stageAttemptId) {
-      return null;
+      return generateStage(appId, stageId, stageAttemptId, "show at <console>:26",
+        Stage.Status.COMPLETED);
     }
 
     @Override
     public List<Task> tasks(String appId, int stageId, int stageAttemptId, int page, int pageSize,
         String sortBy, boolean asc) {
-      return new ArrayList<Task>();
+      ArrayList<Task> list = new ArrayList<Task>();
+      Task task = new Task();
+      task.setTaskId(100000L);
+      task.setStageId(stageId);
+      task.setStageAttemptId(stageAttemptId);
+      task.setIndex(123);
+      task.setAttempt(1);
+      task.setStartTime(System.currentTimeMillis() - 19000000L);
+      task.setEndTime(System.currentTimeMillis());
+      task.setDuration(19000000L);
+      task.setExecutorId("1");
+      task.setHost("host");
+      task.setLocality("NODE_LOCAL");
+      task.setStatus(Task.Status.SUCCESS);
+      task.setErrorDescription("Error");
+      task.setErrorDetails("Details");
+      list.add(task);
+      return list;
     }
   }
 

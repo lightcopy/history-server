@@ -78,9 +78,12 @@ module.exports = {
       return `${hours} h ${minutes % 60} m`;
     } else if (minutes > 0) {
       return `${minutes} m ${seconds % 60} s`;
-    } else {
+    } else if (secondsFloat > 0.1) {
       // report seconds as floating point numbers
       return `${this.rnd(secondsFloat, 1)} s`;
+    } else {
+      // report milliseconds directly
+      return `${diff} ms`;
     }
   },
 
