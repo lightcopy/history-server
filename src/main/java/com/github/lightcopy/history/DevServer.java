@@ -125,6 +125,14 @@ public class DevServer extends AbstractServer {
       removedExecutors.add("4");
       removedExecutors.add("5");
       sum.setRemovedExecutors(removedExecutors);
+
+      HashMap<String, ApplicationSummary.JobSummary> jobs =
+        new HashMap<String, ApplicationSummary.JobSummary>();
+      jobs.put("1", new ApplicationSummary.JobSummary());
+      sum.setRunningJobs(jobs);
+      sum.setSucceededJobs(jobs);
+      sum.setFailedJobs(jobs);
+
       return sum;
     }
 

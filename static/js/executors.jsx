@@ -190,13 +190,11 @@ class Executors extends React.Component {
   }
 
   render() {
-    var appId = this.props.params.appId;
-
     var activeExecutorsTable = null;
     if (this.state.activeExecutors > 0) {
       activeExecutorsTable = (
         <ActiveExecutors
-          appId={appId}
+          appId={this.props.params.appId}
           numActiveExecutors={this.state.activeExecutors} />
       );
     }
@@ -204,7 +202,7 @@ class Executors extends React.Component {
     if (this.state.removedExecutors > 0) {
       removedExecutorsTable = (
         <RemovedExecutors
-          appId={appId}
+          appId={this.props.params.appId}
           numRemovedExecutors={this.state.removedExecutors} />
       );
     }

@@ -1,5 +1,21 @@
 module.exports = {
   /**
+   * Return size (number of keys) for javascript object.
+   * @param obj javascript object
+   * @return length as integer
+   */
+  size: function(obj) {
+    if (!obj) return 0;
+    var size = 0, key;
+    for (key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        size++;
+      }
+    }
+    return size;
+  },
+
+  /**
    * Construct GET request url with params.
    * If value for key is null, parameter is removed from final result.
    * @param url base url string
