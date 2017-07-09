@@ -290,6 +290,18 @@ class EventLogManager implements ApiProvider {
   }
 
   @Override
+  public Job job(String appId, int jobId) {
+    return Mongo.jobs(mongo)
+      .find(
+        Filters.and(
+          Filters.eq(Job.FIELD_APP_ID, appId),
+          Filters.eq(Job.FIELD_JOB_ID, jobId)
+        )
+      )
+      .first();
+  }
+
+  @Override
   public List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc) {
     final List<Stage> list = new ArrayList<Stage>();
     Mongo.page(

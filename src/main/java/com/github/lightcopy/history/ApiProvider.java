@@ -117,6 +117,15 @@ public interface ApiProvider {
       String appId, Job.Status status, int page, int pageSize, String sortBy, boolean asc);
 
   /**
+   * Return job for provided appId and jobId.
+   * Result can be null, if job is not found.
+   * @param appId
+   * @param jobId
+   * @return valid job or null, if not found
+   */
+  Job job(String appId, int jobId);
+
+  /**
    * Return list of stages for appid.
    * @param appId application id
    * @param page page number, 1-based

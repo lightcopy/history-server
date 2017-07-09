@@ -280,6 +280,11 @@ public class DevServer extends AbstractServer {
     }
 
     @Override
+    public Job job(String appId, int jobId) {
+      return generateJob(appId, 2, "foreach at <console>:26", Job.Status.SUCCEEDED);
+    }
+
+    @Override
     public List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc) {
       return new ArrayList<Stage>();
     }

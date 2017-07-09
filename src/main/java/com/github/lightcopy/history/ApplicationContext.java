@@ -338,6 +338,21 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
+    @Path("api/apps/{appId}/jobs/{id}")
+    @Produces("application/json")
+    public Response job(@PathParam("appId") String appId, @PathParam("id") int id) {
+      try {
+        Job job = getProvider().job(appId, id);
+        if (job == null) {
+          return apiError404("No Spark job " + id + " found for application " + appId);
+        }
+        return Response.ok(gson.toJson(job)).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
     @Path("api/apps/{appId}/stages")
     @Produces("application/json")
     public Response listStages(
