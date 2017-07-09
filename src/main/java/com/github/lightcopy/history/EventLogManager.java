@@ -302,11 +302,15 @@ class EventLogManager implements ApiProvider {
   }
 
   @Override
-  public List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc) {
+  public List<Stage> stages(
+      String appId, Stage.Status status, int page, int pageSize, String sortBy, boolean asc) {
     final List<Stage> list = new ArrayList<Stage>();
     Mongo.page(
       Mongo.stages(mongo),
-      Filters.eq(Stage.FIELD_APP_ID, appId),
+      Filters.and(
+        Filters.eq(Stage.FIELD_APP_ID, appId),
+        Filters.eq(Stage.FIELD_STATUS, status.name())
+      ),
       page, pageSize, sortBy, asc)
     .forEach(
       new Block<Stage>() {
@@ -320,14 +324,15 @@ class EventLogManager implements ApiProvider {
   }
 
   @Override
-  public List<Stage> stagesForJob(
-      String appId, int jobId, int page, int pageSize, String sortBy, boolean asc) {
+  public List<Stage> stagesForJob(String appId, int jobId,
+      Stage.Status status, int page, int pageSize, String sortBy, boolean asc) {
     final List<Stage> list = new ArrayList<Stage>();
     Mongo.page(
       Mongo.stages(mongo),
       Filters.and(
         Filters.eq(Stage.FIELD_APP_ID, appId),
-        Filters.eq(Stage.FIELD_JOB_ID, jobId)
+        Filters.eq(Stage.FIELD_JOB_ID, jobId),
+        Filters.eq(Stage.FIELD_STATUS, status.name())
       ),
       page, pageSize, sortBy, asc)
     .forEach(

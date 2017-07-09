@@ -128,7 +128,13 @@ public class DevServer extends AbstractServer {
 
       HashMap<String, ApplicationSummary.JobSummary> jobs =
         new HashMap<String, ApplicationSummary.JobSummary>();
-      jobs.put("1", new ApplicationSummary.JobSummary());
+      ApplicationSummary.JobSummary jobSummary = new ApplicationSummary.JobSummary();
+      jobSummary.pendingStages = 1;
+      jobSummary.activeStages = 2;
+      jobSummary.completedStages = 3;
+      jobSummary.failedStages = 4;
+      jobSummary.skippedStages = 5;
+      jobs.put("1", jobSummary);
       sum.setRunningJobs(jobs);
       sum.setSucceededJobs(jobs);
       sum.setFailedJobs(jobs);
@@ -284,15 +290,53 @@ public class DevServer extends AbstractServer {
       return generateJob(appId, 2, "foreach at <console>:26", Job.Status.SUCCEEDED);
     }
 
-    @Override
-    public List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc) {
-      return new ArrayList<Stage>();
+    private Stage generateStage(
+        String appId, int stageId, int attempt, String name, Stage.Status status) {
+      Stage stage = new Stage();
+      stage.setAppId(appId);
+      stage.setJobId(1);
+      stage.setUniqueStageId(((long) stageId) << 32 | attempt);
+      stage.setStageId(stageId);
+      stage.setStageAttemptId(attempt);
+      stage.setStageName(name);
+      stage.setActiveTasks(10);
+      stage.setCompletedTasks(12);
+      stage.setFailedTasks(4);
+      stage.setTotalTasks(26);
+      stage.setDetails("Stage details");
+      stage.setStartTime(System.currentTimeMillis() - 19000000L);
+      stage.setEndTime(System.currentTimeMillis() - 100000L);
+      stage.setDuration(19000000L);
+      stage.setStatus(status);
+      stage.setErrorDescription("Error reason");
+      stage.setErrorDetails("Error details");
+      return stage;
     }
 
     @Override
-    public List<Stage> stagesForJob(
-        String appId, int jobId, int page, int pageSize, String sortBy, boolean asc) {
-      return new ArrayList<Stage>();
+    public List<Stage> stages(
+        String appId, Stage.Status status, int page, int pageSize, String sortBy, boolean asc) {
+      ArrayList<Stage> list = new ArrayList<Stage>();
+      if (status == Stage.Status.PENDING) {
+        list.add(generateStage(appId, 1, 0, "foreach at <console>:26", status));
+        list.add(generateStage(appId, 0, 0, "count at <console>:26", status));
+      } else if (status == Stage.Status.SKIPPED) {
+        list.add(generateStage(appId, 2, 0, "collect at <console>:26", status));
+      } else if (status == Stage.Status.ACTIVE) {
+        list.add(generateStage(appId, 4, 0, "collect at <console>:26", status));
+      } else if (status == Stage.Status.COMPLETED) {
+        list.add(generateStage(appId, 3, 1, "first at <console>:26", status));
+      } else if (status == Stage.Status.FAILED) {
+        list.add(generateStage(appId, 3, 1, "show at <console>:26", status));
+        list.add(generateStage(appId, 3, 0, "count at <console>:26", status));
+      }
+      return list;
+    }
+
+    @Override
+    public List<Stage> stagesForJob(String appId, int jobId,
+        Stage.Status status, int page, int pageSize, String sortBy, boolean asc) {
+      return stages(appId, status, page, pageSize, sortBy, asc);
     }
 
     @Override

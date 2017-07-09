@@ -357,13 +357,15 @@ public class ApplicationContext extends ResourceConfig {
     @Produces("application/json")
     public Response listStages(
         @PathParam("appId") String appId,
+        @QueryParam("status") String status,
         @DefaultValue("1") @QueryParam("page") int page,
         @DefaultValue("100") @QueryParam("pageSize") int pageSize,
         @DefaultValue("") @QueryParam("sortBy") String sortBy,
         @DefaultValue("true") @QueryParam("asc") boolean asc) {
       try {
-        return Response.ok(
-          gson.toJson(getProvider().stages(appId, page, pageSize, sortBy, asc))).build();
+        if (status == null) throw new IllegalArgumentException("Status param is not defined");
+        return Response.ok(gson.toJson(getProvider().stages(
+          appId, Stage.Status.valueOf(status), page, pageSize, sortBy, asc))).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }
@@ -375,13 +377,15 @@ public class ApplicationContext extends ResourceConfig {
     public Response listStagesForJob(
         @PathParam("appId") String appId,
         @PathParam("jobId") int jobId,
+        @QueryParam("status") String status,
         @DefaultValue("1") @QueryParam("page") int page,
         @DefaultValue("100") @QueryParam("pageSize") int pageSize,
         @DefaultValue("") @QueryParam("sortBy") String sortBy,
         @DefaultValue("true") @QueryParam("asc") boolean asc) {
       try {
+        if (status == null) throw new IllegalArgumentException("Status param is not defined");
         return Response.ok(gson.toJson(getProvider().stagesForJob(
-          appId, jobId, page, pageSize, sortBy, asc))).build();
+          appId, jobId, Stage.Status.valueOf(status), page, pageSize, sortBy, asc))).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }

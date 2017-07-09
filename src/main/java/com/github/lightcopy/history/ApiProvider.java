@@ -128,26 +128,29 @@ public interface ApiProvider {
   /**
    * Return list of stages for appid.
    * @param appId application id
+   * @param status stage status
    * @param page page number, 1-based
    * @param pageSize size of records per page, > 0
    * @param sortBy field name to sort by
    * @param asc return is ascending order if true, descending otherwise
    * @return list of Stage instances.
    */
-  List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc);
+  List<Stage> stages(
+      String appId, Stage.Status status, int page, int pageSize, String sortBy, boolean asc);
 
   /**
    * Return list of stages for appid and jobId.
    * @param appId application id
    * @param jobId job id
+   * @param status stage status
    * @param page page number, 1-based
    * @param pageSize size of records per page, > 0
    * @param sortBy field name to sort by
    * @param asc return is ascending order if true, descending otherwise
    * @return list of Stage instances.
    */
-  List<Stage> stagesForJob(
-      String appId, int jobId, int page, int pageSize, String sortBy, boolean asc);
+  List<Stage> stagesForJob(String appId, int jobId,
+      Stage.Status status, int page, int pageSize, String sortBy, boolean asc);
 
   /**
    * Return Stage instance for appId, stageId and attempt number.
