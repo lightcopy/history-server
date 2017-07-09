@@ -237,8 +237,9 @@ public class Metrics extends AbstractCodec<Metrics> {
       taskMetrics.shuffleReadMetrics.remoteBlocksFetched);
     shuffleReadMetrics.put(SHUFFLE_LOCAL_BLOCKS_FETCHED,
       taskMetrics.shuffleReadMetrics.localBlocksFetched);
+    // shuffle fetch time is in nanoseconds
     shuffleReadMetrics.put(SHUFFLE_FETCH_WAIT_TIME,
-      taskMetrics.shuffleReadMetrics.fetchWaitTime);
+      taskMetrics.shuffleReadMetrics.fetchWaitTime / 1000000L);
     shuffleReadMetrics.put(SHUFFLE_REMOTE_BYTES_READ,
       taskMetrics.shuffleReadMetrics.remoteBytesRead);
     shuffleReadMetrics.put(SHUFFLE_LOCAL_BYTES_READ,
@@ -248,8 +249,9 @@ public class Metrics extends AbstractCodec<Metrics> {
 
     shuffleWriteMetrics.put(SHUFFLE_BYTES_WRITTEN,
       taskMetrics.shuffleWriteMetrics.shuffleBytesWritten);
+    // shuffle write time is in nanoseconds, we convert it into milliseconds
     shuffleWriteMetrics.put(SHUFFLE_WRITE_TIME,
-      taskMetrics.shuffleWriteMetrics.shuffleWriteTime);
+      taskMetrics.shuffleWriteMetrics.shuffleWriteTime / 1000000L);
     shuffleWriteMetrics.put(SHUFFLE_RECORDS_WRITTEN,
       taskMetrics.shuffleWriteMetrics.shuffleRecordsWritten);
 

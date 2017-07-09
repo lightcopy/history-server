@@ -315,7 +315,6 @@ class Table extends React.Component {
         this.updateData(this.state.currentPage, this.state.pageSize, this.state.sortCol,
           this.state.ascending);
       }
-      console.log(this.state);
     }
   }
 

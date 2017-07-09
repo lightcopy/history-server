@@ -463,14 +463,14 @@ class ModelSuite extends UnitTestSuite {
     taskMetrics.shuffleReadMetrics = new TaskMetrics.ShuffleReadMetrics()
     taskMetrics.shuffleReadMetrics.remoteBlocksFetched = 12L
     taskMetrics.shuffleReadMetrics.localBlocksFetched = 13L
-    taskMetrics.shuffleReadMetrics.fetchWaitTime = 14L
+    taskMetrics.shuffleReadMetrics.fetchWaitTime = 14L * 1000000L
     taskMetrics.shuffleReadMetrics.remoteBytesRead = 15L
     taskMetrics.shuffleReadMetrics.localBytesRead = 16L
     taskMetrics.shuffleReadMetrics.totalRecordsRead = 17L
 
     taskMetrics.shuffleWriteMetrics = new TaskMetrics.ShuffleWriteMetrics()
     taskMetrics.shuffleWriteMetrics.shuffleBytesWritten = 18L
-    taskMetrics.shuffleWriteMetrics.shuffleWriteTime = 19L
+    taskMetrics.shuffleWriteMetrics.shuffleWriteTime = 19L * 1000000L
     taskMetrics.shuffleWriteMetrics.shuffleRecordsWritten = 20L
 
     taskMetrics.inputMetrics = new TaskMetrics.InputMetrics()

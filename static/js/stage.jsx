@@ -168,7 +168,8 @@ class Stage extends React.Component {
     var attempt = this.props.params.attempt;
 
     var stats, tasks;
-    if (this.state.stageId) {
+    // if there is at least one key-value pair we display content
+    if (Util.size(this.state) > 0) {
       var duration = Util.displayTimeDiff(this.state.duration);
       var shuffleReadBytes = Util.displayBytes(
         this.state.metrics.shuffleReadMetrics.shuffleLocalBytesRead +
