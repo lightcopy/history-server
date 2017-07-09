@@ -36,6 +36,7 @@ public class Executor extends AbstractCodec<Executor> {
 
   public static final String FIELD_APP_ID = "appId";
   public static final String FIELD_EXECUTOR_ID = "executorId";
+  public static final String FIELD_SORT_EXECUTOR_ID = "sortExecutorId";
   public static final String FIELD_HOST = "host";
   public static final String FIELD_PORT = "port";
   public static final String FIELD_CORES = "cores";
@@ -56,6 +57,10 @@ public class Executor extends AbstractCodec<Executor> {
 
   private String appId;
   private String executorId;
+  // executor id for sorting only, is not used to query data
+  // we either convert executor id into integer or use -1, e.g. "driver"
+  // TODO: make it unique, so we can index by this field
+  private int sortExecutorId;
   private String host;
   private int port;
   private int cores;
@@ -78,6 +83,8 @@ public class Executor extends AbstractCodec<Executor> {
   public Executor() {
     this.appId = null;
     this.executorId = null;
+    // set as largest, so "driver" appears at the end
+    this.sortExecutorId = Integer.MAX_VALUE;
     this.host = null;
     this.port = -1;
     this.cores = -1;
@@ -106,6 +113,11 @@ public class Executor extends AbstractCodec<Executor> {
 
   public String getExecutorId() {
     return executorId;
+  }
+
+  // executor id that is used for sorting
+  public int getSortExecutorId() {
+    return sortExecutorId;
   }
 
   public String getHost() {
@@ -188,6 +200,27 @@ public class Executor extends AbstractCodec<Executor> {
 
   public void setExecutorId(String value) {
     this.executorId = value;
+  }
+
+  // this should be used internally only
+  protected void setSortExecutorId(int value) {
+    this.sortExecutorId = value;
+  }
+
+  /**
+   * Convert executor id into sorted integer column.
+   * "driver" is always assigned -1.
+   */
+  protected void updateSortExecutorId() {
+    if (this.executorId == null || this.executorId.equals("driver")) {
+      this.sortExecutorId = Integer.MAX_VALUE;
+    } else {
+      try {
+        this.sortExecutorId = Integer.parseInt(this.executorId);
+      } catch (NumberFormatException err) {
+        this.sortExecutorId = Integer.MAX_VALUE;
+      }
+    }
   }
 
   public void setHost(String value) {
@@ -323,6 +356,9 @@ public class Executor extends AbstractCodec<Executor> {
         case FIELD_EXECUTOR_ID:
           exc.setExecutorId(safeReadString(reader));
           break;
+        case FIELD_SORT_EXECUTOR_ID:
+          exc.setSortExecutorId(reader.readInt32());
+          break;
         case FIELD_HOST:
           exc.setHost(safeReadString(reader));
           break;
@@ -390,6 +426,7 @@ public class Executor extends AbstractCodec<Executor> {
     writer.writeStartDocument();
     safeWriteString(writer, FIELD_APP_ID, value.getAppId());
     safeWriteString(writer, FIELD_EXECUTOR_ID, value.getExecutorId());
+    writer.writeInt32(FIELD_SORT_EXECUTOR_ID, value.getSortExecutorId());
     safeWriteString(writer, FIELD_HOST, value.getHost());
     writer.writeInt32(FIELD_PORT, value.getPort());
     writer.writeInt32(FIELD_CORES, value.getCores());
@@ -422,6 +459,8 @@ public class Executor extends AbstractCodec<Executor> {
       exc = new Executor();
       exc.setAppId(appId);
       exc.setExecutorId(executorId);
+      // update executor id here for new executors
+      exc.updateSortExecutorId();
     }
     exc.setMongoClient(client);
     return exc;
@@ -430,6 +469,8 @@ public class Executor extends AbstractCodec<Executor> {
   @Override
   protected void upsert(MongoClient client) {
     if (appId == null || executorId == null) return;
+    updateSortExecutorId();
+
     Mongo.upsertOne(
       Mongo.executors(client),
       Filters.and(

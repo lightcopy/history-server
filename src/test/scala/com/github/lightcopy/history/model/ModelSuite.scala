@@ -901,6 +901,7 @@ class ModelSuite extends UnitTestSuite {
     val res = deserialize(exc, doc)
     res.getAppId should be (exc.getAppId)
     res.getExecutorId should be (exc.getExecutorId)
+    res.getSortExecutorId should be (exc.getSortExecutorId)
     res.getHost should be (exc.getHost)
     res.getPort should be (exc.getPort)
     res.getCores should be (exc.getCores)
@@ -923,6 +924,7 @@ class ModelSuite extends UnitTestSuite {
     val exc = new Executor()
     exc.setAppId("app-123")
     exc.setExecutorId("executor-1")
+    exc.setSortExecutorId(1)
     exc.setHost("host")
     exc.setPort(45323)
     exc.setCores(16)
@@ -945,6 +947,7 @@ class ModelSuite extends UnitTestSuite {
 
     res.getAppId should be ("app-123")
     res.getExecutorId should be ("executor-1")
+    res.getSortExecutorId should be (1)
     res.getHost should be ("host")
     res.getPort should be (45323)
     res.getCores should be (16)
@@ -983,6 +986,23 @@ class ModelSuite extends UnitTestSuite {
     exc.setEndTime(300L)
     exc.updateDuration()
     exc.getDuration should be (200L)
+  }
+
+  test("Executor - update sort id") {
+    val exc = new Executor()
+    exc.getSortExecutorId should be (Int.MaxValue)
+
+    exc.setExecutorId("driver")
+    exc.updateSortExecutorId()
+    exc.getSortExecutorId should be (Int.MaxValue)
+
+    exc.setExecutorId("10")
+    exc.updateSortExecutorId()
+    exc.getSortExecutorId should be (10)
+
+    exc.setExecutorId("10abcd")
+    exc.updateSortExecutorId()
+    exc.getSortExecutorId should be (Int.MaxValue)
   }
 
   test("Executor - task updates") {
