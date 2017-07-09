@@ -211,7 +211,7 @@ public class Executor extends AbstractCodec<Executor> {
    * Convert executor id into sorted integer column.
    * "driver" is always assigned -1.
    */
-  protected void updateSortExecutorId() {
+  public void updateSortExecutorId() {
     if (this.executorId == null || this.executorId.equals("driver")) {
       this.sortExecutorId = Integer.MAX_VALUE;
     } else {

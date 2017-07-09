@@ -171,10 +171,53 @@ public class DevServer extends AbstractServer {
       return sql;
     }
 
+    private Executor generateExecutor(String appId, String executorId, Executor.Status status) {
+      Executor exc = new Executor();
+      exc.setAppId(appId);
+      exc.setExecutorId(executorId);
+      exc.updateSortExecutorId();
+      exc.setHost("10.583.8.16");
+      exc.setPort(45323);
+      exc.setCores(16);
+      exc.setMaxMemory(512 * 1000L);
+      if (status == Executor.Status.ACTIVE) {
+        exc.setStartTime(System.currentTimeMillis());
+        exc.setEndTime(-1L);
+        exc.setFailureReason(null);
+      } else {
+        exc.setStartTime(System.currentTimeMillis() - 19000000L);
+        exc.setEndTime(System.currentTimeMillis());
+        exc.setFailureReason("Failure");
+      }
+      exc.updateDuration();
+      exc.setStatus(status);
+      HashMap<String, String> logs = new HashMap<String, String>();
+      logs.put("stdout", "http://stdout");
+      logs.put("stderr", "http://stdout");
+      exc.setLogs(logs);
+      exc.setActiveTasks(1000);
+      exc.setCompletedTasks(2000);
+      exc.setFailedTasks(3000);
+      exc.setTotalTasks(6000);
+      exc.setTaskTime(100000L);
+      return exc;
+    }
+
     @Override
     public List<Executor> executors(
         String appId, Executor.Status status, int page, int pageSize, String sortBy, boolean asc) {
-      return new ArrayList<Executor>();
+      ArrayList<Executor> list = new ArrayList<Executor>();
+      list.add(generateExecutor(appId, "driver", Executor.Status.ACTIVE));
+      list.add(generateExecutor(appId, "0", Executor.Status.ACTIVE));
+      list.add(generateExecutor(appId, "1", Executor.Status.ACTIVE));
+      list.add(generateExecutor(appId, "2", Executor.Status.ACTIVE));
+      list.add(generateExecutor(appId, "10", Executor.Status.ACTIVE));
+
+      list.add(generateExecutor(appId, "3", Executor.Status.REMOVED));
+      list.add(generateExecutor(appId, "4", Executor.Status.REMOVED));
+      list.add(generateExecutor(appId, "5", Executor.Status.REMOVED));
+
+      return list;
     }
 
     @Override
