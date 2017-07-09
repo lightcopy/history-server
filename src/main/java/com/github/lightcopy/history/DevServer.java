@@ -18,6 +18,7 @@ package com.github.lightcopy.history;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 import com.github.lightcopy.history.model.Application;
@@ -109,6 +110,20 @@ public class DevServer extends AbstractServer {
       ApplicationSummary sum = new ApplicationSummary();
       sum.setRunningQueries(3);
       sum.setCompletedQueries(12);
+
+      HashSet<String> activeExecutors = new HashSet<String>();
+      activeExecutors.add("driver");
+      activeExecutors.add("0");
+      activeExecutors.add("1");
+      activeExecutors.add("2");
+      activeExecutors.add("10");
+      sum.setActiveExecutors(activeExecutors);
+
+      HashSet<String> removedExecutors = new HashSet<String>();
+      removedExecutors.add("3");
+      removedExecutors.add("4");
+      removedExecutors.add("5");
+      sum.setRemovedExecutors(removedExecutors);
       return sum;
     }
 
@@ -207,16 +222,17 @@ public class DevServer extends AbstractServer {
     public List<Executor> executors(
         String appId, Executor.Status status, int page, int pageSize, String sortBy, boolean asc) {
       ArrayList<Executor> list = new ArrayList<Executor>();
-      list.add(generateExecutor(appId, "driver", Executor.Status.ACTIVE));
-      list.add(generateExecutor(appId, "0", Executor.Status.ACTIVE));
-      list.add(generateExecutor(appId, "1", Executor.Status.ACTIVE));
-      list.add(generateExecutor(appId, "2", Executor.Status.ACTIVE));
-      list.add(generateExecutor(appId, "10", Executor.Status.ACTIVE));
-
-      list.add(generateExecutor(appId, "3", Executor.Status.REMOVED));
-      list.add(generateExecutor(appId, "4", Executor.Status.REMOVED));
-      list.add(generateExecutor(appId, "5", Executor.Status.REMOVED));
-
+      if (status == Executor.Status.ACTIVE) {
+        list.add(generateExecutor(appId, "0", Executor.Status.ACTIVE));
+        list.add(generateExecutor(appId, "1", Executor.Status.ACTIVE));
+        list.add(generateExecutor(appId, "2", Executor.Status.ACTIVE));
+        list.add(generateExecutor(appId, "10", Executor.Status.ACTIVE));
+        list.add(generateExecutor(appId, "driver", Executor.Status.ACTIVE));
+      } else if (status == Executor.Status.REMOVED) {
+        list.add(generateExecutor(appId, "3", Executor.Status.REMOVED));
+        list.add(generateExecutor(appId, "4", Executor.Status.REMOVED));
+        list.add(generateExecutor(appId, "5", Executor.Status.REMOVED));
+      }
       return list;
     }
 
