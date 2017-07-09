@@ -237,10 +237,38 @@ public class DevServer extends AbstractServer {
       return list;
     }
 
+    private Job generateJob(String appId, int jobId, String name, Job.Status status) {
+      Job job = new Job();
+      job.setAppId(appId);
+      job.setJobId(jobId);
+      job.setJobName(name);
+      job.setStartTime(System.currentTimeMillis() - 1990000L);
+      job.setEndTime(System.currentTimeMillis() - 10000L);
+      job.updateDuration();
+      job.setStatus(status);
+      job.setErrorDescription("Error");
+      job.setErrorDetails("Error details");
+      job.setActiveTasks(10);
+      job.setCompletedTasks(20);
+      job.setFailedTasks(10);
+      job.setSkippedTasks(10);
+      job.setTotalTasks(50);
+      return job;
+    }
+
     @Override
     public List<Job> jobs(
         String appId, Job.Status status, int page, int pageSize, String sortBy, boolean asc) {
-      return new ArrayList<Job>();
+      ArrayList<Job> list = new ArrayList<Job>();
+      if (status == Job.Status.RUNNING) {
+        list.add(generateJob(appId, 4, "count at <console>:26", status));
+      } else if (status == Job.Status.SUCCEEDED) {
+        list.add(generateJob(appId, 3, "foreach at <console>:26", status));
+        list.add(generateJob(appId, 2, "foreach at <console>:26", status));
+      } else if (status == Job.Status.FAILED) {
+        list.add(generateJob(appId, 1, "first at <console>:26", status));
+      }
+      return list;
     }
 
     @Override
