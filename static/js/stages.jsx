@@ -39,6 +39,7 @@ class Stages extends React.Component {
       .then(response => response.json())
       .then(json => {
         this.setState({
+          jobStatus: json.status,
           pendingStages: json.pendingStages.length,
           activeStages: json.activeStages.length,
           completedStages: json.completedStages.length,
@@ -72,11 +73,47 @@ class Stages extends React.Component {
     var jobId = this.props.params.jobId;
     var title = (jobId) ? `Details for job ${jobId}` : "Spark Stages (for all jobs)";
     var activeTab = (jobId) ? "jobs" : "stages";
+
+    var jobStatus = null;
+    if (this.state.jobStatus) {
+      jobStatus = (
+        <li className="margin-bottom-small">
+          <strong>Job Status: </strong>
+          <span>{this.state.jobStatus}</span>
+        </li>
+      );
+    }
+
     return (
       <div>
         <Header appId={this.props.params.appId} active={activeTab} />
         <div className="container-fluid">
           <h2>{title}</h2>
+          <div>
+            <ul className="list-unstyled">
+              {jobStatus}
+              <li className="margin-bottom-small">
+                <strong>Pending Stages: </strong>
+                <span>{this.state.pendingStages}</span>
+              </li>
+              <li className="margin-bottom-small">
+                <strong>Active Stages: </strong>
+                <span>{this.state.activeStages}</span>
+              </li>
+              <li className="margin-bottom-small">
+                <strong>Completed Stages: </strong>
+                <span>{this.state.completedStages}</span>
+              </li>
+              <li className="margin-bottom-small">
+                <strong>Failed Stages: </strong>
+                <span>{this.state.failedStages}</span>
+              </li>
+              <li className="margin-bottom-small">
+                <strong>Skipped Stages: </strong>
+                <span>{this.state.skippedStages}</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     );
