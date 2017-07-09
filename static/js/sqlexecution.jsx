@@ -1,29 +1,18 @@
 import React from "react";
 import {Link} from "react-router";
+import Details from "./details";
 import Header from "./header";
 import Table from "./table";
 import Util from "./util";
 
 class QueryDescription extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {on: false};
-    this.toggleDetails = this.toggleDetails.bind(this);
-  }
-
-  toggleDetails() {
-    this.setState({on: !this.state.on});
-  }
-
   render() {
-    var appId = this.props.appId;
-    var hidden = this.state.on ? "" : "hidden";
     return (
-      <div style={{minWidth: "300px"}}>
-        <Link to={`/apps/${appId}/sql/${this.props.executionId}`}>{this.props.desc}</Link>
-        <div className="details pull-right" onClick={this.toggleDetails}>+ details</div>
-        <pre className={`details-content ${hidden}`}>{this.props.details}</pre>
-      </div>
+      <Details
+        to={`/apps/${this.props.appId}/sql/${this.props.executionId}`}
+        desc={this.props.desc}
+        details={this.props.details}
+        minWidth={300} />
     );
   }
 }

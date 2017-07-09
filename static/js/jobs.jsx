@@ -11,14 +11,11 @@ class JobsTable extends React.Component {
     super(props);
     this.state = {data: []};
     this.tableSpec = this.tableSpec.bind(this);
-    this.formatJobData = this.formatJobData.bind(this);
+    this.formatData = this.formatData.bind(this);
     this.updateData = this.updateData.bind(this);
   }
 
-  tableSpec(jobStatus, title, numJobs) {
-    var running = jobStatus == "RUNNING";
-    var succeeded = jobStatus == "SUCCEEDED";
-    var failed = jobStatus == "FAILED";
+  tableSpec(jobStatus, title, numJobs, showError) {
     var tableTitle = (numJobs > 0) ? `${title} (${numJobs})` : `${title}`;
 
     var spec = {
@@ -43,7 +40,7 @@ class JobsTable extends React.Component {
         {name: "skippedStages", desc: "Skipped Stages", sortable: false, hidden: true},
         {name: "completedStages", desc: "Completed Stages", sortable: false, hidden: false},
         // error description (exists for failed jobs only)
-        {name: "errorDescription", desc: "Errors", sortable: false, hidden: !failed},
+        {name: "errorDescription", desc: "Errors", sortable: false, hidden: !showError},
         // tasks bar
         {name: "progressBar", desc: "Tasks (for all stages): Completed/Total",
           sortable: false, hidden: false}
@@ -58,7 +55,7 @@ class JobsTable extends React.Component {
    * @param json list of job objects
    * @return reference to the input list
    */
-  formatJobData(appId, json) {
+  formatData(appId, json) {
     for (var i = 0; i < json.length; i++) {
       json[i].jobName = <Link to={`/apps/${appId}/jobs/${json[i].jobId}`}>{json[i].jobName}</Link>;
       json[i].starttime = Util.displayTime(json[i].starttime);
@@ -92,7 +89,7 @@ class JobsTable extends React.Component {
     fetch(url)
     .then(response => response.json())
     .then(json => {
-      this.setState({data: this.formatJobData(this.props.appId, json)});
+      this.setState({data: this.formatData(this.props.appId, json)});
     })
     .catch(error => {
       console.error(error);
@@ -102,7 +99,8 @@ class JobsTable extends React.Component {
   render() {
     return (
       <Table
-        spec={this.tableSpec(this.props.jobStatus, this.props.title, this.props.numJobs)}
+        spec={this.tableSpec(this.props.jobStatus, this.props.title, this.props.numJobs,
+          this.props.showError)}
         data={this.state.data}
         updateData={this.updateData} />
     );

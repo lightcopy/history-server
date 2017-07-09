@@ -267,6 +267,11 @@ public class DevServer extends AbstractServer {
       job.setFailedTasks(10);
       job.setSkippedTasks(10);
       job.setTotalTasks(50);
+      job.markStagePending(0, 0);
+      job.markStageActive(1, 0);
+      job.markStageCompleted(2, 0);
+      job.markStageFailed(3, 0);
+      job.markStageSkipped(4, 0);
       return job;
     }
 
@@ -325,7 +330,7 @@ public class DevServer extends AbstractServer {
       } else if (status == Stage.Status.ACTIVE) {
         list.add(generateStage(appId, 4, 0, "collect at <console>:26", status));
       } else if (status == Stage.Status.COMPLETED) {
-        list.add(generateStage(appId, 3, 1, "first at <console>:26", status));
+        list.add(generateStage(appId, 3, 2, "first at <console>:26", status));
       } else if (status == Stage.Status.FAILED) {
         list.add(generateStage(appId, 3, 1, "show at <console>:26", status));
         list.add(generateStage(appId, 3, 0, "count at <console>:26", status));
