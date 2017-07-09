@@ -25,7 +25,7 @@ class StagesTable extends React.Component {
         sortCol: "uniqueStageId",
         ascending: false,
         paging: true,
-        pageSize: 4
+        pageSize: 100
       },
       cols: [
         {name: "uniqueStageId", desc: "Stage", sortable: true, hidden: false},

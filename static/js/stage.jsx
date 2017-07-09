@@ -37,7 +37,7 @@ class TaskTable extends React.Component {
         sortCol: "index",
         ascending: true,
         paging: true,
-        pageSize: 4
+        pageSize: 100
       },
       cols: [
         {name: "index", desc: "Index", sortable: true, hidden: false},

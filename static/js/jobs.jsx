@@ -25,7 +25,7 @@ class JobsTable extends React.Component {
         sortCol: "jobId",
         ascending: false,
         paging: true,
-        pageSize: 4
+        pageSize: 100
       },
       cols: [
         {name: "jobId", desc: "Job", sortable: true, hidden: false},

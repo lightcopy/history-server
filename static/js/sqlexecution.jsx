@@ -28,7 +28,7 @@ class SQLExecutionTable extends React.Component {
         sortCol: "executionId",
         ascending: false,
         paging: true,
-        pageSize: 4
+        pageSize: 100
       },
       cols: [
         {name: "executionId", desc: "ID", sortable: true, hidden: false},

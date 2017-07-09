@@ -41,7 +41,7 @@ class ActiveExecutors extends React.Component {
         sortCol: "sortExecutorId",
         ascending: true,
         paging: true,
-        pageSize: 4
+        pageSize: 100
       },
       cols: [
         {name: "sortExecutorId", desc: "Executor", sortable: true, hidden: false},
@@ -109,7 +109,7 @@ class RemovedExecutors extends React.Component {
         sortCol: "sortExecutorId",
         ascending: true,
         paging: true,
-        pageSize: 4
+        pageSize: 100
       },
       cols: [
         {name: "sortExecutorId", desc: "Executor", sortable: true, hidden: false},

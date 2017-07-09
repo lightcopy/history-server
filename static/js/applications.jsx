@@ -15,7 +15,7 @@ class Applications extends React.Component {
         sortCol: "starttime",
         ascending: false,
         paging: true,
-        pageSize: 4
+        pageSize: 100
       },
       cols: [
         // application settings
