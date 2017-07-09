@@ -42,6 +42,7 @@ import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Executor;
+import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 
@@ -299,18 +300,38 @@ public class ApplicationContext extends ResourceConfig {
     }
 
     @GET
-    @Path("api/apps/{appId}/executors/{status}")
+    @Path("api/apps/{appId}/executors")
     @Produces("application/json")
     public Response listExecutors(
         @PathParam("appId") String appId,
-        @PathParam("status") String status,
+        @QueryParam("status") String status,
         @DefaultValue("1") @QueryParam("page") int page,
         @DefaultValue("100") @QueryParam("pageSize") int pageSize,
         @DefaultValue("") @QueryParam("sortBy") String sortBy,
         @DefaultValue("true") @QueryParam("asc") boolean asc) {
       try {
+        if (status == null) throw new IllegalArgumentException("Status param is not defined");
         return Response.ok(gson.toJson(getProvider().executors(
           appId, Executor.Status.valueOf(status), page, pageSize, sortBy, asc))).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/jobs")
+    @Produces("application/json")
+    public Response listJobs(
+        @PathParam("appId") String appId,
+        @QueryParam("status") String status,
+        @DefaultValue("1") @QueryParam("page") int page,
+        @DefaultValue("100") @QueryParam("pageSize") int pageSize,
+        @DefaultValue("") @QueryParam("sortBy") String sortBy,
+        @DefaultValue("true") @QueryParam("asc") boolean asc) {
+      try {
+        if (status == null) throw new IllegalArgumentException("Status param is not defined");
+        return Response.ok(gson.toJson(getProvider().jobs(
+          appId, Job.Status.valueOf(status), page, pageSize, sortBy, asc))).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }
@@ -344,8 +365,8 @@ public class ApplicationContext extends ResourceConfig {
         @DefaultValue("") @QueryParam("sortBy") String sortBy,
         @DefaultValue("true") @QueryParam("asc") boolean asc) {
       try {
-        return Response.ok(
-          gson.toJson(getProvider().stages(appId, jobId, page, pageSize, sortBy, asc))).build();
+        return Response.ok(gson.toJson(getProvider().stagesForJob(
+          appId, jobId, page, pageSize, sortBy, asc))).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }

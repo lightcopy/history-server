@@ -22,6 +22,7 @@ import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Executor;
+import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 import com.github.lightcopy.history.model.Task;
@@ -100,7 +101,20 @@ public interface ApiProvider {
    * @return list of executors
    */
   List<Executor> executors(
-    String appId, Executor.Status status, int page, int pageSize, String sortBy, boolean asc);
+      String appId, Executor.Status status, int page, int pageSize, String sortBy, boolean asc);
+
+  /**
+   * Return list of jobs based on provided appId and job status.
+   * @param appId application id
+   * @param status job status
+   * @param page page number
+   * @param pageSize page size
+   * @param sortBy field name to sort by
+   * @param asc ascending sort if true, descending otherwise
+   * @return list of jobs
+   */
+  List<Job> jobs(
+      String appId, Job.Status status, int page, int pageSize, String sortBy, boolean asc);
 
   /**
    * Return list of stages for appid.
@@ -123,7 +137,8 @@ public interface ApiProvider {
    * @param asc return is ascending order if true, descending otherwise
    * @return list of Stage instances.
    */
-  List<Stage> stages(String appId, int jobId, int page, int pageSize, String sortBy, boolean asc);
+  List<Stage> stagesForJob(
+      String appId, int jobId, int page, int pageSize, String sortBy, boolean asc);
 
   /**
    * Return Stage instance for appId, stageId and attempt number.
@@ -147,5 +162,5 @@ public interface ApiProvider {
    * @return list of Task instances.
    */
   List<Task> tasks(String appId, int stageId, int stageAttemptId, int page, int pageSize,
-    String sortBy, boolean asc);
+      String sortBy, boolean asc);
 }

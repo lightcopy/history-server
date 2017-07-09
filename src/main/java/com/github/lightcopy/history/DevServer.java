@@ -25,6 +25,7 @@ import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Executor;
+import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 import com.github.lightcopy.history.model.Task;
@@ -237,12 +238,18 @@ public class DevServer extends AbstractServer {
     }
 
     @Override
+    public List<Job> jobs(
+        String appId, Job.Status status, int page, int pageSize, String sortBy, boolean asc) {
+      return new ArrayList<Job>();
+    }
+
+    @Override
     public List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc) {
       return new ArrayList<Stage>();
     }
 
     @Override
-    public List<Stage> stages(
+    public List<Stage> stagesForJob(
         String appId, int jobId, int page, int pageSize, String sortBy, boolean asc) {
       return new ArrayList<Stage>();
     }

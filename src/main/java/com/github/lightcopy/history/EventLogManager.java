@@ -37,6 +37,7 @@ import com.github.lightcopy.history.model.Application;
 import com.github.lightcopy.history.model.ApplicationSummary;
 import com.github.lightcopy.history.model.Environment;
 import com.github.lightcopy.history.model.Executor;
+import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
 import com.github.lightcopy.history.model.Task;
@@ -267,6 +268,28 @@ class EventLogManager implements ApiProvider {
   }
 
   @Override
+  public List<Job> jobs(
+      String appId, Job.Status status, int page, int pageSize, String sortBy, boolean asc) {
+    final List<Job> list = new ArrayList<Job>();
+    Mongo.page(
+      Mongo.jobs(mongo),
+      Filters.and(
+        Filters.eq(Job.FIELD_APP_ID, appId),
+        Filters.eq(Job.FIELD_STATUS, status.name())
+      ),
+      page, pageSize, sortBy, asc)
+    .forEach(
+      new Block<Job>() {
+        @Override
+        public void apply(Job job) {
+          list.add(job);
+        }
+      }
+    );
+    return list;
+  }
+
+  @Override
   public List<Stage> stages(String appId, int page, int pageSize, String sortBy, boolean asc) {
     final List<Stage> list = new ArrayList<Stage>();
     Mongo.page(
@@ -285,7 +308,7 @@ class EventLogManager implements ApiProvider {
   }
 
   @Override
-  public List<Stage> stages(
+  public List<Stage> stagesForJob(
       String appId, int jobId, int page, int pageSize, String sortBy, boolean asc) {
     final List<Stage> list = new ArrayList<Stage>();
     Mongo.page(

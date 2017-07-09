@@ -75,7 +75,8 @@ class ActiveExecutors extends React.Component {
   }
 
   updateData(page, pageSize, sortBy, asc) {
-    var url = Util.urlGet(`/api/apps/${this.props.appId}/executors/ACTIVE`, {
+    var url = Util.urlGet(`/api/apps/${this.props.appId}/executors`, {
+      status: "ACTIVE",
       page: page,
       pageSize: pageSize,
       sortBy: sortBy,
@@ -145,7 +146,8 @@ class RemovedExecutors extends React.Component {
   }
 
   updateData(page, pageSize, sortBy, asc) {
-    var url = Util.urlGet(`/api/apps/${this.props.appId}/executors/REMOVED`, {
+    var url = Util.urlGet(`/api/apps/${this.props.appId}/executors`, {
+      status: "REMOVED",
       page: page,
       pageSize: pageSize,
       sortBy: sortBy,
