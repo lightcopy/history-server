@@ -21,5 +21,6 @@ project/plugins/project/
 work/
 
 node_modules/
+package-lock.json
 
 dist/

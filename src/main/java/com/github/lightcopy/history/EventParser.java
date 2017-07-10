@@ -178,7 +178,7 @@ public class EventParser {
         processEvent(gson.fromJson(json, SparkListenerExecutorMetricsUpdate.class));
         break;
       default:
-        LOG.warn("Unrecongnized event {} ", event);
+        LOG.warn("Unrecognized event {} ", event);
         break;
     }
   }
@@ -338,7 +338,7 @@ public class EventParser {
       job.markStageSkipped(stage.getStageId(), stage.getStageAttemptId());
       job.incSkippedTasks(stage.getTotalTasks());
     }
-    LOG.info("Updated {} stages as SKIPPED for job {} in application {}",
+    LOG.debug("Updated {} stages as SKIPPED for job {} in application {}",
       stagesToUpdate.size(), job.getJobId(), appId);
 
     job.upsert();

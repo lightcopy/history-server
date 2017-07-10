@@ -10,7 +10,7 @@
     "make_img": "cp -r ./static/img ./dist/",
     "make_html": "cp ./static/*.html ./dist/",
     "dev": "npm run setup && npm run make_font && npm run make_scss && npm run make_css && npm run make_js && npm run make_img && npm run make_html",
-    "build" : "webpack -p"
+    "build": "webpack -p"
   },
   "dependencies": {
     "react": "^15.4.2",
