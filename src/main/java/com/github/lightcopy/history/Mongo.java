@@ -180,9 +180,10 @@ public class Mongo {
       Task.FIELD_STAGE_ATTEMPT_ID, Task.FIELD_INDEX, Task.FIELD_ATTEMPT);
     // stages contain two indexes, one is for insertion and quick look up and another one to
     // search stages for job
-    createUniqueIndex(stages(client), Stage.FIELD_APP_ID, Stage.FIELD_UNIQUE_STAGE_ID);
-    createUniqueIndex(stages(client), Stage.FIELD_APP_ID, Stage.FIELD_JOB_ID,
+    createUniqueIndex(stages(client), Stage.FIELD_APP_ID,
       Stage.FIELD_STAGE_ID, Stage.FIELD_STAGE_ATTEMPT_ID);
+    createUniqueIndex(stages(client), Stage.FIELD_APP_ID,
+      Stage.FIELD_JOB_ID, Stage.FIELD_STAGE_ID, Stage.FIELD_STAGE_ATTEMPT_ID);
     // jobs have only one index appId - jobId
     createUniqueIndex(jobs(client), Job.FIELD_APP_ID, Job.FIELD_JOB_ID);
     // executors have only one index appId - executorId
