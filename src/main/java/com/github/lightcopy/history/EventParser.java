@@ -305,8 +305,8 @@ public class EventParser {
       job.setErrorDetails(null);
     } else {
       job.setStatus(Job.Status.FAILED);
-      job.setErrorDescription(event.jobResult.getDescription());
-      job.setErrorDetails(event.jobResult.getDetails());
+      job.setErrorDescription(event.jobResult.getErrorDescription());
+      job.setErrorDetails(event.jobResult.getErrorDetails());
     }
     // upsert job at the end of the method, since we need to update stages as well
 

@@ -33,21 +33,16 @@ public class JobResult {
     return result != null && result.equals("JobSucceeded");
   }
 
-  public String getDescription() {
+  public String getErrorDescription() {
     // return first line as description, if available
     if (exception != null && exception.message != null) {
-      int maxChars = 200;
       int index = exception.message.indexOf('\n');
-      if (index > maxChars) {
-        return exception.message.substring(0, maxChars).trim() + "...";
-      } else {
-        return exception.message.substring(0, index).trim();
-      }
+      return (index < 0) ? exception.message : exception.message.substring(0, index).trim();
     }
     return "";
   }
 
-  public String getDetails() {
+  public String getErrorDetails() {
     return (exception != null) ? exception.message : null;
   }
 }

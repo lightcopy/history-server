@@ -707,6 +707,21 @@ class EventSuite extends UnitTestSuite {
     event.value should be (exp)
   }
 
+  test("StageInfo get details and description") {
+    val info = new StageInfo()
+    info.isSuccess should be (true)
+    info.getErrorDescription should be ("")
+    info.getErrorDetails should be (null)
+
+    info.failureReason = "123"
+    info.getErrorDescription should be ("123")
+    info.getErrorDetails should be ("123")
+
+    info.failureReason = "123\ntest"
+    info.getErrorDescription should be ("123")
+    info.getErrorDetails should be ("123\ntest")
+  }
+
   test("SparkListenerStageSubmitted") {
     val json = """
     {
@@ -878,8 +893,8 @@ class EventSuite extends UnitTestSuite {
     event.completionTime should be (1499038179014L)
     event.jobResult.result should be ("JobSucceeded")
     event.jobResult.isSuccess should be (true)
-    event.jobResult.getDescription should be ("")
-    event.jobResult.getDetails should be (null)
+    event.jobResult.getErrorDescription should be ("")
+    event.jobResult.getErrorDetails should be (null)
   }
 
   test("SparkListenerJobEnd - failure") {
@@ -917,10 +932,31 @@ class EventSuite extends UnitTestSuite {
     event.jobResult.isSuccess should be (false)
     event.jobResult.exception.message should be (
       "Job aborted due to stage failure: Task 3 in stage 0.0 failed 1 times\n")
-    event.jobResult.getDescription should be (
+    event.jobResult.getErrorDescription should be (
       "Job aborted due to stage failure: Task 3 in stage 0.0 failed 1 times")
-    event.jobResult.getDetails should be (
+    event.jobResult.getErrorDetails should be (
       "Job aborted due to stage failure: Task 3 in stage 0.0 failed 1 times\n")
+  }
+
+  test("truncate message correctly for JobResult") {
+    val res = new JobResult()
+    res.isSuccess should be (false)
+    res.getErrorDescription should be ("")
+    res.getErrorDetails should be (null)
+
+    res.exception = new JobResult.ResultException()
+
+    res.exception.message = "123"
+    res.getErrorDescription should be ("123")
+    res.getErrorDetails should be ("123")
+
+    res.exception.message = "123\ntest"
+    res.getErrorDescription should be ("123")
+    res.getErrorDetails should be ("123\ntest")
+
+    res.exception.message = "1" * 201
+    res.getErrorDescription should be ("1" * 201)
+    res.getErrorDetails should be ("1" * 201)
   }
 
   test("SparkListenerBlockManagerAdded") {
