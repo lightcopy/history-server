@@ -70,7 +70,7 @@ class StagesTable extends React.Component {
       // stage does not skip tasks, but can be marked as skipped altogether
       // if stage is skipped, assign all tasks to be skipped
       var skippedTasks = 0;
-      if (json[i].activeTasks == 0 && json[i].completedTasks == 0 && json[i].failedTasks == 0) {
+      if (json[i].status == "SKIPPED") {
         skippedTasks = json[i].totalTasks;
       }
       json[i].progressBar = (
