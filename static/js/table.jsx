@@ -43,9 +43,14 @@ class TableTitle extends React.Component {
           <span className={"glyphicon glyphicon-triangle-" + visible} aria-hidden="true"></span>
         </button>
         <h4 className="table-title">{this.props.title}</h4>
-        <button type="button" className="btn btn-link" aria-label="Configure" onClick={this.props.configureAction}>
-          <span className="glyphicon glyphicon-cog" aria-hidden="true"></span>
-        </button>
+        <div className="btn-group pull-right">
+          <button type="button" className="btn btn-link" aria-label="Configure" onClick={this.props.configureAction}>
+            <span className="glyphicon glyphicon-cog" aria-hidden="true"></span>
+          </button>
+          <button type="button" className="btn btn-link" aria-label="Refresh" onClick={this.props.refreshAction}>
+            <span className="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -236,6 +241,7 @@ class Table extends React.Component {
     this.toggleNext = this.toggleNext.bind(this);
     this.toggleColumnPanel = this.toggleColumnPanel.bind(this);
     this.toggleColumn = this.toggleColumn.bind(this);
+    this.toggleRefresh = this.toggleRefresh.bind(this);
     // `displayCols` is internal state for showing/hiding columns
     // user should use "hidden" attribute for each column in spec
     var displayCols = [];
@@ -302,6 +308,15 @@ class Table extends React.Component {
     });
   }
 
+  /** Force table refresh */
+  toggleRefresh() {
+    // in some cases `updateData` is not defined, therefore no call is made
+    if (this.updateData) {
+      this.updateData(this.state.currentPage, this.state.pageSize, this.state.sortCol,
+        this.state.ascending);
+    }
+  }
+
   componentDidUpdate(prevProps, prevState) {
     // whether or not we should update table data
     var shouldUpdate =
@@ -310,11 +325,7 @@ class Table extends React.Component {
       prevState.ascending != this.state.ascending ||
       prevState.pageSize != this.state.pageSize;
     if (shouldUpdate) {
-      // in some cases `updateData` is not defined, therefore no call is made
-      if (this.updateData) {
-        this.updateData(this.state.currentPage, this.state.pageSize, this.state.sortCol,
-          this.state.ascending);
-      }
+      this.toggleRefresh();
     }
   }
 
@@ -325,6 +336,7 @@ class Table extends React.Component {
           title={this.props.spec.info.title}
           expandAction={this.toggleVisible}
           configureAction={this.toggleColumnPanel}
+          refreshAction={this.toggleRefresh}
           visible={this.state.visible} />
         <ColumnConfigator
           cols={this.props.spec.cols}
