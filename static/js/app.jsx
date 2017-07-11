@@ -4,7 +4,7 @@ import {browserHistory, IndexRedirect, IndexRoute, Router, Route} from "react-ro
 import Applications from "./applications";
 import Jobs from "./jobs";
 import Stage from "./stage";
-import Stages from "./stages";
+import {AllStages, StagesForJob} from "./stages";
 import Storage from "./storage";
 import Environment from "./environment";
 import Executors from "./executors";
@@ -20,10 +20,10 @@ ReactDOM.render((
           <IndexRedirect to="jobs" />
           <Route path="jobs">
             <IndexRoute component={Jobs} />
-            <Route path=":jobId" component={Stages} />
+            <Route path=":jobId" component={StagesForJob} />
           </Route>
           <Route path="stages">
-            <IndexRoute component={Stages} />
+            <IndexRoute component={AllStages} />
             <Route path=":stageId/attempt/:attempt" component={Stage} />
           </Route>
           <Route path="storage" component={Storage} />

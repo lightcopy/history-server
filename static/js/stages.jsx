@@ -208,7 +208,7 @@ class Stages extends React.Component {
 
   render() {
     var jobId = this.props.params.jobId;
-    var title = (jobId) ? `Details for job ${jobId}` : "Spark Stages (for all jobs)";
+    var title = (jobId) ? `Details for Job ${jobId}` : "Spark Stages (for all jobs)";
     var activeTab = (jobId) ? "jobs" : "stages";
 
     var jobStatus = null;
@@ -323,4 +323,22 @@ class Stages extends React.Component {
   }
 }
 
-module.exports = Stages;
+// Classes below are added as a workaround for an issue of page not updating after going from Job
+// stages to all stages. Different classes result in mounting "different" components, which
+// refreshes page (see #7).
+
+/** Page that shows all stages for application */
+class AllStages extends Stages {
+  constructor(props) {
+    super(props);
+  }
+}
+
+/** Page that shows all stages for job */
+class StagesForJob extends Stages {
+  constructor(props) {
+    super(props);
+  }
+}
+
+module.exports = {AllStages, StagesForJob};
