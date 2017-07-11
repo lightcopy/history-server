@@ -112,7 +112,7 @@ module.exports = {
    */
   displayPercent: function(fraction) {
     if (fraction >= 0.0 && fraction <= 1.0) {
-      return `${this.rnd(fraction, 2) * 100}%`;
+      return `${this.rnd(fraction * 100, 2)}%`;
     } else {
       return "NaN%";
     }

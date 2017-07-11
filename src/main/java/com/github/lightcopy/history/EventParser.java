@@ -452,7 +452,12 @@ public class EventParser {
   // == SparkListenerTaskEnd ==
   private void processEvent(final SparkListenerTaskEnd event) {
     Task task = Task.getOrCreate(client, appId, event.taskInfo.taskId);
-    Metrics delta = Metrics.fromTaskMetrics(event.taskMetrics).delta(task.getMetrics());
+    // Event can contain null task metrics; in this case we just update task information, also
+    // skip any metrics updates for stage and job.
+    Metrics delta = null;
+    if (event.taskMetrics != null) {
+      delta = Metrics.fromTaskMetrics(event.taskMetrics).delta(task.getMetrics());
+    }
     // If stage attempt id is -1, it means the DAGScheduler had no idea which attempt this task
     // completion event is for. For now we allow processing of task, it will be assigned to
     // stage -1 which does not exist and we never query by negative attempt
@@ -461,40 +466,49 @@ public class EventParser {
     task.update(event.taskInfo);
     task.update(event.taskEndReason);
     // overwrite task metrics
-    task.update(event.taskMetrics);
+    if (delta != null) {
+      task.update(event.taskMetrics);
+    }
+    boolean taskSucceeded = task.getStatus() == Task.Status.SUCCESS;
     task.upsert();
 
     // Update stage
     Stage stage = Stage.getOrCreate(client, appId, event.stageId, event.stageAttemptId);
     stage.decActiveTasks();
-    if (task.getStatus() == Task.Status.SUCCESS) {
+    if (taskSucceeded) {
       stage.incCompletedTasks();
     } else {
       stage.incFailedTasks();
     }
-    stage.updateMetrics(delta);
+    if (delta != null) {
+      stage.updateMetrics(delta);
+    }
     stage.upsert();
 
     // Update job
     Job job = Job.getOrCreate(client, appId, stage.getJobId());
     job.decActiveTasks();
-    if (task.getStatus() == Task.Status.SUCCESS) {
+    if (taskSucceeded) {
       job.incCompletedTasks();
     } else {
       job.incFailedTasks();
     }
-    job.updateMetrics(delta);
+    if (delta != null) {
+      job.updateMetrics(delta);
+    }
     job.upsert();
 
     // Update executor
     Executor exc = Executor.getOrCreate(client, appId, event.taskInfo.executorId);
     exc.decActiveTasks();
-    if (task.getStatus() == Task.Status.SUCCESS) {
+    if (taskSucceeded) {
       exc.incCompletedTasks();
     } else {
       exc.incFailedTasks();
     }
-    exc.updateMetrics(delta);
+    if (delta != null) {
+      exc.updateMetrics(delta);
+    }
     exc.incTaskTime(task.getDuration());
     exc.upsert();
   }

@@ -13,7 +13,7 @@ class ProgressBar extends React.Component {
     var total = this.props.total;
 
     if (total - running - completed - failed - skipped < 0) {
-      throw new Error(`Mismatch: ${total} < ${running} + ${completed} + ${failed} + ${skipped}`);
+      console.warn(`Mismatch: ${total} < ${running} + ${completed} + ${failed} + ${skipped}`);
     }
 
     // build label
