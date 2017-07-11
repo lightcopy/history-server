@@ -20,15 +20,16 @@ class Applications extends React.Component {
       cols: [
         // application settings
         {name: "appId", desc: "App ID", sortable: true, hidden: false},
-        {name: "appName", desc: "App name", sortable: true, hidden: false},
-        {name: "starttime", desc: "Start time", sortable: true, hidden: false},
-        {name: "endtime", desc: "End time", sortable: true, hidden: false},
+        {name: "appName", desc: "App Name", sortable: true, hidden: false},
+        {name: "starttime", desc: "Start Time", sortable: true, hidden: false},
+        {name: "endtime", desc: "End Time", sortable: true, hidden: false},
         {name: "user", desc: "User", sortable: true, hidden: false},
-        {name: "appStatus", desc: "App status", sortable: true, hidden: false},
+        {name: "appStatus", desc: "App Status", sortable: true, hidden: false},
         // application log settings
-        {name: "size", desc: "File size", sortable: false, hidden: true},
-        {name: "mtime", desc: "Last modified", sortable: false, hidden: true},
-        {name: "loadStatus", desc: "Load status", sortable: false, hidden: false}
+        {name: "size", desc: "File Size", sortable: true, hidden: true},
+        {name: "mtime", desc: "Last Modified", sortable: true, hidden: true},
+        {name: "loadProgress", desc: "Loaded", sortable: true, hidden: false},
+        {name: "loadStatus", desc: "Load Status", sortable: true, hidden: false}
       ]
     };
     this.state = {data: []};
@@ -55,6 +56,7 @@ class Applications extends React.Component {
         json[i].endtime = Util.displayTime(json[i].endtime);
         json[i].mtime = Util.displayTime(json[i].mtime);
         json[i].size = Util.displayBytes(json[i].size);
+        json[i].loadProgress = Util.displayPercent(json[i].loadProgress);
       }
       this.setState({data: json});
     })

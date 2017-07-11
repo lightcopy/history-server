@@ -52,6 +52,7 @@ public class Application extends AbstractCodec<Application> {
   public static final String FIELD_SIZE = "size";
   public static final String FIELD_MTIME = "mtime";
   public static final String FIELD_LOAD_STATUS = "loadStatus";
+  public static final String FIELD_LOAD_PROGRESS = "loadProgress";
 
   // application id (globally unique)
   private String appId;
@@ -75,6 +76,8 @@ public class Application extends AbstractCodec<Application> {
   private long mtime;
   // processing status
   private LoadStatus loadStatus;
+  // processing fraction (loading progress), between 0.0 and 1.0
+  private double loadProgress;
 
   // default constructor for encode/decode
   public Application() {
@@ -88,6 +91,7 @@ public class Application extends AbstractCodec<Application> {
     this.size = 0L;
     this.mtime = -1L;
     this.loadStatus = LoadStatus.LOAD_PROGRESS;
+    this.loadProgress = 0;
   }
 
   // == getters ==
@@ -125,6 +129,11 @@ public class Application extends AbstractCodec<Application> {
   /** Get processing (loading by history server) status */
   public LoadStatus getLoadStatus() {
     return loadStatus;
+  }
+
+  /** Get processing fraction, which represents loading progress */
+  public double getLoadProgress() {
+    return loadProgress;
   }
 
   /** Get path to the event log */
@@ -184,6 +193,10 @@ public class Application extends AbstractCodec<Application> {
     this.loadStatus = status;
   }
 
+  public void setLoadProgress(double fraction) {
+    this.loadProgress = fraction;
+  }
+
   /**
    * Update application status for current instance.
    * @param newStatus new application status
@@ -217,6 +230,7 @@ public class Application extends AbstractCodec<Application> {
     setSize(other.getSize());
     setModificationTime(other.getModificationTime());
     setLoadStatus(other.getLoadStatus());
+    setLoadProgress(other.getLoadProgress());
   }
 
   /**
@@ -243,6 +257,7 @@ public class Application extends AbstractCodec<Application> {
     app.setSize(fileStatus.getLen());
     app.setModificationTime(fileStatus.getModificationTime());
     app.setLoadStatus(LoadStatus.LOAD_PROGRESS);
+    app.setLoadProgress(0);
     return app;
   }
 
@@ -255,7 +270,8 @@ public class Application extends AbstractCodec<Application> {
       ", appName=" + appName +
       ", appStatus=" + appStatus +
       ", mtime=" + mtime +
-      ", loadStatus=" + loadStatus + ")";
+      ", loadStatus=" + loadStatus +
+      ", loadProgress=" + loadProgress + ")";
   }
 
   // == Codec methods ==
@@ -296,6 +312,9 @@ public class Application extends AbstractCodec<Application> {
         case FIELD_LOAD_STATUS:
           app.setLoadStatus(LoadStatus.valueOf(safeReadString(reader)));
           break;
+        case FIELD_LOAD_PROGRESS:
+          app.setLoadProgress(reader.readDouble());
+          break;
         default:
           reader.skipValue();
           break;
@@ -323,6 +342,7 @@ public class Application extends AbstractCodec<Application> {
     writer.writeInt64(FIELD_SIZE, value.getSize());
     writer.writeInt64(FIELD_MTIME, value.getModificationTime());
     safeWriteString(writer, FIELD_LOAD_STATUS, value.getLoadStatus().name());
+    writer.writeDouble(FIELD_LOAD_PROGRESS, value.getLoadProgress());
     writer.writeEndDocument();
   }
 

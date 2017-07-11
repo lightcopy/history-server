@@ -123,6 +123,7 @@ class ModelSuite extends UnitTestSuite {
     res.getSize() should be (app.getSize())
     res.getModificationTime() should be (app.getModificationTime())
     res.getLoadStatus() should be (app.getLoadStatus())
+    res.getLoadProgress() should be (app.getLoadProgress())
   }
 
   test("Complete application to bson") {
@@ -137,6 +138,7 @@ class ModelSuite extends UnitTestSuite {
     app.setSize(128L)
     app.setModificationTime(3000L)
     app.setLoadStatus(Application.LoadStatus.LOAD_SUCCESS)
+    app.setLoadProgress(0.23)
 
     val doc = serialize(app, app)
     val res = deserialize(app, doc)
@@ -151,6 +153,7 @@ class ModelSuite extends UnitTestSuite {
     app.getSize() should be (128L)
     app.getModificationTime() should be (3000L)
     app.getLoadStatus() should be (Application.LoadStatus.LOAD_SUCCESS)
+    app.getLoadProgress() should be (0.23)
   }
 
   test("Empty environment to bson") {

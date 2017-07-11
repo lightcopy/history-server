@@ -102,5 +102,19 @@ module.exports = {
     } else {
       return `${this.rnd(bytes / 1024 / 1024 / 1024, 2)} GB`;
     }
+  },
+
+  /**
+   * Display fraction as percentage value, e.g. 0.234 => 23.4%
+   * Value must be between 0.0 and 1.0, otherwise returns "NaN%"
+   * @param fraction double value between 0.0 and 1.0
+   * @return percentage value as string
+   */
+  displayPercent: function(fraction) {
+    if (fraction >= 0.0 && fraction <= 1.0) {
+      return `${this.rnd(fraction, 2) * 100}%`;
+    } else {
+      return "NaN%";
+    }
   }
 }

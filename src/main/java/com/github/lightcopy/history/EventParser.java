@@ -21,6 +21,7 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -100,12 +101,15 @@ public class EventParser {
     FSDataInputStream in = null;
     String json = null;
     try {
-      in = fs.open(new Path(appPath));
+      FileStatus status = fs.getFileStatus(new Path(appPath));
+      in = fs.open(status.getPath());
       BufferedReader reader = new BufferedReader(new InputStreamReader(in));
       while ((json = reader.readLine()) != null) {
         Event event = gson.fromJson(json, Event.class);
         if (event.getEventName() != null) {
           parseJsonEvent(event, json);
+          // update progress fraction for application
+          updateProgress(in.getPos() * 1.0 / status.getLen());
         } else {
           LOG.warn("Drop event {} for app {}", json, appId);
         }
@@ -125,6 +129,13 @@ public class EventParser {
       // always mark event parser as finished
       finished = true;
     }
+  }
+
+  /** Update progress of the application based on new fraction */
+  private void updateProgress(double fraction) {
+    Application app = Application.getOrCreate(client, appId);
+    app.setLoadProgress(fraction);
+    app.upsert();
   }
 
   /** Parse individual event from json string */
