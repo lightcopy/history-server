@@ -75,9 +75,9 @@ module.exports = {
     var hours = Math.floor(seconds / 3600);
     var minutes = Math.floor(seconds / 60);
     if (hours > 0) {
-      return `${hours} h ${minutes % 60} m`;
+      return `${hours} h ${minutes % 60} min`;
     } else if (minutes > 0) {
-      return `${minutes} m ${seconds % 60} s`;
+      return `${minutes} min ${seconds % 60} s`;
     } else if (secondsFloat > 0.1) {
       // report seconds as floating point numbers
       return `${this.rnd(secondsFloat, 1)} s`;

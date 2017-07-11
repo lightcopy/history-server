@@ -17,8 +17,8 @@ function formatExecutorData(json) {
     json[i].endtime = Util.displayTime(json[i].endtime);
     json[i].duration = Util.displayTimeDiff(json[i].duration);
     json[i].storageMemory = Util.displayBytes(json[i].maxMemory);
-    json[i].taskTime = `${json[i].taskTime} ms`;
-    json[i].metricGcTime = `${json[i].metrics.jvmGcTime} ms`;
+    json[i].taskTime = Util.displayTimeDiff(json[i].taskTime);
+    json[i].metricGcTime = Util.displayTimeDiff(json[i].metrics.jvmGcTime);
     json[i].metricInput = Util.displayBytes(json[i].metrics.inputMetrics.inputBytesRead);
     // shuffle read bytes are displayed as total (local + remote)
     json[i].metricShuffleRead = Util.displayBytes(
@@ -57,8 +57,8 @@ class ActiveExecutors extends React.Component {
         {name: "taskTime", "desc": "Task Time", sortable: false, hidden: true},
         {name: "metricGcTime", "desc": "GC Time", sortable: false, hidden: true},
         {name: "metricInput", "desc": "Input", sortable: false, hidden: true},
-        {name: "metricShuffleRead", "desc": "Shuffle Read", sortable: false, hidden: true},
-        {name: "metricShuffleWrite", "desc": "Shuffle Write", sortable: false, hidden: true}
+        {name: "metricShuffleRead", "desc": "Shuffle Read", sortable: false, hidden: false},
+        {name: "metricShuffleWrite", "desc": "Shuffle Write", sortable: false, hidden: false}
       ]
     };
     this.state = {data: []};
