@@ -28,7 +28,7 @@ class Applications extends React.Component {
         // application log settings
         {name: "size", desc: "File size", sortable: false, hidden: true},
         {name: "mtime", desc: "Last modified", sortable: false, hidden: true},
-        {name: "loadStatus", desc: "Load status", sortable: false, hidden: true}
+        {name: "loadStatus", desc: "Load status", sortable: false, hidden: false}
       ]
     };
     this.state = {data: []};
