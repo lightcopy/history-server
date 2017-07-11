@@ -87,8 +87,8 @@ public class Executor extends AbstractCodec<Executor> {
     this.sortExecutorId = Integer.MAX_VALUE;
     this.host = null;
     this.port = -1;
-    this.cores = -1;
-    this.maxMemory = -1L;
+    this.cores = 0;
+    this.maxMemory = 0L;
     this.starttime = -1L;
     this.endtime = -1L;
     this.duration = -1L;
