@@ -98,10 +98,10 @@ public class EventParser {
       throw new IllegalStateException("Event parser already finished parsing log");
     }
     FSDataInputStream in = null;
+    String json = null;
     try {
       in = fs.open(new Path(appPath));
       BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-      String json;
       while ((json = reader.readLine()) != null) {
         Event event = gson.fromJson(json, Event.class);
         if (event.getEventName() != null) {
@@ -112,7 +112,8 @@ public class EventParser {
       }
     } catch (Exception err) {
       throw new EventProcessException(
-        "Failed to process events for " + appId + "; err: " + err.getMessage(), err);
+        "Failed to process events for " + appId + "; err: " + err.getMessage() +
+          "; invalid json: " + json, err);
     } finally {
       if (in != null) {
         try {
