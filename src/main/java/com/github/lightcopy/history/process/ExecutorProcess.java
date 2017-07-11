@@ -81,6 +81,7 @@ public class ExecutorProcess extends InterruptibleThread {
           Mongo.applications(mongo).insertOne(app);
 
           LOG.info("{} - processing {}", id, app);
+          long startTime = System.nanoTime();
           try {
             EventParser parser = new EventParser(fs, mongo, app);
             parser.parseApplicationLog();
@@ -89,9 +90,10 @@ public class ExecutorProcess extends InterruptibleThread {
             LOG.error("Failed to process application log " + app, err);
             currentStatus = Application.LoadStatus.LOAD_FAILURE;
           } finally {
+            long endTime = System.nanoTime();
             // upsert application log status
             updateApplication(mongo, app, currentStatus);
-            LOG.info("Updated application log {}", app);
+            LOG.info("Updated application log {}, took {} ms", app, (endTime - startTime) / 1e6);
           }
         }
         long interval = POLLING_INTERVAL_MS + rand.nextInt(POLLING_INTERVAL_MS);
