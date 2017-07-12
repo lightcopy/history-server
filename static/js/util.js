@@ -116,5 +116,82 @@ module.exports = {
     } else {
       return "NaN%";
     }
+  },
+
+  /** Cache based on localStorage */
+  cache: {
+    /**
+     * Check if local storage is available.
+     * @return true when local storage is available, false otherwise
+     */
+    available: function() {
+      try {
+        var storage = window["localStorage"], x = "__storage_test__";
+        storage.setItem(x, x);
+        storage.removeItem(x);
+        return true;
+      } catch(e) {
+        return e instanceof DOMException && (
+          // everything except Firefox
+          e.code === 22 ||
+          // Firefox
+          e.code === 1014 ||
+          // test name field too, because code might not be present
+          // everything except Firefox
+          e.name === "QuotaExceededError" ||
+          // Firefox
+          e.name === "NS_ERROR_DOM_QUOTA_REACHED") &&
+          // acknowledge QuotaExceededError only if there's something already stored
+          storage.length !== 0;
+      }
+    },
+
+    /**
+     * Set key-value pair, data internally is stored as JSON string.
+     * If storage is not available - no-op.
+     * @param key key for value
+     * @param value object to store
+     */
+    set: function(key, value) {
+      if (this.available()) {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+    },
+
+    /**
+     * Get value for key, returns original value format and type.
+     * If key does not exist, null is returned.
+     * @param key key to extract value
+     * @return value or null if key does not exist
+     */
+    get: function(key) {
+      if (!this.available()) return null;
+      var res = localStorage.getItem(key);
+      if (!res) return res;
+      try {
+        return JSON.parse(res);
+      } catch (err) {
+        console.error(`Cache 'get' value parsin fails: ${err}`);
+        return null;
+      }
+    },
+
+    /**
+     * Whether or not cache contains key.
+     * @param key key to extract value
+     * @return true if value exists in cache for the key, false otherwise
+     */
+    contains: function(key) {
+      return this.get(key) != null;
+    },
+
+    /**
+     * Clear local storage.
+     */
+    clear: function() {
+      if (this.available()) {
+        localStorage.clear();
+      }
+    }
   }
 }

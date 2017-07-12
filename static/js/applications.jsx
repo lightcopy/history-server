@@ -70,7 +70,11 @@ class Applications extends React.Component {
       <div>
         <Header />
         <div className="container-fluid">
-          <Table spec={this.spec} data={this.state.data} updateData={this.updateData} />
+          <Table
+            id="applications-table"
+            spec={this.spec}
+            data={this.state.data}
+            updateData={this.updateData} />
         </div>
       </div>
     );

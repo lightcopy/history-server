@@ -1,4 +1,5 @@
 import React from "react";
+import Util from "./util";
 
 /*
 == Table specification ==
@@ -31,6 +32,14 @@ const data = [
   {appId: "app-2", appName: "B", starttime: "04/02/2015", endtime: "05/02/2015", user: "B"},
   {appId: "app-3", appName: "C", starttime: "11/02/2015", endtime: "11/02/2015", user: "C"}
 ];
+
+== Table API ==
+You can override method "updateData" which is triggered when table needs to be refreshed or loaded.
+Essentially should perform API call to fetch data and set internal state.
+
+You can provide "id" as property of the table (will be accessed as `this.props.id`). This will be
+used to cache table state. It is recommended that "id" property is unique, so there is no overlap
+when caching data for different tables under the same id.
 */
 
 class TableTitle extends React.Component {
@@ -306,6 +315,10 @@ class Table extends React.Component {
       currentPage: (this.props.spec.info.paging ? 1 : null),
       pageSize: this.props.spec.info.pageSize
     });
+    // overwrite values with cache if available
+    if (this.props.id && Util.cache.contains(this.props.id)) {
+      this.setState(Util.cache.get(this.props.id));
+    }
   }
 
   /** Force table refresh */
@@ -326,6 +339,10 @@ class Table extends React.Component {
       prevState.pageSize != this.state.pageSize;
     if (shouldUpdate) {
       this.toggleRefresh();
+    }
+    // cache current state
+    if (this.props.id) {
+      Util.cache.set(this.props.id, this.state);
     }
   }
 

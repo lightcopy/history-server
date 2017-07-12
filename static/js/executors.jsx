@@ -94,7 +94,13 @@ class ActiveExecutors extends React.Component {
 
   render() {
     this.spec.info.title = this.generateTableHeader(this.props.numActiveExecutors);
-    return <Table spec={this.spec} data={this.state.data} updateData={this.updateData} />;
+    return (
+      <Table
+        id="executors-table-ACTIVE"
+        spec={this.spec}
+        data={this.state.data}
+        updateData={this.updateData} />
+    );
   }
 }
 
@@ -165,7 +171,13 @@ class RemovedExecutors extends React.Component {
 
   render() {
     this.spec.info.title = this.generateTableHeader(this.props.numRemovedExecutors);
-    return <Table spec={this.spec} data={this.state.data} updateData={this.updateData} />;
+    return (
+      <Table
+        id="executors-table-REMOVED"
+        spec={this.spec}
+        data={this.state.data}
+        updateData={this.updateData} />
+    );
   }
 }
 

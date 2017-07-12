@@ -37,7 +37,7 @@ class Environment extends React.Component {
         {name: "value", desc: valueCol}
       ]
     };
-    return <Table key={title} spec={spec} data={props} />;
+    return <Table id={`environment-table-${title}`} key={title} spec={spec} data={props} />;
   }
 
   render() {

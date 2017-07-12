@@ -104,7 +104,13 @@ class SQLExecutionTable extends React.Component {
     // update table title based on number of queries
     this.spec.info.title = this.generateTableHeader(
       this.props.numRunningQueries, this.props.numCompletedQueries);
-    return <Table spec={this.spec} data={this.state.data} updateData={this.updateData} />;
+    return(
+      <Table
+        id="sqlexecution-table"
+        spec={this.spec}
+        data={this.state.data}
+        updateData={this.updateData} />
+    );
   }
 }
 

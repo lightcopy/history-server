@@ -134,6 +134,7 @@ class StagesTable extends React.Component {
   render() {
     return (
       <Table
+        id={`stages-table-${this.props.stageStatus}`}
         spec={this.tableSpec(this.props.stageStatus, this.props.title, this.props.numStages,
           this.props.showError)}
         data={this.state.data}

@@ -97,8 +97,10 @@ class JobsTable extends React.Component {
   }
 
   render() {
+    // table id must be unique for each job table
     return (
       <Table
+        id={`jobs-table-${this.props.jobStatus}`}
         spec={this.tableSpec(this.props.jobStatus, this.props.title, this.props.numJobs,
           this.props.showError)}
         data={this.state.data}

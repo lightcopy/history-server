@@ -127,6 +127,7 @@ class TaskTable extends React.Component {
   render() {
     return (
       <Table
+        id="tasks-table"
         spec={this.tableSpec(
           this.props.activeTasks,
           this.props.completedTasks,
