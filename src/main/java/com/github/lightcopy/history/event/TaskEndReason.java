@@ -68,7 +68,7 @@ public class TaskEndReason {
           partitionId + ", attemptNumber: " + attemptNumber;
         break;
       case "TaskKilled":
-        msg = "TaskKilled (" + killReason + ")";
+        msg = "TaskKilled (" + ((killReason == null) ? "killed intentionally" : killReason) + ")";
         break;
       case "ExecutorLostFailure":
         String exitBehavior =
