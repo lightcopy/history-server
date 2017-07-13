@@ -590,6 +590,11 @@ class EventSuite extends UnitTestSuite {
     reason.killReason = "Test"
     reason.getDescription should be ("TaskKilled (Test)")
     reason.getDetails should be (null)
+
+    reason.reason = "TaskKilled"
+    reason.killReason = null
+    reason.getDescription should be ("TaskKilled (killed intentionally)")
+    reason.getDetails should be (null)
   }
 
   test("TaskEndReason - ExecutorLostFailure") {
