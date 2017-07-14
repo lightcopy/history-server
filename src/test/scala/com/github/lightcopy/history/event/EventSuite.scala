@@ -358,6 +358,8 @@ class EventSuite extends UnitTestSuite {
     taskEndReason.description should be ("Test")
     taskEndReason.fullStackTrace should be (
       "java.lang.Exception: Test\n\tat package$.error(package.scala:27)")
+    taskEndReason.isSuccess should be (false)
+    taskEndReason.isKilled should be (false)
 
     val taskMetrics = event.taskMetrics
     taskMetrics.executorDeserializeTime should be (0L)
@@ -495,6 +497,8 @@ class EventSuite extends UnitTestSuite {
 
     val taskEndReason = event.taskEndReason
     taskEndReason.reason should be ("Success")
+    taskEndReason.isSuccess should be (true)
+    taskEndReason.isKilled should be (false)
 
     val taskMetrics = event.taskMetrics
     taskMetrics.executorDeserializeTime should be (18L)
@@ -540,6 +544,8 @@ class EventSuite extends UnitTestSuite {
     reason.reason = "Success"
     reason.getDescription should be ("")
     reason.getDetails should be (null)
+    reason.isSuccess should be (true)
+    reason.isKilled should be (false)
   }
 
   test("TaskEndReason - FetchFailed") {
@@ -561,6 +567,8 @@ class EventSuite extends UnitTestSuite {
     reason.getDescription should be ("FetchFailed(BlockManagerId(0, 1.2.3.4, 45320), " +
       "shuffleId=1, mapId=2, reduceId=3, message=\nMessage\n)")
     reason.getDetails should be (null)
+    reason.isSuccess should be (false)
+    reason.isKilled should be (false)
   }
 
   test("TaskEndReason - ExceptionFailure") {
@@ -571,6 +579,8 @@ class EventSuite extends UnitTestSuite {
     reason.fullStackTrace = "FST"
     reason.getDescription should be ("java.lang.RuntimeException: Test")
     reason.getDetails should be ("FST")
+    reason.isSuccess should be (false)
+    reason.isKilled should be (false)
   }
 
   test("TaskEndReason - TaskCommitDenied") {
@@ -582,6 +592,8 @@ class EventSuite extends UnitTestSuite {
     reason.getDescription should be (
       "TaskCommitDenied (Driver denied task commit) for job: 10, partition: 12, attemptNumber: 3")
     reason.getDetails should be (null)
+    reason.isSuccess should be (false)
+    reason.isKilled should be (false)
   }
 
   test("TaskEndReason - TaskKilled") {
@@ -595,6 +607,8 @@ class EventSuite extends UnitTestSuite {
     reason.killReason = null
     reason.getDescription should be ("TaskKilled (killed intentionally)")
     reason.getDetails should be (null)
+    reason.isSuccess should be (false)
+    reason.isKilled should be (true)
   }
 
   test("TaskEndReason - ExecutorLostFailure") {
@@ -606,6 +620,8 @@ class EventSuite extends UnitTestSuite {
     reason.getDescription should be (
       "ExecutorLostFailure (executor 1 exited caused by one of the running tasks) Reason: Test")
     reason.getDetails should be (null)
+    reason.isSuccess should be (false)
+    reason.isKilled should be (false)
 
     reason.causedByApp = false
     reason.getDescription should be (
@@ -618,6 +634,8 @@ class EventSuite extends UnitTestSuite {
     reason.reason = "TaskResultLost"
     reason.getDescription should be ("TaskResultLost (result lost from block manager)")
     reason.getDetails should be (null)
+    reason.isSuccess should be (false)
+    reason.isKilled should be (false)
   }
 
   test("TaskEndReason - Resubmitted") {
@@ -625,6 +643,8 @@ class EventSuite extends UnitTestSuite {
     reason.reason = "Resubmitted"
     reason.getDescription should be ("Resubmitted (resubmitted due to lost executor)")
     reason.getDetails should be (null)
+    reason.isSuccess should be (false)
+    reason.isKilled should be (false)
   }
 
   test("TaskEndReason - Unknown") {
@@ -632,6 +652,8 @@ class EventSuite extends UnitTestSuite {
     reason.reason = "Unknown"
     reason.getDescription should be ("Unknown reason")
     reason.getDetails should be (null)
+    reason.isSuccess should be (false)
+    reason.isKilled should be (false)
   }
 
   test("AccumulableInfo - parse primitive values") {

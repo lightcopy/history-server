@@ -47,6 +47,11 @@ public class TaskEndReason {
     return reason != null && reason.equals("Success");
   }
 
+  /** Whether or not task was killed */
+  public boolean isKilled() {
+    return reason != null && reason.equals("TaskKilled");
+  }
+
   public String getDescription() {
     // we mark reason that cannot be processed as "<unknown>"; this potentially indicates
     // bug in parsing and/or conversion, and should be fixed

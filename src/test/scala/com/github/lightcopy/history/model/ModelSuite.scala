@@ -400,13 +400,21 @@ class ModelSuite extends UnitTestSuite {
 
     reason.reason = "Success"
     task.update(reason)
+    task.getStatus should be (Task.Status.SUCCESS)
     task.getErrorDescription should be ("")
     task.getErrorDetails should be (null)
 
     reason.reason = "TaskKilled"
     reason.killReason = "Test"
     task.update(reason)
+    task.getStatus should be (Task.Status.KILLED)
     task.getErrorDescription should be ("TaskKilled (Test)")
+    task.getErrorDetails should be (null)
+
+    reason.reason = "Resubmitted"
+    task.update(reason)
+    task.getStatus should be (Task.Status.FAILED)
+    task.getErrorDescription should be ("Resubmitted (resubmitted due to lost executor)")
     task.getErrorDetails should be (null)
   }
 

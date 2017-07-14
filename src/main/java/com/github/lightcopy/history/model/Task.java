@@ -274,6 +274,12 @@ public class Task extends AbstractCodec<Task> {
    * @param reason TaskEndReason instance
    */
   public void update(TaskEndReason reason) {
+    // update status again, should be called after TaskInfo update
+    if (reason.isSuccess()) {
+      setStatus(Status.SUCCESS);
+    } else {
+      setStatus(reason.isKilled() ? Status.KILLED : Status.FAILED);
+    }
     // success reason will return empty string as description and null as details
     setErrorDescription(reason.getDescription());
     setErrorDetails(reason.getDetails());
