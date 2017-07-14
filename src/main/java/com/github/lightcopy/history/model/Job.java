@@ -37,6 +37,7 @@ public class Job extends AbstractCodec<Job> {
   public static final String FIELD_APP_ID = "appId";
   public static final String FIELD_JOB_ID = "jobId";
   public static final String FIELD_JOB_NAME = "jobName";
+  public static final String FIELD_JOB_GROUP = "jobGroup";
   public static final String FIELD_STARTTIME = "starttime";
   public static final String FIELD_ENDTIME = "endtime";
   public static final String FIELD_DURATION = "duration";
@@ -60,6 +61,7 @@ public class Job extends AbstractCodec<Job> {
   private String appId;
   private int jobId;
   private String jobName;
+  private String jobGroup;
   private long starttime;
   private long endtime;
   private long duration;
@@ -84,6 +86,7 @@ public class Job extends AbstractCodec<Job> {
   public Job() {
     this.appId = null;
     this.jobName = null;
+    this.jobGroup = null;
     this.jobId = -1;
     this.starttime = -1L;
     this.endtime = -1L;
@@ -122,6 +125,10 @@ public class Job extends AbstractCodec<Job> {
 
   public String getJobName() {
     return this.jobName;
+  }
+
+  public String getJobGroup() {
+    return this.jobGroup;
   }
 
   public long getStartTime() {
@@ -204,6 +211,10 @@ public class Job extends AbstractCodec<Job> {
 
   public void setJobName(String value) {
     this.jobName = value;
+  }
+
+  public void setJobGroup(String value) {
+    this.jobGroup = value;
   }
 
   public void setStartTime(long value) {
@@ -380,6 +391,9 @@ public class Job extends AbstractCodec<Job> {
         case FIELD_JOB_NAME:
           job.setJobName(safeReadString(reader));
           break;
+        case FIELD_JOB_GROUP:
+          job.setJobGroup(safeReadString(reader));
+          break;
         case FIELD_STARTTIME:
           job.setStartTime(reader.readInt64());
           break;
@@ -451,6 +465,7 @@ public class Job extends AbstractCodec<Job> {
     safeWriteString(writer, FIELD_APP_ID, value.getAppId());
     writer.writeInt32(FIELD_JOB_ID, value.getJobId());
     safeWriteString(writer, FIELD_JOB_NAME, value.getJobName());
+    safeWriteString(writer, FIELD_JOB_GROUP, value.getJobGroup());
     writer.writeInt64(FIELD_STARTTIME, value.getStartTime());
     writer.writeInt64(FIELD_ENDTIME, value.getEndTime());
     writer.writeInt64(FIELD_DURATION, value.getDuration());

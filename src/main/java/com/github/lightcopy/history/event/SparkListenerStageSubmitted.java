@@ -23,4 +23,11 @@ import com.google.gson.annotations.SerializedName;
 public class SparkListenerStageSubmitted {
   @SerializedName("Stage Info") public StageInfo stageInfo;
   @SerializedName("Properties") public Map<String, String> properties;
+
+  /** Get job group for stage or null if group is not provided */
+  public String getJobGroup() {
+    // if property is not found, it is okay to return null
+    if (properties == null) return null;
+    return properties.get("spark.jobGroup.id");
+  }
 }

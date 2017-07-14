@@ -268,6 +268,7 @@ public class EventParser {
   private void processEvent(final SparkListenerJobStart event) {
     Job job = Job.getOrCreate(client, appId, event.jobId);
     job.setJobName(event.getJobName());
+    job.setJobGroup(event.getJobGroup());
     job.setStartTime(event.submissionTime);
     job.setStatus(Job.Status.RUNNING);
     job.setTotalTasks(event.getTotalTasks());
@@ -369,6 +370,7 @@ public class EventParser {
       event.stageInfo.stageId, event.stageInfo.stageAttemptId);
     stage.update(event.stageInfo);
     stage.setStatus(Stage.Status.ACTIVE);
+    stage.setJobGroup(event.getJobGroup());
     stage.upsert();
 
     // Update job

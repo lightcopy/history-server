@@ -47,6 +47,7 @@ public class Stage extends AbstractCodec<Stage> {
   public static final String FIELD_STAGE_ID = "stageId";
   public static final String FIELD_STAGE_ATTEMPT_ID = "stageAttemptId";
   public static final String FIELD_STAGE_NAME = "stageName";
+  public static final String FIELD_JOB_GROUP = "jobGroup";
   public static final String FIELD_ACTIVE_TASKS = "activeTasks";
   public static final String FIELD_COMPLETED_TASKS = "completedTasks";
   public static final String FIELD_FAILED_TASKS = "failedTasks";
@@ -66,6 +67,7 @@ public class Stage extends AbstractCodec<Stage> {
   private int stageId;
   private int stageAttemptId;
   private String stageName;
+  private String jobGroup;
 
   // task info
   private int activeTasks;
@@ -90,6 +92,7 @@ public class Stage extends AbstractCodec<Stage> {
     this.stageId = -1;
     this.stageAttemptId = -1;
     this.stageName = null;
+    this.jobGroup = null;
 
     // set tasks data to 0, so we can increment/decrement them
     // naturally, without conditions
@@ -132,6 +135,10 @@ public class Stage extends AbstractCodec<Stage> {
 
   public String getStageName() {
     return stageName;
+  }
+
+  public String getJobGroup() {
+    return jobGroup;
   }
 
   public int getActiveTasks() {
@@ -206,6 +213,10 @@ public class Stage extends AbstractCodec<Stage> {
 
   public void setStageName(String value) {
     this.stageName = value;
+  }
+
+  public void setJobGroup(String value) {
+    this.jobGroup = value;
   }
 
   public void setActiveTasks(int value) {
@@ -334,6 +345,9 @@ public class Stage extends AbstractCodec<Stage> {
         case FIELD_STAGE_NAME:
           stage.setStageName(safeReadString(reader));
           break;
+        case FIELD_JOB_GROUP:
+          stage.setJobGroup(safeReadString(reader));
+          break;
         case FIELD_ACTIVE_TASKS:
           stage.setActiveTasks(reader.readInt32());
           break;
@@ -393,6 +407,7 @@ public class Stage extends AbstractCodec<Stage> {
     writer.writeInt32(FIELD_STAGE_ID, value.getStageId());
     writer.writeInt32(FIELD_STAGE_ATTEMPT_ID, value.getStageAttemptId());
     safeWriteString(writer, FIELD_STAGE_NAME, value.getStageName());
+    safeWriteString(writer, FIELD_JOB_GROUP, value.getJobGroup());
     writer.writeInt32(FIELD_ACTIVE_TASKS, value.getActiveTasks());
     writer.writeInt32(FIELD_COMPLETED_TASKS, value.getCompletedTasks());
     writer.writeInt32(FIELD_FAILED_TASKS, value.getFailedTasks());

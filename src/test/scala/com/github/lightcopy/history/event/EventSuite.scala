@@ -869,6 +869,17 @@ class EventSuite extends UnitTestSuite {
       "Job aborted due to stage failure: Task 1 in stage 1.0 failed 1 times")
   }
 
+  test("SparkListenerStageSubmitted - job group") {
+    val event = new SparkListenerStageSubmitted()
+    event.getJobGroup should be (null)
+
+    event.properties = Map("spark.a.b.c" -> "true").asJava
+    event.getJobGroup should be (null)
+
+    event.properties = Map("spark.jobGroup.id" -> "abc").asJava
+    event.getJobGroup should be ("abc")
+  }
+
   test("SparkListenerJobStart") {
     val json = """
     {
@@ -902,6 +913,17 @@ class EventSuite extends UnitTestSuite {
     event.stageInfos.size should be (1)
     event.stageInfos.get(0).stageId should be (1)
     event.stageInfos.get(0).stageAttemptId should be (2)
+  }
+
+  test("SparkListenerJobStart - job group") {
+    val event = new SparkListenerJobStart()
+    event.getJobGroup should be (null)
+
+    event.properties = Map("spark.a.b.c" -> "true").asJava
+    event.getJobGroup should be (null)
+
+    event.properties = Map("spark.jobGroup.id" -> "abc").asJava
+    event.getJobGroup should be ("abc")
   }
 
   test("SparkListenerJobEnd - success") {

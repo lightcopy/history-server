@@ -70,4 +70,11 @@ public class SparkListenerJobStart {
     // could not find query for the job
     return -1;
   }
+
+  /** Get job group or null if no group is not provided */
+  public String getJobGroup() {
+    // if property is not found, it is okay to return null
+    if (properties == null) return null;
+    return properties.get("spark.jobGroup.id");
+  }
 }
