@@ -38,6 +38,7 @@ class ActiveExecutors extends React.Component {
       info: {
         title: "Active Executors",
         equalColumnWidth: false,
+        showMetadata: false,
         sortCol: "sortExecutorId",
         ascending: true,
         paging: true,
@@ -112,6 +113,7 @@ class RemovedExecutors extends React.Component {
       info: {
         title: "Removed Executors",
         equalColumnWidth: false,
+        showMetadata: false,
         sortCol: "sortExecutorId",
         ascending: true,
         paging: true,

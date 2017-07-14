@@ -25,6 +25,7 @@ class SQLExecutionTable extends React.Component {
       info: {
         title: "Queries",
         equalColumnWidth: false,
+        showMetadata: false,
         sortCol: "executionId",
         ascending: false,
         paging: true,

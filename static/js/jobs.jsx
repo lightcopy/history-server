@@ -22,6 +22,7 @@ class JobsTable extends React.Component {
       info: {
         title: tableTitle,
         equalColumnWidth: false,
+        showMetadata: false,
         sortCol: "jobId",
         ascending: false,
         paging: true,

@@ -10,6 +10,7 @@ const spec = {
   info: {
     title: "Applications",
     equalColumnWidth: false,
+    showMetadata: false,
     sortCol: "starttime",
     ascending: false,
     paging: true,
@@ -126,6 +127,19 @@ class TableHeader extends React.Component {
         <span>{this.props.col.desc}</span>
         <span className={showSort}></span>
       </th>
+    );
+  }
+}
+
+/** Display table metadata, such as number of rows */
+class TableMetadata extends React.Component {
+  render() {
+    var visible = this.props.visible ? "" : "hidden";
+    var numRows = this.props.data.length;
+    return (
+      <div className={`text-muted margin-bottom-small ${visible}`}>
+        {`Displaying ${numRows} rows`}
+      </div>
     );
   }
 }
@@ -364,6 +378,9 @@ class Table extends React.Component {
           displayColsEnabled={this.state.displayColsEnabled}
           displayCols={this.state.displayCols}
           toggleColumn={this.toggleColumn} />
+        <TableMetadata
+          data={this.props.data}
+          visible={this.props.spec.info.showMetadata && this.state.visible} />
         <TableBody
           cols={this.props.spec.cols}
           displayCols={this.state.displayCols}

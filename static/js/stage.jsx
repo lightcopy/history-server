@@ -34,6 +34,7 @@ class TaskTable extends React.Component {
       info: {
         title: tableTitle,
         equalColumnWidth: false,
+        showMetadata: true,
         sortCol: "index",
         ascending: true,
         paging: true,

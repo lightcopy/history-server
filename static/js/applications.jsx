@@ -12,6 +12,7 @@ class Applications extends React.Component {
       info: {
         title: "Applications",
         equalColumnWidth: false,
+        showMetadata: false,
         sortCol: "starttime",
         ascending: false,
         paging: true,

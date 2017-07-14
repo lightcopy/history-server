@@ -30,7 +30,8 @@ class Environment extends React.Component {
     var spec = {
       info: {
         title: title,
-        equalColumnWidth: true
+        equalColumnWidth: true,
+        showMetadata: false
       },
       cols: [
         {name: "name", desc: nameCol},

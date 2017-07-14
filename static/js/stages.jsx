@@ -22,6 +22,7 @@ class StagesTable extends React.Component {
       info: {
         title: tableTitle,
         equalColumnWidth: false,
+        showMetadata: false,
         sortCol: "uniqueStageId",
         ascending: false,
         paging: true,
