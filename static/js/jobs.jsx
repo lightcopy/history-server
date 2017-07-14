@@ -58,7 +58,9 @@ class JobsTable extends React.Component {
    */
   formatData(appId, json) {
     for (var i = 0; i < json.length; i++) {
-      json[i].jobName = <Link to={`/apps/${appId}/jobs/${json[i].jobId}`}>{json[i].jobName}</Link>;
+      var jobId = json[i].jobId;
+      json[i].jobId = (json[i].jobGroup) ? `${jobId} (${json[i].jobGroup})` : jobId;
+      json[i].jobName = <Link to={`/apps/${appId}/jobs/${jobId}`}>{json[i].jobName}</Link>;
       json[i].starttime = Util.displayTime(json[i].starttime);
       json[i].endtime = Util.displayTime(json[i].endtime);
       json[i].duration = Util.displayTimeDiff(json[i].duration);

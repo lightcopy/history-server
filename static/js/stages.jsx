@@ -52,6 +52,9 @@ class StagesTable extends React.Component {
     for (var i = 0; i < json.length; i++) {
       // stage id, if attempt > 0, then display attempt
       json[i].uniqueStageId = json[i].stageId;
+      if (json[i].jobGroup) {
+        json[i].uniqueStageId += ` (${json[i].jobGroup})`;
+      }
       if (json[i].stageAttemptId > 0) {
         json[i].uniqueStageId += ` (retry ${json[i].stageAttemptId})`;
       }
