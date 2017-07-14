@@ -579,8 +579,10 @@ public class EventParser {
   }
 
   // == SparkListenerExecutorMetricsUpdate ==
+  // This event is not saved into application log.
+  // See:https://github.com/apache/spark/blob/master/core/src/main/scala/
+  // org/apache/spark/scheduler/EventLoggingListener.scala#L217
   private void processEvent(final SparkListenerExecutorMetricsUpdate event) {
-    // TODO: update executor-per-stage metrics
     Task task = Task.getOrCreate(client, appId, event.metrics.taskId);
     Metrics oldMetrics = task.getMetrics().copy();
     Metrics newMetrics =
