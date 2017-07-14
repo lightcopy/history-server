@@ -16,6 +16,22 @@ module.exports = {
   },
 
   /**
+   * Return shallow copy of object. If object is not set, returns empty object.
+   * @param obj original object
+   * @return shallow copy, or empty object if input is null
+   */
+  shallowCopy: function(obj) {
+    if (!obj) return {};
+    var copy = {}, key;
+    for (key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        copy[key] = obj[key];
+      }
+    }
+    return copy;
+  },
+
+  /**
    * Construct GET request url with params.
    * If value for key is null, parameter is removed from final result.
    * @param url base url string

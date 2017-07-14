@@ -341,8 +341,12 @@ class Table extends React.Component {
       this.toggleRefresh();
     }
     // cache current state
+    // ignore cache for settings panel visibility and page number
     if (this.props.id) {
-      Util.cache.set(this.props.id, this.state);
+      var cache = Util.shallowCopy(this.state);
+      delete cache.currentPage;
+      delete cache.displayColsEnabled;
+      Util.cache.set(this.props.id, cache);
     }
   }
 
