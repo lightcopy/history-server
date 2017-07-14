@@ -176,6 +176,13 @@ class EventLogManager implements ApiProvider {
   // == API methods ==
 
   @Override
+  public Metadata metadata() {
+    Metadata meta = new Metadata();
+    meta.setNumApplications(Mongo.applications(mongo).count());
+    return meta;
+  }
+
+  @Override
   public List<Application> applications(int page, int pageSize, String sortBy, boolean asc) {
     final List<Application> list = new ArrayList<Application>();
     // we do not apply any filter when querying applications

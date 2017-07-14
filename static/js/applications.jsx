@@ -7,10 +7,19 @@ import Util from "./util";
 class Applications extends React.Component {
   constructor(props) {
     super(props);
-    // table spec
-    this.spec = {
+    this.state = {data: [], metadata: {}};
+    this.updateData = this.updateData.bind(this);
+  }
+
+  tableSpec(metadata) {
+    var title = "Applications";
+    if (metadata && metadata.numApplications != null) {
+      title += ` (${metadata.numApplications})`;
+    }
+
+    var spec = {
       info: {
-        title: "Applications",
+        title: title,
         equalColumnWidth: false,
         showMetadata: false,
         sortCol: "starttime",
@@ -33,8 +42,7 @@ class Applications extends React.Component {
         {name: "loadStatus", desc: "Load Status", sortable: true, hidden: false}
       ]
     };
-    this.state = {data: []};
-    this.updateData = this.updateData.bind(this);
+    return spec;
   }
 
   updateData(page, pageSize, sortBy, asc) {
@@ -64,6 +72,15 @@ class Applications extends React.Component {
     .catch(error => {
       console.error(error);
     })
+    // fetch number of applications
+    fetch("/api/metadata")
+    .then(response => response.json())
+    .then(json => {
+      this.setState({metadata: json});
+    })
+    .catch(error => {
+      console.error(error);
+    })
   }
 
   render() {
@@ -73,7 +90,7 @@ class Applications extends React.Component {
         <div className="container-fluid">
           <Table
             id="applications-table"
-            spec={this.spec}
+            spec={this.tableSpec(this.state.metadata)}
             data={this.state.data}
             updateData={this.updateData} />
         </div>

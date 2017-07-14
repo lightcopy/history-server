@@ -213,6 +213,17 @@ public class ApplicationContext extends ResourceConfig {
     // == REST API ==
 
     @GET
+    @Path("api/metadata")
+    @Produces("application/json")
+    public Response metadata() {
+      try {
+        return Response.ok(gson.toJson(getProvider().metadata())).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
     @Path("api/apps")
     @Produces("application/json")
     public Response listApplications(

@@ -33,6 +33,12 @@ import com.github.lightcopy.history.model.Task;
 public interface ApiProvider {
 
   /**
+   * Return metadata of history server.
+   * @return metadata
+   */
+  Metadata metadata();
+
+  /**
    * Return available applications.
    * Parameters are guaranteed to be valid.
    * @param page page number, 1-based

@@ -45,6 +45,13 @@ public class DevServer extends AbstractServer {
   /** Test API provider with hardcoded examples of data */
   static class TestApiProvider implements ApiProvider {
     @Override
+    public Metadata metadata() {
+      Metadata meta = new Metadata();
+      meta.setNumApplications(3);
+      return meta;
+    }
+
+    @Override
     public List<Application> applications(int page, int pageSize, String sortBy, boolean asc) {
       LOG.info("apps: page={}, pageSize={}, sortBy={}, asc={}", page, pageSize, sortBy, asc);
       List<Application> list = new ArrayList<Application>();
