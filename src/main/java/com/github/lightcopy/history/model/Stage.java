@@ -58,6 +58,7 @@ public class Stage extends AbstractCodec<Stage> {
   public static final String FIELD_DURATION = "duration";
   public static final String FIELD_STATUS = "status";
   public static final String FIELD_METRICS = "metrics";
+  public static final String FIELD_TASK_TIME = "taskTime";
   public static final String FIELD_ERROR_DESCRIPTION = "errorDescription";
   public static final String FIELD_ERROR_DETAILS = "errorDetails";
 
@@ -81,6 +82,7 @@ public class Stage extends AbstractCodec<Stage> {
   private long duration;
   private Status status;
   private Metrics metrics;
+  private long taskTime;
 
   private String errorDescription;
   private String errorDetails;
@@ -107,6 +109,7 @@ public class Stage extends AbstractCodec<Stage> {
     this.duration = -1L;
     this.status = Status.UNKNOWN;
     this.metrics = new Metrics();
+    this.taskTime = 0L;
     this.errorDescription = null;
     this.errorDetails = null;
   }
@@ -179,6 +182,10 @@ public class Stage extends AbstractCodec<Stage> {
 
   public Metrics getMetrics() {
     return metrics;
+  }
+
+  public long getTaskTime() {
+    return taskTime;
   }
 
   public String getErrorDescription() {
@@ -259,6 +266,10 @@ public class Stage extends AbstractCodec<Stage> {
     this.metrics = value;
   }
 
+  public void setTaskTime(long value) {
+    this.taskTime = value;
+  }
+
   public void setErrorDescription(String value) {
     this.errorDescription = value;
   }
@@ -317,6 +328,13 @@ public class Stage extends AbstractCodec<Stage> {
   /** Increment failed tasks for stage */
   public void incFailedTasks() {
     this.failedTasks++;
+  }
+
+  /** Increment total task time by duration, only if duration is non-negative */
+  public void incTaskTime(long duration) {
+    if (duration >= 0) {
+      this.taskTime += duration;
+    }
   }
 
   // == Codec methods ==
@@ -378,6 +396,9 @@ public class Stage extends AbstractCodec<Stage> {
         case FIELD_METRICS:
           stage.setMetrics(Metrics.CODEC.decode(reader, decoderContext));
           break;
+        case FIELD_TASK_TIME:
+          stage.setTaskTime(reader.readInt64());
+          break;
         case FIELD_ERROR_DESCRIPTION:
           stage.setErrorDescription(safeReadString(reader));
           break;
@@ -419,6 +440,7 @@ public class Stage extends AbstractCodec<Stage> {
     safeWriteString(writer, FIELD_STATUS, value.getStatus().name());
     writer.writeName(FIELD_METRICS);
     Metrics.CODEC.encode(writer, value.getMetrics(), encoderContext);
+    writer.writeInt64(FIELD_TASK_TIME, value.getTaskTime());
     safeWriteString(writer, FIELD_ERROR_DESCRIPTION, value.getErrorDescription());
     safeWriteString(writer, FIELD_ERROR_DETAILS, value.getErrorDetails());
     writer.writeEndDocument();

@@ -320,6 +320,7 @@ public class DevServer extends AbstractServer {
       stage.setEndTime(System.currentTimeMillis() - 100000L);
       stage.setDuration(19000000L);
       stage.setStatus(status);
+      stage.setTaskTime(123567L);
       stage.setErrorDescription("Error reason");
       stage.setErrorDetails("Error details");
       return stage;

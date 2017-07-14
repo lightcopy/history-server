@@ -486,6 +486,7 @@ public class EventParser {
       if (delta != null) {
         stage.updateMetrics(delta);
       }
+      stage.incTaskTime(task.getDuration());
       stage.upsert();
 
       // Update job

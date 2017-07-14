@@ -684,6 +684,7 @@ class ModelSuite extends UnitTestSuite {
     res.getDuration should be (stage.getDuration)
     res.getStatus should be (stage.getStatus)
     res.getMetrics should be (stage.getMetrics)
+    res.getTaskTime should be (stage.getTaskTime)
     res.getErrorDescription should be (stage.getErrorDescription)
     res.getErrorDetails should be (stage.getErrorDetails)
   }
@@ -707,6 +708,7 @@ class ModelSuite extends UnitTestSuite {
     stage.setDuration(4L)
     stage.setStatus(Stage.Status.FAILED)
     stage.setMetrics(new Metrics())
+    stage.setTaskTime(123456L)
     stage.setErrorDescription("reason")
     stage.setErrorDetails("details")
 
@@ -729,6 +731,7 @@ class ModelSuite extends UnitTestSuite {
     res.getDuration should be (4L)
     res.getStatus should be (Stage.Status.FAILED)
     res.getMetrics should be (new Metrics())
+    res.getTaskTime should be (123456L)
     res.getErrorDescription should be ("reason")
     res.getErrorDetails should be ("details")
   }
@@ -773,6 +776,16 @@ class ModelSuite extends UnitTestSuite {
 
     stage.incCompletedTasks()
     stage.getCompletedTasks() should be (1)
+  }
+
+  test("Stage - increment task time") {
+    val stage = new Stage()
+    stage.getTaskTime should be (0L)
+    stage.incTaskTime(100L)
+    stage.incTaskTime(200L)
+    stage.incTaskTime(-100L)
+    stage.incTaskTime(0L)
+    stage.getTaskTime should be (300L)
   }
 
   test("Empty Job to bson") {
