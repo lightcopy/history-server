@@ -40,6 +40,7 @@ import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.StageSummary;
 import com.github.lightcopy.history.model.Task;
 
 /**
@@ -54,6 +55,7 @@ public class Mongo {
   public static final String JOB_COLLECTION = "jobs";
   public static final String SQLEXECUTION_COLLECTION = "sqlexecution";
   public static final String STAGE_COLLECTION = "stages";
+  public static final String STAGE_SUMMARY_COLLECTION = "stage_summary";
   public static final String TASK_COLLECTION = "tasks";
   public static final String EXECUTOR_COLLECTION = "executors";
 
@@ -78,6 +80,7 @@ public class Mongo {
   private static final SQLExecution SQL_CODEC = new SQLExecution();
   private static final Task TASK_CODEC = new Task();
   private static final Stage STAGE_CODEC = new Stage();
+  private static final StageSummary STAGE_SUMMARY_CODEC = new StageSummary();
   private static final Job JOB_CODEC = new Job();
   private static final Executor EXC_CODEC = new Executor();
 
@@ -136,6 +139,15 @@ public class Mongo {
   }
 
   /**
+   * Get mongo collection for StageSummary.
+   * @param client Mongo client
+   * @return collection for StageSummary
+   */
+  public static MongoCollection<StageSummary> stageSummary(MongoClient client) {
+    return getCollection(client, STAGE_SUMMARY_COLLECTION, StageSummary.class, STAGE_SUMMARY_CODEC);
+  }
+
+  /**
    * Get mongo collection for Job.
    * @param client Mongo client
    * @return collection for Job
@@ -184,6 +196,9 @@ public class Mongo {
       Stage.FIELD_STAGE_ID, Stage.FIELD_STAGE_ATTEMPT_ID);
     createUniqueIndex(stages(client), Stage.FIELD_APP_ID,
       Stage.FIELD_JOB_ID, Stage.FIELD_STAGE_ID, Stage.FIELD_STAGE_ATTEMPT_ID);
+    // stage summary index (similar to stages)
+    createUniqueIndex(stageSummary(client), StageSummary.FIELD_APP_ID,
+      StageSummary.FIELD_STAGE_ID, StageSummary.FIELD_STAGE_ATTEMPT_ID);
     // jobs have only one index appId - jobId
     createUniqueIndex(jobs(client), Job.FIELD_APP_ID, Job.FIELD_JOB_ID);
     // executors have only one index appId - executorId
@@ -202,6 +217,7 @@ public class Mongo {
     sqlExecution(client).deleteMany(Filters.all(SQLExecution.FIELD_APP_ID, appIds));
     tasks(client).deleteMany(Filters.all(Task.FIELD_APP_ID, appIds));
     stages(client).deleteMany(Filters.all(Stage.FIELD_APP_ID, appIds));
+    stageSummary(client).deleteMany(Filters.all(StageSummary.FIELD_APP_ID, appIds));
     jobs(client).deleteMany(Filters.all(Job.FIELD_APP_ID, appIds));
     executors(client).deleteMany(Filters.all(Executor.FIELD_APP_ID, appIds));
   }

@@ -1179,4 +1179,61 @@ class ModelSuite extends UnitTestSuite {
     sum.getRunningQueries should be (0)
     sum.getCompletedQueries should be (1)
   }
+
+  test("Empty StageSummary to bson") {
+    val sum = new StageSummary()
+    val doc = serialize(sum, sum)
+    val res = deserialize(sum, doc)
+
+    res.getAppId should be (sum.getAppId)
+    res.getStageId should be (sum.getStageId)
+    res.getStageAttemptId should be (sum.getStageAttemptId)
+    res.taskDuration should be (sum.taskDuration)
+    res.taskDeserializationTime should be (sum.taskDeserializationTime)
+    res.gcTime should be (sum.gcTime)
+    res.resultSerializationTime should be (sum.resultSerializationTime)
+    res.shuffleFetchWaitTime should be (sum.shuffleFetchWaitTime)
+    res.shuffleRemoteBytesRead should be (sum.shuffleRemoteBytesRead)
+    res.shuffleLocalBytesRead should be (sum.shuffleLocalBytesRead)
+    res.shuffleTotalRecordsRead should be (sum.shuffleTotalRecordsRead)
+    res.shuffleBytesWritten should be (sum.shuffleBytesWritten)
+    res.shuffleWriteTime should be (sum.shuffleWriteTime)
+    res.shuffleRecordsWritten should be (sum.shuffleRecordsWritten)
+  }
+
+  test("Complete StageSummary to bson") {
+    val sum = new StageSummary()
+    sum.setAppId("app-123")
+    sum.setStageId(23)
+    sum.setStageAttemptId(67)
+    sum.taskDuration = StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3, 4, 5))
+    sum.shuffleRemoteBytesRead = StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3))
+    sum.shuffleRecordsWritten = StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3))
+
+    val doc = serialize(sum, sum)
+    val res = deserialize(sum, doc)
+
+    res.getAppId should be ("app-123")
+    res.getStageId should be (23)
+    res.getStageAttemptId should be (67)
+    res.taskDuration should be (sum.taskDuration)
+    res.taskDeserializationTime should be (sum.taskDeserializationTime)
+    res.gcTime should be (sum.gcTime)
+    res.resultSerializationTime should be (sum.resultSerializationTime)
+    res.shuffleFetchWaitTime should be (sum.shuffleFetchWaitTime)
+    res.shuffleRemoteBytesRead should be (sum.shuffleRemoteBytesRead)
+    res.shuffleLocalBytesRead should be (sum.shuffleLocalBytesRead)
+    res.shuffleTotalRecordsRead should be (sum.shuffleTotalRecordsRead)
+    res.shuffleBytesWritten should be (sum.shuffleBytesWritten)
+    res.shuffleWriteTime should be (sum.shuffleWriteTime)
+    res.shuffleRecordsWritten should be (sum.shuffleRecordsWritten)
+  }
+
+  test("StageSummary - setSummary") {
+    val sum = new StageSummary()
+    val task = new Task()
+    task.setDuration(123L)
+    sum.setSummary(al(task :: task :: task :: Nil))
+    sum.taskDuration should be (StageSummary.MetricPercentiles.fromArray(Array(123L, 123L, 123L)))
+  }
 }
