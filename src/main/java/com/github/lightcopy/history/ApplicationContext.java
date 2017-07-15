@@ -45,6 +45,7 @@ import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.StageSummary;
 
 /**
  * Application context.
@@ -416,6 +417,25 @@ public class ApplicationContext extends ResourceConfig {
             " (attempt " + attemptId + ") found for application " + appId);
         }
         return Response.ok(gson.toJson(stage)).build();
+      } catch (Exception err) {
+        return apiError400(err.getMessage());
+      }
+    }
+
+    @GET
+    @Path("api/apps/{appId}/stages/{stageId}/attempt/{attemptId}/summary")
+    @Produces("application/json")
+    public Response stageSummary(
+        @PathParam("appId") String appId,
+        @PathParam("stageId") int stageId,
+        @PathParam("attemptId") int attemptId) {
+      try {
+        StageSummary summary = getProvider().stageSummary(appId, stageId, attemptId);
+        if (summary == null) {
+          return apiError404("No stage summary" + stageId +
+            " (attempt " + attemptId + ") found for application " + appId);
+        }
+        return Response.ok(gson.toJson(summary)).build();
       } catch (Exception err) {
         return apiError400(err.getMessage());
       }

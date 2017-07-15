@@ -150,6 +150,7 @@ public class StageSummary extends AbstractCodec<StageSummary> {
   public static final String FIELD_STAGE_ID = "stageId";
   public static final String FIELD_STAGE_ATTEMPT_ID = "stageAttemptId";
 
+  public static final String FIELD_NUM_TASKS = "numTasks";
   public static final String FIELD_TASK_DURATION = "taskDuration";
   public static final String FIELD_TASK_DESERIALIZE_TIME = "taskDeserializationTime";
   public static final String FIELD_GC_TIME = "gcTime";
@@ -165,6 +166,8 @@ public class StageSummary extends AbstractCodec<StageSummary> {
   private String appId;
   private int stageId;
   private int stageAttemptId;
+  long numTasks;
+
   // metrics fields
   MetricPercentiles taskDuration;
   MetricPercentiles taskDeserializationTime;
@@ -184,6 +187,7 @@ public class StageSummary extends AbstractCodec<StageSummary> {
     this.appId = null;
     this.stageId = -1;
     this.stageAttemptId = -1;
+    this.numTasks = 0L;
 
     this.taskDuration = new MetricPercentiles();
     this.taskDeserializationTime = new MetricPercentiles();
@@ -230,6 +234,9 @@ public class StageSummary extends AbstractCodec<StageSummary> {
 
   /** Set summary from list of tasks */
   public void setSummary(List<Task> tasks) {
+    // set num tasks used to generate summary
+    this.numTasks = tasks.size();
+
     long[] values = new long[tasks.size()];
     int index = 0;
     // build task duration
@@ -324,6 +331,8 @@ public class StageSummary extends AbstractCodec<StageSummary> {
         case FIELD_STAGE_ATTEMPT_ID:
           summary.setStageAttemptId(reader.readInt32());
           break;
+        case FIELD_NUM_TASKS:
+          summary.numTasks = reader.readInt64();
         case FIELD_TASK_DURATION:
           summary.taskDuration = MetricPercentiles.CODEC.decode(reader, decoderContext);
           break;
@@ -377,6 +386,7 @@ public class StageSummary extends AbstractCodec<StageSummary> {
     safeWriteString(writer, FIELD_APP_ID, value.getAppId());
     writer.writeInt32(FIELD_STAGE_ID, value.getStageId());
     writer.writeInt32(FIELD_STAGE_ATTEMPT_ID, value.getStageAttemptId());
+    writer.writeInt64(FIELD_NUM_TASKS, value.numTasks);
     writer.writeName(FIELD_TASK_DURATION);
     MetricPercentiles.CODEC.encode(writer, value.taskDuration, encoderContext);
     writer.writeName(FIELD_TASK_DESERIALIZE_TIME);

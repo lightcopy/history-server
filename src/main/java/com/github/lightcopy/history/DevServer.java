@@ -28,6 +28,7 @@ import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.StageSummary;
 import com.github.lightcopy.history.model.Task;
 
 /** Simple development server for frontend */
@@ -356,6 +357,15 @@ public class DevServer extends AbstractServer {
     public Stage stage(String appId, int stageId, int stageAttemptId) {
       return generateStage(appId, stageId, stageAttemptId, "show at <console>:26",
         Stage.Status.COMPLETED);
+    }
+
+    @Override
+    public StageSummary stageSummary(String appId, int stageId, int stageAttemptId) {
+      StageSummary summary = new StageSummary();
+      summary.setAppId(appId);
+      summary.setStageId(stageId);
+      summary.setStageAttemptId(stageAttemptId);
+      return summary;
     }
 
     @Override

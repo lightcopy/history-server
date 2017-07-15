@@ -1188,6 +1188,7 @@ class ModelSuite extends UnitTestSuite {
     res.getAppId should be (sum.getAppId)
     res.getStageId should be (sum.getStageId)
     res.getStageAttemptId should be (sum.getStageAttemptId)
+    res.numTasks should be (sum.numTasks)
     res.taskDuration should be (sum.taskDuration)
     res.taskDeserializationTime should be (sum.taskDeserializationTime)
     res.gcTime should be (sum.gcTime)
@@ -1206,6 +1207,7 @@ class ModelSuite extends UnitTestSuite {
     sum.setAppId("app-123")
     sum.setStageId(23)
     sum.setStageAttemptId(67)
+    sum.numTasks = 3
     sum.taskDuration = StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3, 4, 5))
     sum.shuffleRemoteBytesRead = StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3))
     sum.shuffleRecordsWritten = StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3))
@@ -1216,6 +1218,7 @@ class ModelSuite extends UnitTestSuite {
     res.getAppId should be ("app-123")
     res.getStageId should be (23)
     res.getStageAttemptId should be (67)
+    res.numTasks should be (3)
     res.taskDuration should be (sum.taskDuration)
     res.taskDeserializationTime should be (sum.taskDeserializationTime)
     res.gcTime should be (sum.gcTime)
@@ -1234,6 +1237,7 @@ class ModelSuite extends UnitTestSuite {
     val task = new Task()
     task.setDuration(123L)
     sum.setSummary(al(task :: task :: task :: Nil))
+    sum.numTasks should be (3)
     sum.taskDuration should be (StageSummary.MetricPercentiles.fromArray(Array(123L, 123L, 123L)))
   }
 }

@@ -25,6 +25,7 @@ import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.StageSummary;
 import com.github.lightcopy.history.model.Task;
 
 /**
@@ -167,6 +168,16 @@ public interface ApiProvider {
    * @return valid stage or null, if not found
    */
   Stage stage(String appId, int stageId, int stageAttemptId);
+
+  /**
+   * Return StageSummary instance for appId, stageId and attempt number.
+   * Result can be null, if stage summary is not found.
+   * @param appId application id
+   * @param stageId
+   * @param stageAttemptId
+   * @return valid stage summary or null, if not found
+   */
+  StageSummary stageSummary(String appId, int stageId, int stageAttemptId);
 
   /**
    * Return list of tasks for a particular stage attempt.

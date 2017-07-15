@@ -63,6 +63,7 @@ import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.Metrics;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.StageSummary;
 import com.github.lightcopy.history.model.Task;
 
 /**
@@ -114,6 +115,12 @@ public class EventParser {
           LOG.warn("Drop event {} for app {}", json, appId);
         }
       }
+      long startTime = System.nanoTime();
+      LOG.info("Start application summary for app {}", appId);
+      updateStageSummary();
+      long endTime = System.nanoTime();
+      LOG.info("Finish application summary for app {}, took {} ms", appId,
+        ((endTime - startTime) / 1e6));
     } catch (Exception err) {
       throw new EventProcessException(
         "Failed to process events for " + appId + "; err: " + err.getMessage() +
@@ -610,5 +617,38 @@ public class EventParser {
     Executor exc = Executor.getOrCreate(client, appId, event.executorId);
     exc.updateMetrics(delta);
     exc.upsert();
+  }
+
+  // == Update application summaries ==
+
+  private void updateStageSummary() {
+    final ArrayList<StageSummary> summaries = new ArrayList<StageSummary>();
+    // fetch all stages and for each compute summary, only completed tasks are fetched
+    Mongo.stages(client).find(Filters.eq(Stage.FIELD_APP_ID, appId)).forEach(new Block<Stage>() {
+      @Override
+      public void apply(Stage stage) {
+        StageSummary summary = StageSummary.getOrCreate(
+          client, stage.getAppId(), stage.getStageId(), stage.getStageAttemptId());
+        summaries.add(summary);
+      }
+    });
+
+    // stage summary is only collected for completed tasks
+    for (StageSummary summary : summaries) {
+      final ArrayList<Task> tasks = new ArrayList<Task>();
+      Mongo.tasks(client).find(Filters.and(
+        Filters.eq(Task.FIELD_APP_ID, summary.getAppId()),
+        Filters.eq(Task.FIELD_STAGE_ID, summary.getStageId()),
+        Filters.eq(Task.FIELD_STAGE_ATTEMPT_ID, summary.getStageAttemptId()),
+        Filters.eq(Task.FIELD_STATUS, Task.Status.SUCCESS.name())
+      )).forEach(new Block<Task>() {
+        @Override
+        public void apply(Task task) {
+          tasks.add(task);
+        }
+      });
+      summary.setSummary(tasks);
+      summary.upsert();
+    }
   }
 }

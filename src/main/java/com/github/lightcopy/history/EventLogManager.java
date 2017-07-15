@@ -40,6 +40,7 @@ import com.github.lightcopy.history.model.Executor;
 import com.github.lightcopy.history.model.Job;
 import com.github.lightcopy.history.model.SQLExecution;
 import com.github.lightcopy.history.model.Stage;
+import com.github.lightcopy.history.model.StageSummary;
 import com.github.lightcopy.history.model.Task;
 import com.github.lightcopy.history.process.ExecutorProcess;
 import com.github.lightcopy.history.process.InterruptibleThread;
@@ -361,6 +362,19 @@ class EventLogManager implements ApiProvider {
           Filters.eq(Stage.FIELD_APP_ID, appId),
           Filters.eq(Stage.FIELD_STAGE_ID, stageId),
           Filters.eq(Stage.FIELD_STAGE_ATTEMPT_ID, stageAttemptId)
+        )
+      )
+      .first();
+  }
+
+  @Override
+  public StageSummary stageSummary(String appId, int stageId, int stageAttemptId) {
+    return Mongo.stageSummary(mongo)
+      .find(
+        Filters.and(
+          Filters.eq(StageSummary.FIELD_APP_ID, appId),
+          Filters.eq(StageSummary.FIELD_STAGE_ID, stageId),
+          Filters.eq(StageSummary.FIELD_STAGE_ATTEMPT_ID, stageAttemptId)
         )
       )
       .first();
