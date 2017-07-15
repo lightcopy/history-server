@@ -45,25 +45,25 @@ class StageSummaryTable extends React.Component {
 
   formatData(json) {
     json.taskDuration = this.formatRecord(
-      "Duration", json.taskDuration, Util.displayTimeDiff);
+      "Duration", json.taskDuration, Util.displayTimeDiff.bind(Util));
     json.taskDeserializationTime = this.formatRecord(
-      "Task Deserialization Time", json.taskDeserializationTime, Util.displayTimeDiff);
+      "Task Deserialization Time", json.taskDeserializationTime, Util.displayTimeDiff.bind(Util));
     json.gcTime = this.formatRecord(
-      "GC Time", json.gcTime, Util.displayTimeDiff);
+      "GC Time", json.gcTime, Util.displayTimeDiff.bind(Util));
     json.resultSerializationTime = this.formatRecord(
-      "Result Serialization Time", json.resultSerializationTime, Util.displayTimeDiff);
+      "Result Serialization Time", json.resultSerializationTime, Util.displayTimeDiff.bind(Util));
     json.shuffleFetchWaitTime = this.formatRecord(
-      "Shuffle Fetch Wait Time", json.shuffleFetchWaitTime, Util.displayTimeDiff);
+      "Shuffle Fetch Wait Time", json.shuffleFetchWaitTime, Util.displayTimeDiff.bind(Util));
     json.shuffleRemoteBytesRead = this.formatRecord(
-      "Shuffle Remote Bytes Read", json.shuffleRemoteBytesRead, Util.displayBytes);
+      "Shuffle Remote Bytes Read", json.shuffleRemoteBytesRead, Util.displayBytes.bind(Util));
     json.shuffleLocalBytesRead = this.formatRecord(
-      "Shuffle Local Bytes Read", json.shuffleLocalBytesRead, Util.displayBytes);
+      "Shuffle Local Bytes Read", json.shuffleLocalBytesRead, Util.displayBytes.bind(Util));
     json.shuffleTotalRecordsRead = this.formatRecord(
       "Shuffle Total Records Read", json.shuffleTotalRecordsRead);
     json.shuffleWriteTime = this.formatRecord(
-      "Shuffle Write Time", json.shuffleWriteTime, Util.displayTimeDiff);
+      "Shuffle Write Time", json.shuffleWriteTime, Util.displayTimeDiff.bind(Util));
     json.shuffleBytesWritten = this.formatRecord(
-      "Shuffle Bytes Written", json.shuffleBytesWritten, Util.displayBytes);
+      "Shuffle Bytes Written", json.shuffleBytesWritten, Util.displayBytes.bind(Util));
     json.shuffleRecordsWritten = this.formatRecord(
       "Shuffle Records Written", json.shuffleRecordsWritten, false);
 
