@@ -84,83 +84,47 @@ public class Mongo {
   private static final Job JOB_CODEC = new Job();
   private static final Executor EXC_CODEC = new Executor();
 
-  /**
-   * Get mongo collection for Application.
-   * @param client Mongo client
-   * @return collection for Application
-   */
+  /** Get mongo collection for Application */
   public static MongoCollection<Application> applications(MongoClient client) {
     return getCollection(client, APPLICATION_COLLECTION, Application.class, APP_CODEC);
   }
 
-  /**
-   * Get mongo collection for ApplicationSummary.
-   * @param client Mongo client
-   * @return collection for ApplicationSummary
-   */
+  /** Get mongo collection for ApplicationSummary */
   public static MongoCollection<ApplicationSummary> appSummary(MongoClient client) {
     return getCollection(client, APP_SUMMARY_COLLECTION, ApplicationSummary.class, APP_SUM_CODEC);
   }
 
-  /**
-   * Get mongo collection for Environment.
-   * @param client Mongo client
-   * @return collection for Environment
-   */
+  /** Get mongo collection for Environment */
   public static MongoCollection<Environment> environment(MongoClient client) {
     return getCollection(client, ENVIRONMENT_COLLECTION, Environment.class, ENV_CODEC);
   }
 
-  /**
-   * Get mongo collection for SQLExecution.
-   * @param client Mongo client
-   * @return collection for SQLExecution
-   */
+  /** Get mongo collection for SQLExecution */
   public static MongoCollection<SQLExecution> sqlExecution(MongoClient client) {
     return getCollection(client, SQLEXECUTION_COLLECTION, SQLExecution.class, SQL_CODEC);
   }
 
-  /**
-   * Get mongo collection for Task.
-   * @param client Mongo client
-   * @return collection for Task
-   */
+  /** Get mongo collection for Task */
   public static MongoCollection<Task> tasks(MongoClient client) {
     return getCollection(client, TASK_COLLECTION, Task.class, TASK_CODEC);
   }
 
-  /**
-   * Get mongo collection for Stage.
-   * @param client Mongo client
-   * @return collection for Stage
-   */
+  /** Get mongo collection for Stage */
   public static MongoCollection<Stage> stages(MongoClient client) {
     return getCollection(client, STAGE_COLLECTION, Stage.class, STAGE_CODEC);
   }
 
-  /**
-   * Get mongo collection for StageSummary.
-   * @param client Mongo client
-   * @return collection for StageSummary
-   */
+  /** Get mongo collection for StageSummary */
   public static MongoCollection<StageSummary> stageSummary(MongoClient client) {
     return getCollection(client, STAGE_SUMMARY_COLLECTION, StageSummary.class, STAGE_SUMMARY_CODEC);
   }
 
-  /**
-   * Get mongo collection for Job.
-   * @param client Mongo client
-   * @return collection for Job
-   */
+  /** Get mongo collection for Job */
   public static MongoCollection<Job> jobs(MongoClient client) {
     return getCollection(client, JOB_COLLECTION, Job.class, JOB_CODEC);
   }
 
-  /**
-   * Get mongo collection for Executor.
-   * @param client Mongo client
-   * @return collection for Executor
-   */
+  /** Get mongo collection for Executor */
   public static MongoCollection<Executor> executors(MongoClient client) {
     return getCollection(client, EXECUTOR_COLLECTION, Executor.class, EXC_CODEC);
   }
