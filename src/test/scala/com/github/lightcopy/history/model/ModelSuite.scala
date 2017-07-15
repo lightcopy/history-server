@@ -1188,18 +1188,19 @@ class ModelSuite extends UnitTestSuite {
     res.getAppId should be (sum.getAppId)
     res.getStageId should be (sum.getStageId)
     res.getStageAttemptId should be (sum.getStageAttemptId)
-    res.numTasks should be (sum.numTasks)
-    res.taskDuration should be (sum.taskDuration)
-    res.taskDeserializationTime should be (sum.taskDeserializationTime)
-    res.gcTime should be (sum.gcTime)
-    res.resultSerializationTime should be (sum.resultSerializationTime)
-    res.shuffleFetchWaitTime should be (sum.shuffleFetchWaitTime)
-    res.shuffleRemoteBytesRead should be (sum.shuffleRemoteBytesRead)
-    res.shuffleLocalBytesRead should be (sum.shuffleLocalBytesRead)
-    res.shuffleTotalRecordsRead should be (sum.shuffleTotalRecordsRead)
-    res.shuffleBytesWritten should be (sum.shuffleBytesWritten)
-    res.shuffleWriteTime should be (sum.shuffleWriteTime)
-    res.shuffleRecordsWritten should be (sum.shuffleRecordsWritten)
+    res.stageMetrics.numTasks should be (sum.stageMetrics.numTasks)
+    res.stageMetrics.taskDuration should be (sum.stageMetrics.taskDuration)
+    res.stageMetrics.taskDeserializationTime should be (sum.stageMetrics.taskDeserializationTime)
+    res.stageMetrics.gcTime should be (sum.stageMetrics.gcTime)
+    res.stageMetrics.resultSerializationTime should be (sum.stageMetrics.resultSerializationTime)
+    res.stageMetrics.shuffleFetchWaitTime should be (sum.stageMetrics.shuffleFetchWaitTime)
+    res.stageMetrics.shuffleRemoteBytesRead should be (sum.stageMetrics.shuffleRemoteBytesRead)
+    res.stageMetrics.shuffleLocalBytesRead should be (sum.stageMetrics.shuffleLocalBytesRead)
+    res.stageMetrics.shuffleTotalRecordsRead should be (sum.stageMetrics.shuffleTotalRecordsRead)
+    res.stageMetrics.shuffleBytesWritten should be (sum.stageMetrics.shuffleBytesWritten)
+    res.stageMetrics.shuffleWriteTime should be (sum.stageMetrics.shuffleWriteTime)
+    res.stageMetrics.shuffleRecordsWritten should be (sum.stageMetrics.shuffleRecordsWritten)
+    res.executors should be (sum.executors)
   }
 
   test("Complete StageSummary to bson") {
@@ -1207,10 +1208,18 @@ class ModelSuite extends UnitTestSuite {
     sum.setAppId("app-123")
     sum.setStageId(23)
     sum.setStageAttemptId(67)
-    sum.numTasks = 3
-    sum.taskDuration = StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3, 4, 5))
-    sum.shuffleRemoteBytesRead = StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3))
-    sum.shuffleRecordsWritten = StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3))
+    sum.stageMetrics.numTasks = 3
+    sum.stageMetrics.taskDuration =
+      StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3, 4, 5))
+    sum.stageMetrics.shuffleRemoteBytesRead =
+      StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3))
+    sum.stageMetrics.shuffleRecordsWritten =
+      StageSummary.MetricPercentiles.fromArray(Array[Long](1, 2, 3))
+    sum.executors.put("0", new StageSummary.ExecutorMetrics())
+    sum.executors.get("0").taskTime = 123L
+    sum.executors.get("0").totalTasks = 2L
+    sum.executors.get("0").runningTasks = 1L
+    sum.executors.get("0").succeededTasks = 1L
 
     val doc = serialize(sum, sum)
     val res = deserialize(sum, doc)
@@ -1218,26 +1227,32 @@ class ModelSuite extends UnitTestSuite {
     res.getAppId should be ("app-123")
     res.getStageId should be (23)
     res.getStageAttemptId should be (67)
-    res.numTasks should be (3)
-    res.taskDuration should be (sum.taskDuration)
-    res.taskDeserializationTime should be (sum.taskDeserializationTime)
-    res.gcTime should be (sum.gcTime)
-    res.resultSerializationTime should be (sum.resultSerializationTime)
-    res.shuffleFetchWaitTime should be (sum.shuffleFetchWaitTime)
-    res.shuffleRemoteBytesRead should be (sum.shuffleRemoteBytesRead)
-    res.shuffleLocalBytesRead should be (sum.shuffleLocalBytesRead)
-    res.shuffleTotalRecordsRead should be (sum.shuffleTotalRecordsRead)
-    res.shuffleBytesWritten should be (sum.shuffleBytesWritten)
-    res.shuffleWriteTime should be (sum.shuffleWriteTime)
-    res.shuffleRecordsWritten should be (sum.shuffleRecordsWritten)
+    res.stageMetrics.numTasks should be (3)
+    res.stageMetrics.taskDuration should be (sum.stageMetrics.taskDuration)
+    res.stageMetrics.taskDeserializationTime should be (sum.stageMetrics.taskDeserializationTime)
+    res.stageMetrics.gcTime should be (sum.stageMetrics.gcTime)
+    res.stageMetrics.resultSerializationTime should be (sum.stageMetrics.resultSerializationTime)
+    res.stageMetrics.shuffleFetchWaitTime should be (sum.stageMetrics.shuffleFetchWaitTime)
+    res.stageMetrics.shuffleRemoteBytesRead should be (sum.stageMetrics.shuffleRemoteBytesRead)
+    res.stageMetrics.shuffleLocalBytesRead should be (sum.stageMetrics.shuffleLocalBytesRead)
+    res.stageMetrics.shuffleTotalRecordsRead should be (sum.stageMetrics.shuffleTotalRecordsRead)
+    res.stageMetrics.shuffleBytesWritten should be (sum.stageMetrics.shuffleBytesWritten)
+    res.stageMetrics.shuffleWriteTime should be (sum.stageMetrics.shuffleWriteTime)
+    res.stageMetrics.shuffleRecordsWritten should be (sum.stageMetrics.shuffleRecordsWritten)
+    res.executors should be (sum.executors)
   }
 
   test("StageSummary - setSummary") {
     val sum = new StageSummary()
     val task = new Task()
+    task.setExecutorId("0")
     task.setDuration(123L)
+    task.setStatus(Task.Status.SUCCESS)
     sum.setSummary(al(task :: task :: task :: Nil))
-    sum.numTasks should be (3)
-    sum.taskDuration should be (StageSummary.MetricPercentiles.fromArray(Array(123L, 123L, 123L)))
+    sum.stageMetrics.numTasks should be (3)
+    sum.stageMetrics.taskDuration should be (
+      StageSummary.MetricPercentiles.fromArray(Array(123L, 123L, 123L)))
+    sum.executors.size should be (1)
+    sum.executors.get("0").taskTime should be (369L)
   }
 }

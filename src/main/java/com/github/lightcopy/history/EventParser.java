@@ -633,14 +633,12 @@ public class EventParser {
       }
     });
 
-    // stage summary is collected for completed tasks only
     for (StageSummary summary : summaries) {
       final ArrayList<Task> tasks = new ArrayList<Task>();
       Mongo.tasks(client).find(Filters.and(
         Filters.eq(Task.FIELD_APP_ID, summary.getAppId()),
         Filters.eq(Task.FIELD_STAGE_ID, summary.getStageId()),
-        Filters.eq(Task.FIELD_STAGE_ATTEMPT_ID, summary.getStageAttemptId()),
-        Filters.eq(Task.FIELD_STATUS, Task.Status.SUCCESS.name())
+        Filters.eq(Task.FIELD_STAGE_ATTEMPT_ID, summary.getStageAttemptId())
       )).forEach(new Block<Task>() {
         @Override
         public void apply(Task task) {

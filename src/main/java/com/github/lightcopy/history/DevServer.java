@@ -365,6 +365,7 @@ public class DevServer extends AbstractServer {
       summary.setAppId(appId);
       summary.setStageId(stageId);
       summary.setStageAttemptId(stageAttemptId);
+      summary.setSummary(tasks(appId, stageId, stageAttemptId, 0, 0, "", true));
       return summary;
     }
 
