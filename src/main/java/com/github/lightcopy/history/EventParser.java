@@ -623,7 +623,7 @@ public class EventParser {
 
   private void updateStageSummary() {
     final ArrayList<StageSummary> summaries = new ArrayList<StageSummary>();
-    // fetch all stages and for each compute summary, only completed tasks are fetched
+    // fetch all stages for application and create summary for each
     Mongo.stages(client).find(Filters.eq(Stage.FIELD_APP_ID, appId)).forEach(new Block<Stage>() {
       @Override
       public void apply(Stage stage) {
@@ -633,7 +633,7 @@ public class EventParser {
       }
     });
 
-    // stage summary is only collected for completed tasks
+    // stage summary is collected for completed tasks only
     for (StageSummary summary : summaries) {
       final ArrayList<Task> tasks = new ArrayList<Task>();
       Mongo.tasks(client).find(Filters.and(

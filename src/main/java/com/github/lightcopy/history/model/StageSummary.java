@@ -166,8 +166,8 @@ public class StageSummary extends AbstractCodec<StageSummary> {
   private String appId;
   private int stageId;
   private int stageAttemptId;
-  long numTasks;
 
+  long numTasks;
   // metrics fields
   MetricPercentiles taskDuration;
   MetricPercentiles taskDeserializationTime;
@@ -234,7 +234,7 @@ public class StageSummary extends AbstractCodec<StageSummary> {
 
   /** Set summary from list of tasks */
   public void setSummary(List<Task> tasks) {
-    // set num tasks used to generate summary
+    // set number of tasks that are used to generate summary
     this.numTasks = tasks.size();
 
     long[] values = new long[tasks.size()];
@@ -333,6 +333,7 @@ public class StageSummary extends AbstractCodec<StageSummary> {
           break;
         case FIELD_NUM_TASKS:
           summary.numTasks = reader.readInt64();
+          break;
         case FIELD_TASK_DURATION:
           summary.taskDuration = MetricPercentiles.CODEC.decode(reader, decoderContext);
           break;
