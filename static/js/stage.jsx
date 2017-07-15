@@ -4,6 +4,111 @@ import Header from "./header";
 import Table from "./table";
 import Util from "./util";
 
+class StageSummaryTable extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {numTasks: 0, data: []};
+    this.tableSpec = this.tableSpec.bind(this);
+    this.formatRecord = this.formatRecord.bind(this);
+    this.formatData = this.formatData.bind(this);
+  }
+
+  tableSpec(completedTasks) {
+    var spec = {
+      info: {
+        title: `Summary Metrics for ${completedTasks} Completed Tasks`,
+        equalColumnWidth: false,
+        showMetadata: false
+      },
+      cols: [
+        {name: "metric", desc: "Metric", sortable: false, hidden: false},
+        {name: "min", desc: "Min", sortable: false, hidden: false},
+        {name: "prc25", desc: "25th percentile", sortable: false, hidden: false},
+        {name: "median", desc: "Median", sortable: false, hidden: false},
+        {name: "prc75", desc: "75th percentile", sortable: false, hidden: false},
+        {name: "max", desc: "Max", sortable: false, hidden: false}
+      ]
+    };
+    return spec;
+  }
+
+  formatRecord(metric, obj, func) {
+    var key;
+    for (key in obj) {
+      if (obj.hasOwnProperty(key) && func) {
+        obj[key] = func(obj[key]);
+      }
+    }
+    obj.metric = <strong>{metric}</strong>;
+    return obj;
+  }
+
+  formatData(json) {
+    json.taskDuration = this.formatRecord(
+      "Duration", json.taskDuration, Util.displayTimeDiff);
+    json.taskDeserializationTime = this.formatRecord(
+      "Task Deserialization Time", json.taskDeserializationTime, Util.displayTimeDiff);
+    json.gcTime = this.formatRecord(
+      "GC Time", json.gcTime, Util.displayTimeDiff);
+    json.resultSerializationTime = this.formatRecord(
+      "Result Serialization Time", json.resultSerializationTime, Util.displayTimeDiff);
+    json.shuffleFetchWaitTime = this.formatRecord(
+      "Shuffle Fetch Wait Time", json.shuffleFetchWaitTime, Util.displayTimeDiff);
+    json.shuffleRemoteBytesRead = this.formatRecord(
+      "Shuffle Remote Bytes Read", json.shuffleRemoteBytesRead, Util.displayBytes);
+    json.shuffleLocalBytesRead = this.formatRecord(
+      "Shuffle Local Bytes Read", json.shuffleLocalBytesRead, Util.displayBytes);
+    json.shuffleTotalRecordsRead = this.formatRecord(
+      "Shuffle Total Records Read", json.shuffleTotalRecordsRead);
+    json.shuffleWriteTime = this.formatRecord(
+      "Shuffle Write Time", json.shuffleWriteTime, Util.displayTimeDiff);
+    json.shuffleBytesWritten = this.formatRecord(
+      "Shuffle Bytes Written", json.shuffleBytesWritten, Util.displayBytes);
+    json.shuffleRecordsWritten = this.formatRecord(
+      "Shuffle Records Written", json.shuffleRecordsWritten, false);
+
+    return [
+      json.taskDuration,
+      json.taskDeserializationTime,
+      json.gcTime,
+      json.resultSerializationTime,
+      json.shuffleFetchWaitTime,
+      json.shuffleRemoteBytesRead,
+      json.shuffleLocalBytesRead,
+      json.shuffleTotalRecordsRead,
+      json.shuffleWriteTime,
+      json.shuffleBytesWritten,
+      json.shuffleRecordsWritten
+    ];
+  }
+
+  componentDidMount() {
+    var appId = this.props.appId;
+    var stageId = this.props.stageId;
+    var attempt = this.props.attempt;
+
+    fetch(`/api/apps/${appId}/stages/${stageId}/attempt/${attempt}/summary`)
+    .then(response => response.json())
+    .then(json => {
+      this.setState({numTasks: json.numTasks});
+      this.setState({data: this.formatData(json)});
+    })
+    .catch(error => {
+      console.error(error);
+    })
+  }
+
+  render() {
+    return (
+      <Table
+        id="stage-summary-table"
+        spec={this.tableSpec(this.state.numTasks)}
+        data={this.state.data}
+        updateData={this.updateData} />
+    );
+  }
+}
+
 class TaskTable extends React.Component {
   constructor(props) {
     super(props);
@@ -17,7 +122,7 @@ class TaskTable extends React.Component {
     // construct dynamic table title based on number of tasks
     var clauses = [];
     if (totalTasks > 0) {
-      clauses.push(`${totalTasks} total`);
+      clauses.push(`${totalTasks} scheduled in total`);
     }
     if (activeTasks > 0) {
       clauses.push(`${activeTasks} active`);
@@ -169,10 +274,11 @@ class Stage extends React.Component {
     var stageId = this.props.params.stageId;
     var attempt = this.props.params.attempt;
 
-    var stats, tasks;
+    var stats, stageSummary, tasks;
     // if there is at least one key-value pair we display content
     if (Util.size(this.state) > 0) {
       var duration = Util.displayTimeDiff(this.state.duration);
+      var totalTaskTime = Util.displayTimeDiff(this.state.taskTime);
       var shuffleReadBytes = Util.displayBytes(
         this.state.metrics.shuffleReadMetrics.shuffleLocalBytesRead +
         this.state.metrics.shuffleReadMetrics.shuffleRemoteBytesRead
@@ -197,6 +303,10 @@ class Stage extends React.Component {
               <span>{duration}</span>
             </li>
             <li className="margin-bottom-small">
+              <strong>Total Time Across All Tasks: </strong>
+              <span>{totalTaskTime}</span>
+            </li>
+            <li className="margin-bottom-small">
               <strong>Shuffle Read: </strong>
               <span>{shuffleReadBytes}</span>
             </li>
@@ -206,6 +316,13 @@ class Stage extends React.Component {
             </li>
           </ul>
         </div>
+      );
+
+      stageSummary = (
+        <StageSummaryTable
+          appId={appId}
+          stageId={stageId}
+          attempt={attempt} />
       );
 
       tasks = (
@@ -228,6 +345,7 @@ class Stage extends React.Component {
         <div className="container-fluid">
           <h2>{`Details for Stage ${stageId} (Attempt ${attempt})`}</h2>
           {stats}
+          {stageSummary}
           {tasks}
         </div>
       </div>
