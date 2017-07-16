@@ -1,5 +1,6 @@
 import React from "react";
 import {Link} from "react-router";
+import version from "./version";
 
 class Tab extends React.Component {
   render() {
@@ -89,6 +90,8 @@ class Header extends React.Component {
             <Link className="brand" to="/">
               <img alt="Spark" src="/img/spark-logo-77x50px-hd.png" />
             </Link>
+            <span className="version">{`HS ${version}`}</span>
+            <span className="brand-separator"></span>
           </div>
           {controls}
         </div>
