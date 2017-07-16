@@ -52,6 +52,16 @@ public class TaskEndReason {
     return reason != null && reason.equals("TaskKilled");
   }
 
+  /** Truncate long message to the first '\n' character */
+  private String truncateMessage(String message) {
+    if (message != null) {
+      int index = message.indexOf('\n');
+      return (index < 0) ? message : message.substring(0, index).trim();
+    } else {
+      return message;
+    }
+  }
+
   public String getDescription() {
     // we mark reason that cannot be processed as "<unknown>"; this potentially indicates
     // bug in parsing and/or conversion, and should be fixed
@@ -62,7 +72,7 @@ public class TaskEndReason {
         break;
       case "FetchFailed":
         msg = "FetchFailed(" + blockManagerAddress + ", shuffleId=" + shuffleId + ", mapId=" +
-          mapId + ", reduceId=" + reduceId + ", message=\n" + message + "\n)";
+          mapId + ", reduceId=" + reduceId + ", message=" + truncateMessage(message) + ")";
         break;
       case "ExceptionFailure":
         // full stack trace is available separately
@@ -95,7 +105,13 @@ public class TaskEndReason {
   }
 
   public String getDetails() {
-    // details are only defined for exception failures
-    return this.fullStackTrace;
+    switch (reason) {
+      case "FetchFailed":
+        // in case of fetch failure, stack trace can be part of the message
+        return (message == null) ? fullStackTrace : message;
+      default:
+        // details are only defined for exception failures
+        return fullStackTrace;
+    }
   }
 }

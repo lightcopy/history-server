@@ -557,16 +557,16 @@ class EventSuite extends UnitTestSuite {
     reason.reduceId = 3
     reason.message = "Message"
     reason.getDescription should be (
-      "FetchFailed(null, shuffleId=1, mapId=2, reduceId=3, message=\nMessage\n)")
-    reason.getDetails should be (null)
+      "FetchFailed(null, shuffleId=1, mapId=2, reduceId=3, message=Message)")
+    reason.getDetails should be ("Message")
 
     reason.blockManagerAddress = new BlockManagerId()
     reason.blockManagerAddress.executorId = "0"
     reason.blockManagerAddress.host = "1.2.3.4"
     reason.blockManagerAddress.port = 45320
     reason.getDescription should be ("FetchFailed(BlockManagerId(0, 1.2.3.4, 45320), " +
-      "shuffleId=1, mapId=2, reduceId=3, message=\nMessage\n)")
-    reason.getDetails should be (null)
+      "shuffleId=1, mapId=2, reduceId=3, message=Message)")
+    reason.getDetails should be ("Message")
     reason.isSuccess should be (false)
     reason.isKilled should be (false)
   }
