@@ -2,15 +2,18 @@
   "name": "history-server",
   "private": true,
   "scripts": {
+    "clean": "rm -r ./dist/*",
     "setup": "mkdir -p ./dist/css && mkdir -p ./dist/fonts && mkdir -p ./dist/img && mkdir -p ./dist/js",
     "make_font": "cp -r ./static/fonts ./dist/",
     "make_scss": "node-sass ./static/css/app.scss --output-style compressed ./dist/css/app.css",
     "make_css": "cp ./static/css/*.css ./dist/css/",
-    "make_js": "webpack -d --display-error-details",
     "make_img": "cp -r ./static/img ./dist/",
     "make_html": "cp ./static/*.html ./dist/",
-    "dev": "npm run setup && npm run make_font && npm run make_scss && npm run make_css && npm run make_js && npm run make_img && npm run make_html",
-    "build": "webpack -p"
+    "pkg_sources": "npm run make_font && npm run make_scss && npm run make_css && npm run make_img && npm run make_html",
+    "make_js": "webpack -d --display-error-details",
+    "make_js_prod": "webpack -p",
+    "dev": "npm run setup && npm run pkg_sources && npm run make_js",
+    "prod": "npm run clean && npm run setup && npm run pkg_sources && npm run make_js_prod"
   },
   "dependencies": {
     "react": "^15.4.2",
