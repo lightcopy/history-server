@@ -16,6 +16,15 @@ module.exports = {
   },
 
   /**
+   * Make copy of object.
+   * @param obj
+   * @return full copy
+   */
+  copy: function(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  },
+
+  /**
    * Return shallow copy of object. If object is not set, returns empty object.
    * @param obj original object
    * @return shallow copy, or empty object if input is null

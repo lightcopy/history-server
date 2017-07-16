@@ -7,7 +7,6 @@ import Util from "./util";
 class StageSummaryTable extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {numTasks: 0, data: []};
     this.tableSpec = this.tableSpec.bind(this);
     this.formatRecord = this.formatRecord.bind(this);
     this.formatData = this.formatData.bind(this);
@@ -44,6 +43,8 @@ class StageSummaryTable extends React.Component {
   }
 
   formatData(json) {
+    // return empty list for initial render
+    if (!json) return [];
     json.taskDuration = this.formatRecord(
       "Duration", json.taskDuration, Util.displayTimeDiff.bind(Util));
     json.taskDeserializationTime = this.formatRecord(
@@ -65,7 +66,7 @@ class StageSummaryTable extends React.Component {
     json.shuffleBytesWritten = this.formatRecord(
       "Shuffle Bytes Written", json.shuffleBytesWritten, Util.displayBytes.bind(Util));
     json.shuffleRecordsWritten = this.formatRecord(
-      "Shuffle Records Written", json.shuffleRecordsWritten, false);
+      "Shuffle Records Written", json.shuffleRecordsWritten);
 
     return [
       json.taskDuration,
@@ -82,6 +83,99 @@ class StageSummaryTable extends React.Component {
     ];
   }
 
+  render() {
+    var numTasks, data;
+    if (Util.size(this.props.data) > 0) {
+      numTasks = this.props.data.numTasks;
+      data = Util.copy(this.props.data);
+    }
+    return (
+      <Table
+        id="stage-summary-table"
+        spec={this.tableSpec(numTasks)}
+        data={this.formatData(data)} />
+    );
+  }
+}
+
+class ExecutorSummaryTable extends React.Component {
+  constructor(props) {
+    super(props);
+    this.tableSpec = this.tableSpec.bind(this);
+    this.formatData = this.formatData.bind(this);
+  }
+
+  tableSpec() {
+    var spec = {
+      info: {
+        title: "Aggregated Metrics by Executor",
+        equalColumnWidth: false,
+        showMetadata: false
+      },
+      cols: [
+        {name: "executorId", desc: "Executor ID", sortable: false, hidden: false},
+        {name: "address", desc: "Address", sortable: false, hidden: false},
+        {name: "taskTime", desc: "Task Time", sortable: false, hidden: false},
+        {name: "totalTasks", desc: "Total Tasks", sortable: false, hidden: false},
+        {name: "failedTasks", desc: "Failed Tasks", sortable: false, hidden: false},
+        {name: "killedTasks", desc: "Killed Tasks", sortable: false, hidden: false},
+        {name: "succeededTasks", desc: "Succeeded Tasks", sortable: false, hidden: false},
+        {name: "shuffleRead", desc: "Shuffle Read Size / Records", sortable: false, hidden: false},
+        {name: "shuffleWrite", desc: "Shuffle Write Size / Records", sortable: false, hidden: false}
+      ]
+    };
+    return spec;
+  }
+
+  formatData(json) {
+    var arr = [], key;
+    for (key in json) {
+      if (json.hasOwnProperty(key)) {
+        var exc = {};
+        exc.executorId = key;
+        exc.address = (json[key].address) ? json[key].address : "CANNOT FIND ADDRESS";
+
+        exc.taskTime = Util.displayTimeDiff(json[key].taskTime);
+        exc.totalTasks = json[key].totalTasks;
+        exc.failedTasks = json[key].failedTasks;
+        exc.killedTasks = json[key].killedTasks;
+        exc.succeededTasks = json[key].succeededTasks;
+
+        var shuffleReadBytes = json[key].shuffleLocalBytesRead + json[key].shuffleRemoteBytesRead;
+        var shuffleReadRecords = json[key].shuffleTotalRecordsRead;
+        exc.shuffleRead = `${Util.displayBytes(shuffleReadBytes)} / ${shuffleReadRecords}`;
+
+        var shuffleWriteBytes = json[key].shuffleBytesWritten;
+        var shuffleWriteRecords = json[key].shuffleRecordsWritten;
+        exc.shuffleWrite = `${Util.displayBytes(shuffleWriteBytes)} / ${shuffleWriteRecords}`;
+
+        arr.push(exc);
+      }
+    }
+    return arr;
+  }
+
+  render() {
+    var numTasks, data;
+    if (Util.size(this.props.data) > 0) {
+      numTasks = this.props.data.numTasks;
+      data = Util.copy(this.props.data);
+    }
+    return (
+      <Table
+        id="stage-summary-by-executor-table"
+        spec={this.tableSpec()}
+        data={this.formatData(data)} />
+    );
+  }
+}
+
+class StageSummary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {stageMetrics: {}, executors: {}};
+  }
+
   componentDidMount() {
     var appId = this.props.appId;
     var stageId = this.props.stageId;
@@ -90,8 +184,8 @@ class StageSummaryTable extends React.Component {
     fetch(`/api/apps/${appId}/stages/${stageId}/attempt/${attempt}/summary`)
     .then(response => response.json())
     .then(json => {
-      this.setState({numTasks: json.numTasks});
-      this.setState({data: this.formatData(json)});
+      this.setState({stageMetrics: json.stageMetrics});
+      this.setState({executors: json.executors});
     })
     .catch(error => {
       console.error(error);
@@ -100,11 +194,10 @@ class StageSummaryTable extends React.Component {
 
   render() {
     return (
-      <Table
-        id="stage-summary-table"
-        spec={this.tableSpec(this.state.numTasks)}
-        data={this.state.data}
-        updateData={this.updateData} />
+      <div>
+        <StageSummaryTable data={this.state.stageMetrics} />
+        <ExecutorSummaryTable data={this.state.executors} />
+      </div>
     );
   }
 }
@@ -319,7 +412,7 @@ class Stage extends React.Component {
       );
 
       stageSummary = (
-        <StageSummaryTable
+        <StageSummary
           appId={appId}
           stageId={stageId}
           attempt={attempt} />

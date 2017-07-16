@@ -370,7 +370,7 @@ public class StageSummary extends AbstractCodec<StageSummary> {
 
   /** Stage metrics aggregated by executor */
   public static class ExecutorMetrics {
-    public static final String FIELD_EXECUTOR_ID = "executorId";
+    public static final String FIELD_ADDRESS = "address";
     public static final String FIELD_TASK_TIME = "taskTime";
     public static final String FIELD_TOTAL_TASKS = "totalTasks";
     public static final String FIELD_RUNNING_TASKS = "runningTasks";
@@ -383,7 +383,7 @@ public class StageSummary extends AbstractCodec<StageSummary> {
     public static final String FIELD_SHUFFLE_BYTES_WRITTEN = "shuffleBytesWritten";
     public static final String FIELD_SHUFFLE_RECORDS_WRITTEN = "shuffleRecordsWritten";
 
-    String executorId;
+    String address;
     // metrics
     long taskTime;
     long totalTasks;
@@ -398,7 +398,7 @@ public class StageSummary extends AbstractCodec<StageSummary> {
     long shuffleRecordsWritten;
 
     public ExecutorMetrics() {
-      this.executorId = null;
+      this.address = null;
       this.taskTime = 0L;
       this.totalTasks = 0L;
       this.runningTasks = 0L;
@@ -413,6 +413,9 @@ public class StageSummary extends AbstractCodec<StageSummary> {
     }
 
     public void incSummary(Task task) {
+      // update executor address
+      address = task.getHost();
+
       // update task counts
       switch (task.getStatus()) {
         case RUNNING:
@@ -454,8 +457,8 @@ public class StageSummary extends AbstractCodec<StageSummary> {
       if (obj == null || !(obj instanceof ExecutorMetrics)) return false;
       ExecutorMetrics that = (ExecutorMetrics) obj;
       return
-        (this.executorId == null && that.executorId == null ||
-          this.executorId.equals(that.executorId)) &&
+        (this.address == null && that.address == null ||
+          this.address != null && this.address.equals(that.address)) &&
         this.taskTime == that.taskTime &&
         this.totalTasks == that.totalTasks &&
         this.runningTasks == that.runningTasks &&
@@ -479,8 +482,8 @@ public class StageSummary extends AbstractCodec<StageSummary> {
         reader.readStartDocument();
         while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
           switch (reader.readName()) {
-            case FIELD_EXECUTOR_ID:
-              summary.executorId = safeReadString(reader);
+            case FIELD_ADDRESS:
+              summary.address = safeReadString(reader);
               break;
             case FIELD_TASK_TIME:
               summary.taskTime = reader.readInt64();
@@ -529,7 +532,7 @@ public class StageSummary extends AbstractCodec<StageSummary> {
       @Override
       public void write(BsonWriter writer, ExecutorMetrics value) {
         writer.writeStartDocument();
-        safeWriteString(writer, FIELD_EXECUTOR_ID, value.executorId);
+        safeWriteString(writer, FIELD_ADDRESS, value.address);
         writer.writeInt64(FIELD_TASK_TIME, value.taskTime);
         writer.writeInt64(FIELD_TOTAL_TASKS, value.totalTasks);
         writer.writeInt64(FIELD_RUNNING_TASKS, value.runningTasks);
