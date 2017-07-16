@@ -2,7 +2,7 @@
   "name": "history-server",
   "private": true,
   "scripts": {
-    "clean": "rm -r ./dist/*",
+    "clean": "rm -rf ./dist/*",
     "setup": "mkdir -p ./dist/css && mkdir -p ./dist/fonts && mkdir -p ./dist/img && mkdir -p ./dist/js",
     "make_font": "cp -r ./static/fonts ./dist/",
     "make_scss": "node-sass ./static/css/app.scss --output-style compressed ./dist/css/app.css",

@@ -64,7 +64,8 @@ if [[ -z "$LOG4J_CONF_FILE" ]]; then
   LOG4J_CONF_FILE="file:$ROOT_DIR/conf/log4j.properties"
 fi
 
-# Start service
+# Start service in script root directory (to load dist)
+cd $ROOT_DIR
 LAUNCH_CMD="java \
   -Xmx512m -XX:MaxPermSize=256m \
   -Dlog4j.configuration='$LOG4J_CONF_FILE' \
