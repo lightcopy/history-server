@@ -24,7 +24,7 @@ function resolve_daemon_mode() {
   fi
 }
 
-# Command-line options:
+# Command-line options
 for i in "$@"; do
   case $i in
     # Daemon process (true/false)
