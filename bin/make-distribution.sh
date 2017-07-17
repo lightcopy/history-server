@@ -15,17 +15,14 @@ EOM
 # Build flags will be saved as part of release in addition to manifest
 BUILD_FLAGS="$@"
 
-# Command-line options
 for i in "$@"; do
   case $i in
-    # Daemon process (true/false)
     --name=*)
       MAKE_SUFFIX="${i#*=}"
     shift ;;
     --tgz)
       MAKE_TGZ="true"
     shift ;;
-    # Display help
     --help)
       show_help
       exit 0
@@ -37,6 +34,8 @@ echo "[info] Make .tgz = ${MAKE_TGZ:-false}"
 echo "[info] Use suffix = ${MAKE_SUFFIX:-''}"
 
 # Prepare directories
+cd $ROOT_DIR
+
 echo "[info] Project directory $ROOT_DIR"
 TARGET_DIR=$ROOT_DIR/target
 echo "[info] Target directory $TARGET_DIR"
