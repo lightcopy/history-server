@@ -80,6 +80,11 @@ echo "[info] Create RELEASE file"
 RELEASE_MANIFEST_FILE="$TARGET_DIR/$RELEASE_NAME/RELEASE"
 touch $RELEASE_MANIFEST_FILE
 echo "Build flags: $BUILD_FLAGS" >> $RELEASE_MANIFEST_FILE
+echo "Build date: $(date)" >> $RELEASE_MANIFEST_FILE
+echo "Git branch: $(git rev-parse --abbrev-ref HEAD)" >> $RELEASE_MANIFEST_FILE
+echo "Git HEAD rev: $(git log -n1 --pretty=%H)" >> $RELEASE_MANIFEST_FILE
+echo "Git repo clean: $(git diff --quiet && echo 'true' || echo 'false')" >> $RELEASE_MANIFEST_FILE
+
 echo "" >> $RELEASE_MANIFEST_FILE
 for f in $(find $TARGET_DIR/$RELEASE_NAME -name *.jar -type f); do
   unzip -pq $f META-INF/MANIFEST.MF >> $RELEASE_MANIFEST_FILE
