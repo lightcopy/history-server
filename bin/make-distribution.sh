@@ -12,12 +12,15 @@ Usage: $0 [options]
 EOM
 }
 
+# Build flags will be saved as part of release in addition to manifest
+BUILD_FLAGS="$@"
+
 # Command-line options
 for i in "$@"; do
   case $i in
     # Daemon process (true/false)
     --name=*)
-      RELEASE_NAME="${i#*=}"
+      MAKE_SUFFIX="${i#*=}"
     shift ;;
     --tgz)
       MAKE_TGZ="true"
@@ -30,12 +33,16 @@ for i in "$@"; do
   esac
 done
 
+echo "[info] Make .tgz = ${MAKE_TGZ:-false}"
+echo "[info] Use suffix = ${MAKE_SUFFIX:-''}"
+
+# Prepare directories
 echo "[info] Project directory $ROOT_DIR"
 TARGET_DIR=$ROOT_DIR/target
 echo "[info] Target directory $TARGET_DIR"
 
-if [[ -n "$RELEASE_NAME" ]]; then
-  RELEASE_NAME="history-server-bin-$RELEASE_NAME"
+if [[ -n "$MAKE_SUFFIX" ]]; then
+  RELEASE_NAME="history-server-bin-$MAKE_SUFFIX"
 else
   RELEASE_NAME="history-server-bin"
 fi
@@ -44,12 +51,14 @@ rm -f "$TARGET_DIR/$RELEASE_NAME.tgz"
 mkdir -p "$TARGET_DIR/$RELEASE_NAME"
 echo "[info] Prepared release directory $TARGET_DIR/$RELEASE_NAME"
 
+# Start build process
 echo "[info] Build assembly jar"
 sbt assembly
 
 echo "[info] Build static files in dist dir"
 npm run prod
 
+# Start assembly of artefacts
 echo "[info] Assemble artefacts in release directory"
 for f in $(find $TARGET_DIR/scala-2.11 -name *.jar -type f); do
   echo "[info] Found jar $f, will be added to distribution"
@@ -61,12 +70,27 @@ echo "[info] Copy conf folder into release directory"
 cp -r $ROOT_DIR/conf $TARGET_DIR/$RELEASE_NAME/
 echo "[info] Copy sbin folder into release directory"
 cp -r $ROOT_DIR/sbin $TARGET_DIR/$RELEASE_NAME/
+echo "[info] Copy license"
+cp $ROOT_DIR/LICENSE $TARGET_DIR/$RELEASE_NAME/
+echo "[info] Copy readme"
+cp $ROOT_DIR/README.md $TARGET_DIR/$RELEASE_NAME/
 
+# Create file based on manifest[s] and build flags
+echo "[info] Create RELEASE file"
+RELEASE_MANIFEST_FILE="$TARGET_DIR/$RELEASE_NAME/RELEASE"
+touch $RELEASE_MANIFEST_FILE
+echo "Build flags: $BUILD_FLAGS" >> $RELEASE_MANIFEST_FILE
+echo "" >> $RELEASE_MANIFEST_FILE
+for f in $(find $TARGET_DIR/$RELEASE_NAME -name *.jar -type f); do
+  unzip -pq $f META-INF/MANIFEST.MF >> $RELEASE_MANIFEST_FILE
+done
+
+# tgz is enabled, we pack release folder into archive and delete release folder
 if [[ -n "$MAKE_TGZ" ]]; then
   TARNAME="$RELEASE_NAME.tgz"
-  echo "Create $TARNAME"
   tar czf "$TARGET_DIR/$TARNAME" -C "$TARGET_DIR" "$RELEASE_NAME"
   rm -rf $TARGET_DIR/$RELEASE_NAME
+  echo "[info] Created $TARNAME"
 fi
 
 echo "[info] Done, see $TARGET_DIR for release artefacts"
