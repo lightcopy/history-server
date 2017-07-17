@@ -1,1 +1,1 @@
-module.exports = "0.1.0-SNAPSHOT";
+module.exports = "0.1.0";
