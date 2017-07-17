@@ -40,7 +40,7 @@ if [[ -z "$NEXT_VERSION" ]]; then
   exit 1
 fi
 
-if [[ $(git diff --quiet) != 0 ]]; then
+if [[ ! $(git diff --quiet) ]]; then
   echo "[error] Found unstaged changes! Commit or discard changes first."
   exit 1
 fi
