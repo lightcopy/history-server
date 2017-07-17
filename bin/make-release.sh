@@ -74,6 +74,10 @@ git add version.sbt
 git add static/js/version.js
 git commit -m "Prepare next dev version $NEXT_VERSION"
 
+echo ""
 echo "Done. Do not forget to push commits and tags!"
+echo "# git push"
+echo "# git push --tags"
+echo ""
 echo "Latest commits added:"
 git log --pretty=oneline -n5
