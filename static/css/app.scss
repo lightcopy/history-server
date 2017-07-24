@@ -146,6 +146,17 @@ th.sortable {
   }
 }
 
+// == Code ==
+
+// wrap code block in pre (mainly for large details)
+pre.wrap {
+  white-space: pre-wrap;
+  white-space: -moz-pre-wrap;
+  white-space: -pre-wrap;
+  white-space: -o-pre-wrap;
+  word-wrap: break-word;
+}
+
 // == Utility classes ==
 
 $small-margin: 10px;

@@ -221,7 +221,7 @@ class SQLExecutionQuery extends React.Component {
             </li>
           </ul>
           <h4 className="margin-top-large">Query plan</h4>
-          <pre>{this.state.query.physicalPlan}</pre>
+          <pre className="wrap">{this.state.query.physicalPlan}</pre>
         </div>
       );
     } else {
